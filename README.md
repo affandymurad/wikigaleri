@@ -65,7 +65,7 @@ Gemini can be wrong or miss context. The license summary is a guide, not legal a
 
 ### Run locally
 
-**Prerequisites:** Node.js 20 or newer (or Bun).
+**Prerequisites:** Node.js 22 or newer.
 
 ```bash
 git clone https://github.com/affandymurad/wikigaleri.git
@@ -157,7 +157,7 @@ Gemini bisa salah atau melewatkan konteks. Ringkasan lisensi hanya penuntun, buk
 
 ### Menjalankan secara lokal
 
-**Prasyarat:** Node.js 20 atau lebih baru (atau Bun).
+**Prasyarat:** Node.js 22 atau lebih baru.
 
 ```bash
 git clone https://github.com/affandymurad/wikigaleri.git
