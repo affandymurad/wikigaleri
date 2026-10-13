@@ -1,0 +1,725 @@
+import React, { useState } from 'react';
+import { useDarkMode } from './hooks/useDarkMode';
+import { useLanguage } from './hooks/useLanguage';
+import { useGeminiApiKey } from './hooks/useGeminiApiKey';
+import { useCommonsGallery, useBookmarkLists } from './hooks/useCommonsGallery';
+import { Header } from './components/Header';
+import { SearchBar } from './components/SearchBar';
+import { CuratedTopics } from './components/CuratedTopics';
+import { NearbyPhotosSection } from './components/NearbyPhotosSection';
+import { MediaTypeFilter } from './components/MediaTypeFilter';
+import { MediaGrid, TalkPageView, BookmarksPanel, BookmarkBackupBar } from './components/MediaGrid';
+import { MediaDetailModal } from './components/MediaDetailModal';
+import { GeminiKeyModal } from './components/GeminiKeyModal';
+import { LicenseGuideModal, WikimediaTermsModal, DisclaimerModal } from './components/LicenseGuideModal';
+import { AttributionQuickCopyModal } from './components/AttributionQuickCopyModal';
+import { CategoryListSection } from './components/CategoryListSection';
+import { CommonsMediaItem, CategorySearchMode } from './types/wikimedia';
+import { CURATED_TOPICS, normalizeCategoryName } from './services/wikimediaApi';
+import { ExternalLink, Search, MapPin, LayoutGrid, FolderTree, FolderRoot, Radio, Bookmark, Shuffle } from 'lucide-react';
+
+export default function App() {
+  const { isDark, toggleDarkMode } = useDarkMode();
+  const { language, setLanguage, t } = useLanguage();
+  const {
+    apiKey: geminiApiKey,
+    hasKey: hasGeminiKey,
+    saveKey: saveGeminiKey,
+    removeKey: removeGeminiKey,
+    lastError: geminiLastError,
+  } = useGeminiApiKey();
+
+  const {
+    filter,
+    activeTopicId,
+    items,
+    isLoading,
+    error,
+    currentPage,
+    totalPages,
+    totalHits,
+    hasNextPage,
+    hasPrevPage,
+    itemsPerPage,
+    viewLayout,
+    savedCount,
+    showSavedOnly,
+    setViewLayout,
+    setShowSavedOnly,
+    toggleSaveItem,
+    isItemSaved,
+    goToPage,
+    nextPage,
+    prevPage,
+    setQuery,
+    setMediaType,
+    setLicense,
+    setSort,
+    setTopic,
+    refresh,
+    isLatestUploads,
+    liveFeed,
+    setLiveFeed,
+  setRandomMode,
+    userMode,
+    setUserMode,
+  } = useCommonsGallery();
+  const { savedUsers, savedCategories, toggleUser, toggleCategory, isUserSaved, isCategorySaved } = useBookmarkLists();
+
+  // Navigation Mode: 'keywords' (Kata Kunci) | 'nearby' (Terdekat) | 'categories' (Kategori)
+  type ActiveMode = 'keywords' | 'nearby' | 'categories' | 'live' | 'random' | 'bookmarks';
+  const [activeMode, setActiveMode] = useState<ActiveMode>('keywords');
+
+  // Mode Kategori sub-search mode: 'media' | 'subcategories' | 'parent_categories'
+  // Mode Nama Pengguna: 'uploads' (unggahan) | 'talk' (halaman pembicaraan pengguna)
+  const [userView, setUserView] = useState<'uploads' | 'talk'>('uploads');
+  const [categorySearchMode, setCategorySearchMode] = useState<CategorySearchMode>('media');
+  const [currentCategoryName, setCurrentCategoryName] = useState<string>('');
+
+  // Modals state
+  const [selectedDetailItem, setSelectedDetailItem] = useState<CommonsMediaItem | null>(null);
+  const [quickAttributionItem, setQuickAttributionItem] = useState<CommonsMediaItem | null>(null);
+  const [isGeminiModalOpen, setIsGeminiModalOpen] = useState<boolean>(false);
+  const [isLicenseGuideOpen, setIsLicenseGuideOpen] = useState<boolean>(false);
+  const [isTermsOpen, setIsTermsOpen] = useState<boolean>(false);
+  const [isDisclaimerOpen, setIsDisclaimerOpen] = useState<boolean>(false);
+
+  const handleResetToHome = () => {
+    setLiveFeed(false);
+    setUserMode(false);
+    setActiveMode('keywords');
+    setCategorySearchMode('media');
+    setShowSavedOnly(false);
+    setTopic('indonesia-heritage');
+    setCurrentCategoryName('');
+    setMediaType('all');
+    setLicense('all');
+    setSort('relevance');
+  };
+
+  const handleSelectTopic = (topicId: string) => {
+    setTopic(topicId);
+    const tp = CURATED_TOPICS.find((t) => t.id === topicId);
+    if (tp?.categoryName) {
+      const cleanCat = normalizeCategoryName(tp.categoryName);
+      setCurrentCategoryName(cleanCat);
+      if (activeMode === 'categories') {
+        setQuery(cleanCat);
+      }
+    }
+  };
+
+  const handleCategorySearch = (q: string) => {
+    const clean = (q.trim() ? normalizeCategoryName(q) : '');
+    setCurrentCategoryName(clean);
+    setQuery(clean);
+  };
+
+  const handleSelectCategoryFromList = (catName: string) => {
+    const clean = normalizeCategoryName(catName);
+    setCurrentCategoryName(clean);
+    setQuery(clean);
+  };
+
+  const handleViewMediaFromList = (catName: string) => {
+    const clean = normalizeCategoryName(catName);
+    setCurrentCategoryName(clean);
+    setQuery(clean);
+    setCategorySearchMode('media');
+  };
+
+  const handleSwitchMode = (mode: ActiveMode) => {
+    setLiveFeed(mode === 'live');
+    setRandomMode(mode === 'random');
+    setShowSavedOnly(mode === 'bookmarks');
+    if (mode === 'categories') setMediaType('all');
+    if (mode !== 'keywords') { setUserMode(false); setUserView('uploads'); }
+    if (mode === 'keywords' && activeMode === 'categories') setQuery('');
+    setActiveMode(mode);
+    if (mode === 'categories') {
+      const clean = (currentCategoryName ? normalizeCategoryName(currentCategoryName) : '');
+      setCurrentCategoryName(clean);
+      setQuery(clean);
+    }
+  };
+
+  // Buka pencarian username (mode Kata Kunci > Nama Pengguna)
+  const openUserSearch = (username: string) => {
+    const clean = username.replace(/^(User|Pengguna):/i, '').trim();
+    if (!clean) return;
+    setSelectedDetailItem(null);
+    setShowSavedOnly(false);
+    setLiveFeed(false);
+    setActiveMode('keywords');
+    setUserView('uploads');
+    setUserMode(true);
+    setQuery(clean);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Buka pencarian kategori (mode Kategori > Media)
+  const openCategorySearch = (catName: string) => {
+    const clean = normalizeCategoryName(catName);
+    if (!clean) return;
+    setSelectedDetailItem(null);
+    setShowSavedOnly(false);
+    setLiveFeed(false);
+    setUserMode(false);
+    setUserView('uploads');
+    setActiveMode('categories');
+    setMediaType('all');
+    setCategorySearchMode('media');
+    setCurrentCategoryName(clean);
+    setQuery(clean);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Next / Prev detail item navigation
+  const currentDetailIndex = selectedDetailItem
+    ? items.findIndex((i) => i.id === selectedDetailItem.id)
+    : -1;
+  const hasPrevDetail = currentDetailIndex > 0;
+  const hasNextDetail = currentDetailIndex >= 0 && currentDetailIndex < items.length - 1;
+
+
+  const handleNextDetail = () => {
+    if (hasNextDetail) {
+      setSelectedDetailItem(items[currentDetailIndex + 1]);
+    }
+  };
+
+  const handlePrevDetail = () => {
+    if (hasPrevDetail) {
+      setSelectedDetailItem(items[currentDetailIndex - 1]);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+      {/* 3-Zone Header Contract */}
+      <Header
+        isDark={isDark}
+        onToggleDark={toggleDarkMode}
+        hasGeminiKey={hasGeminiKey}
+        onOpenGeminiModal={() => setIsGeminiModalOpen(true)}
+        onOpenLicenseGuide={() => setIsLicenseGuideOpen(true)}
+        onOpenTerms={() => setIsTermsOpen(true)}
+        onOpenDisclaimer={() => setIsDisclaimerOpen(true)}
+        onResetToHome={handleResetToHome}
+        language={language}
+        onSetLanguage={setLanguage}
+        t={t}
+      />
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        {/* Hero Section & Search Header */}
+        <section className="space-y-6 pt-2">
+          <div className="max-w-3xl space-y-2">
+            <h1 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+              {t.hero.title}
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+              {t.hero.subtitle}
+            </p>
+          </div>
+
+          {/* Mode Switcher Chips & Category Sub-modes (Placed directly to the right of Categories) */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {/* Primary Navigation Tabs */}
+            <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl shadow-2xs border border-slate-200/80 dark:border-slate-800 overflow-x-auto max-w-full">
+              <button
+                type="button"
+                onClick={() => handleSwitchMode('keywords')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  (activeMode === 'keywords' || activeMode === 'categories')
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs scale-[1.01]'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span>{t.tabs.keywords}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSwitchMode('nearby')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  activeMode === 'nearby'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs scale-[1.01]'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>{t.tabs.nearby}</span>
+              </button>
+
+
+          <button
+                type="button"
+                onClick={() => handleSwitchMode('live')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  activeMode === 'live'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs scale-[1.01]'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Radio className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span>{language === 'id' ? 'Unggahan Terbaru' : 'Live Feed'}</span>
+              </button>
+
+              <button
+            type="button"
+            onClick={() => handleSwitchMode('random')}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              activeMode === 'random'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs scale-[1.01]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Shuffle className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <span>{language === 'id' ? 'Acak' : 'Random'}</span>
+          </button>
+
+          <button
+                type="button"
+                onClick={() => handleSwitchMode('bookmarks')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  activeMode === 'bookmarks'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs scale-[1.01]'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Bookmark className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span>{language === 'id' ? 'Markah' : 'Bookmark'}</span>
+                {(savedCount + savedUsers.length + savedCategories.length) > 0 && (
+                  <span className="rounded-full bg-purple-100 px-1.5 text-[10px] font-bold text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">{savedCount + savedUsers.length + savedCategories.length}</span>
+                )}
+              </button>
+            </div>
+
+          </div>
+
+          {(activeMode === 'keywords' || activeMode === 'categories') && (
+            <MediaTypeFilter
+              mediaType={filter.mediaType}
+              onSelectMediaType={(type) => {
+                if (activeMode === 'categories') handleSwitchMode('keywords');
+                setMediaType(type);
+              }}
+              t={t}
+              userMode={userMode}
+              onSetUserMode={(on) => {
+                if (on && activeMode === 'categories') handleSwitchMode('keywords');
+                setUserMode(on);
+                setUserView('uploads');
+                setQuery('');
+              }}
+              userLabel={language === 'id' ? 'Nama Pengguna' : 'Username'}
+              categoryMode={activeMode === 'categories'}
+              onSetCategoryMode={(on) => {
+                if (on) handleSwitchMode('categories');
+                else if (activeMode === 'categories') handleSwitchMode('keywords');
+              }}
+              categoryLabel={language === 'id' ? 'Kategori' : 'Categories'}
+            />
+          )}
+
+          {/* Mode 1: Kata Kunci (Filter jenis dokumen + Field pencarian) */}
+          {/* Mode Live Feed: tanpa field pencarian & tanpa filter, langsung unggahan terbaru */}
+        {activeMode === 'keywords' && (
+            <div className="space-y-4 pt-1">
+              <SearchBar
+                currentQuery={filter.query}
+                onSearch={setQuery}
+                placeholder={userMode ? (language === 'id' ? 'Ketik nama pengguna Commons untuk melihat unggahannya…' : 'Type a Commons username to see their uploads…') : t.search.placeholder}
+                t={t}
+              />
+            {userMode && filter.query.trim() !== '' && (
+              <button
+                type="button"
+                onClick={() => toggleUser(filter.query.replace(/^(User|Pengguna):/i, ''))}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold cursor-pointer transition ${
+                  isUserSaved(filter.query.replace(/^(User|Pengguna):/i, ''))
+                    ? 'border-purple-400 bg-purple-50 text-purple-700 dark:border-purple-500 dark:bg-purple-900/30 dark:text-purple-300'
+                    : 'border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                <Bookmark className={`h-3.5 w-3.5 ${isUserSaved(filter.query.replace(/^(User|Pengguna):/i, '')) ? 'fill-current' : ''}`} />
+                {isUserSaved(filter.query.replace(/^(User|Pengguna):/i, ''))
+                  ? (language === 'id' ? 'Nama pengguna tersimpan' : 'Username saved')
+                  : (language === 'id' ? 'Simpan nama pengguna' : 'Save username')}
+              </button>
+            )}
+
+            {userMode && (
+              <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Tampilan pengguna">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={userView === 'uploads'}
+                  onClick={() => setUserView('uploads')}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${userView === 'uploads' ? 'border-blue-600 bg-blue-600 text-white shadow-xs' : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
+                >
+                  {language === 'id' ? 'Unggahan' : 'Uploads'}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={userView === 'talk'}
+                  onClick={() => setUserView('talk')}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${userView === 'talk' ? 'border-blue-600 bg-blue-600 text-white shadow-xs' : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
+                >
+                  {language === 'id' ? 'Halaman Pembicaraan' : 'Talk Page'}
+                </button>
+              </div>
+            )}
+            </div>
+          )}
+
+
+          {/* Mode 3: Kategori (Field pencarian + Papan Koleksi Kurasi Collapsible) */}
+          {activeMode === 'categories' && (
+            <div className="space-y-4 pt-1">
+              {/* Field Pencarian Kategori */}
+              <SearchBar
+                currentQuery={currentCategoryName}
+                onSearch={handleCategorySearch}
+                placeholder={t.search.categoryPlaceholder}
+                t={t}
+              />
+
+              {currentCategoryName.trim() !== '' && (
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(currentCategoryName)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold cursor-pointer transition ${
+                    isCategorySaved(currentCategoryName)
+                      ? 'border-purple-400 bg-purple-50 text-purple-700 dark:border-purple-500 dark:bg-purple-900/30 dark:text-purple-300'
+                      : 'border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Bookmark className={`h-3.5 w-3.5 ${isCategorySaved(currentCategoryName) ? 'fill-current' : ''}`} />
+                  {isCategorySaved(currentCategoryName)
+                    ? (language === 'id' ? 'Kategori tersimpan' : 'Category saved')
+                    : (language === 'id' ? 'Simpan kategori' : 'Save category')}
+                </button>
+              )}
+
+              {activeMode === 'categories' && (
+                <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Mode kategori">
+                  {/* 1. Media dengan ikon grid existing */}
+                  <button
+                    type="button"
+                    onClick={() => setCategorySearchMode('media')}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                      categorySearchMode === 'media'
+                        ? 'border-blue-600 bg-blue-600 text-white shadow-xs'
+                        : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                    <span>{t.categoryModes?.media || 'Media'}</span>
+                  </button>
+
+                  {/* 2. Subkategori */}
+                  <button
+                    type="button"
+                    onClick={() => setCategorySearchMode('subcategories')}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                      categorySearchMode === 'subcategories'
+                        ? 'border-blue-600 bg-blue-600 text-white shadow-xs'
+                        : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <FolderTree className="w-4 h-4" />
+                    <span>{t.categoryModes?.subcategories || 'Subkategori'}</span>
+                  </button>
+
+                  {/* 3. Kategori Induk */}
+                  <button
+                    type="button"
+                    onClick={() => setCategorySearchMode('parent_categories')}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                      categorySearchMode === 'parent_categories'
+                        ? 'border-blue-600 bg-blue-600 text-white shadow-xs'
+                        : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <FolderRoot className="w-4 h-4" />
+                    <span>{t.categoryModes?.parentCategories || 'Kategori Induk'}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Papan Koleksi Kurasi dengan chip bersegmen selengkap mungkin & collapsible */}
+              <CuratedTopics
+                activeTopicId={activeTopicId}
+                onSelectTopic={handleSelectTopic}
+                t={t}
+              />
+            </div>
+          )}
+        </section>
+
+        {/* Mode 2: Terdekat (Satu section Foto Terdekat / Nearby Photos) */}
+        {activeMode === 'nearby' && (
+          <section aria-label="Foto Terdekat" className="space-y-6">
+            <NearbyPhotosSection
+              onOpenDetail={(item) => setSelectedDetailItem(item)}
+              geminiApiKey={geminiApiKey}
+              onOpenGeminiModal={() => setIsGeminiModalOpen(true)}
+              language={language}
+              t={t}
+            />
+          </section>
+        )}
+
+        {/* Results Section: Kata Kunci (MediaGrid) & Kategori (MediaGrid atau CategoryListSection) */}
+        {activeMode === 'keywords' && userMode && userView === 'talk' && (
+        <section aria-label="Talk Page Pengguna">
+          {filter.query.trim() !== '' ? (
+            <TalkPageView
+              title={`User talk:${filter.query.trim().replace(/^(User|Pengguna)( talk)?:/i, '')}`}
+              emptyHint="Pengguna ini belum memiliki halaman pembicaraan."
+            />
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400">
+              {language === 'id' ? 'Ketik nama pengguna untuk melihat halaman pembicaraannya.' : 'Type a username to see their talk page.'}
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeMode === 'bookmarks' && (
+        <section aria-label="Bookmark" className="space-y-6">
+          <BookmarkBackupBar language={language} />
+          <BookmarksPanel
+            savedUsers={savedUsers}
+            savedCategories={savedCategories}
+            onOpenUser={openUserSearch}
+            onOpenCategory={openCategorySearch}
+            onRemoveUser={toggleUser}
+            onRemoveCategory={toggleCategory}
+            language={language}
+          />
+          <MediaGrid
+            language={language}
+            items={items}
+            isLoading={isLoading}
+            error={error}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalHits={totalHits}
+            itemsPerPage={itemsPerPage}
+            hasNextPage={hasNextPage}
+            hasPrevPage={hasPrevPage}
+            viewLayout={viewLayout}
+            savedCount={savedCount}
+            showSavedOnly={true}
+            onSetViewLayout={setViewLayout}
+            onSetShowSavedOnly={(v) => { if (!v) handleSwitchMode('keywords'); }}
+            onGoToPage={goToPage}
+            onNextPage={nextPage}
+            onPrevPage={prevPage}
+            onRetry={refresh}
+            onOpenDetail={(item) => setSelectedDetailItem(item)}
+            onQuickCopyAttribution={(item) => setQuickAttributionItem(item)}
+            isItemSaved={isItemSaved}
+            onToggleSaveItem={toggleSaveItem}
+            isLatestUploads={false}
+            t={t}
+          />
+        </section>
+      )}
+
+      {(activeMode === 'live' || activeMode === 'random' || (activeMode === 'keywords' && filter.query.trim() !== '' && !(userMode && userView === 'talk'))) && (
+          <section aria-label="Media Gallery">
+            {activeMode === 'random' && (
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">{language === 'id' ? 'Berkas acak dari Wikimedia Commons, berbeda setiap kali.' : 'Random files from Wikimedia Commons, different every time.'}</p>
+                <button type="button" onClick={refresh} disabled={isLoading} className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 dark:border-slate-600 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 cursor-pointer"><Shuffle className="h-3.5 w-3.5" />{language === 'id' ? 'Acak lagi' : 'Shuffle again'}</button>
+              </div>
+            )}
+            <MediaGrid
+              language={language}
+              items={items}
+              isLoading={isLoading}
+              error={error}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalHits={totalHits}
+              itemsPerPage={itemsPerPage}
+              hasNextPage={hasNextPage}
+              hasPrevPage={hasPrevPage}
+              viewLayout={viewLayout}
+              savedCount={savedCount}
+              showSavedOnly={showSavedOnly}
+              onSetViewLayout={setViewLayout}
+              onSetShowSavedOnly={setShowSavedOnly}
+              onGoToPage={goToPage}
+              onNextPage={nextPage}
+              onPrevPage={prevPage}
+              onRetry={refresh}
+              onOpenDetail={(item) => setSelectedDetailItem(item)}
+              onQuickCopyAttribution={(item) => setQuickAttributionItem(item)}
+              isItemSaved={isItemSaved}
+              onToggleSaveItem={toggleSaveItem}
+              isLatestUploads={isLatestUploads && !userMode}
+              t={t}
+            />
+          </section>
+        )}
+
+{activeMode === 'categories' && currentCategoryName.trim() === '' && (
+<div className="text-center text-sm text-slate-500 dark:text-slate-400 py-10">
+{t.categoryModes?.emptyHint || 'Ketik nama kategori di atas atau pilih dari Koleksi Kurasi.'}
+</div>
+)}
+
+        {activeMode === 'categories' && currentCategoryName.trim() !== '' && (
+          <section aria-label="Category Results">
+            {categorySearchMode === 'media' ? (
+              <MediaGrid
+                language={language}
+                items={items}
+                isLoading={isLoading}
+                error={error}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalHits={totalHits}
+                itemsPerPage={itemsPerPage}
+                hasNextPage={hasNextPage}
+                hasPrevPage={hasPrevPage}
+                viewLayout={viewLayout}
+                savedCount={savedCount}
+                showSavedOnly={showSavedOnly}
+                onSetViewLayout={setViewLayout}
+                onSetShowSavedOnly={setShowSavedOnly}
+                onGoToPage={goToPage}
+                onNextPage={nextPage}
+                onPrevPage={prevPage}
+                onRetry={refresh}
+                onOpenDetail={(item) => setSelectedDetailItem(item)}
+                onQuickCopyAttribution={(item) => setQuickAttributionItem(item)}
+                isItemSaved={isItemSaved}
+                onToggleSaveItem={toggleSaveItem}
+                isLatestUploads={isLatestUploads}
+                t={t}
+              />
+            ) : (
+              <CategoryListSection
+                currentCategory={currentCategoryName || filter.query}
+                mode={categorySearchMode}
+                onSelectCategory={handleSelectCategoryFromList}
+                onViewMedia={handleViewMediaFromList}
+                t={t}
+              />
+            )}
+          </section>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors py-8 mt-12 text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center sm:text-left">
+            <span className="font-semibold text-slate-800 dark:text-slate-200">WikiGaleri</span>
+            <span className="hidden sm:inline" aria-hidden="true">·</span>
+            <span>{t.footer.tagline}</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsLicenseGuideOpen(true)}
+              className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              {t.footer.attributionGuide}
+            </button>
+            <span aria-hidden="true">·</span>
+            <button
+              onClick={() => setIsGeminiModalOpen(true)}
+              className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              {t.footer.apiKeySettings}
+            </button>
+            <span aria-hidden="true">·</span>
+            <a
+              href="https://commons.wikimedia.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1"
+            >
+              <span>{t.footer.commonsLink}</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
+      </footer>
+
+      {/* Modals */}
+      {selectedDetailItem && (
+        <MediaDetailModal
+          item={selectedDetailItem}
+          onClose={() => setSelectedDetailItem(null)}
+          geminiApiKey={geminiApiKey}
+          onOpenGeminiModal={() => {
+            setSelectedDetailItem(null);
+            setIsGeminiModalOpen(true);
+          }}
+          onNext={handleNextDetail}
+          onPrev={handlePrevDetail}
+          hasNext={hasNextDetail}
+          hasPrev={hasPrevDetail}
+          isSaved={isItemSaved(selectedDetailItem.id)}
+          onToggleSave={toggleSaveItem}
+          onSearchUser={openUserSearch}
+          onSearchCategory={openCategorySearch}
+          isUserSaved={isUserSaved}
+          isCategorySaved={(c) => isCategorySaved(normalizeCategoryName(c))}
+          onToggleUserSave={toggleUser}
+          onToggleCategorySave={(c) => toggleCategory(normalizeCategoryName(c))}
+          t={t}
+          language={language}
+        />
+      )}
+
+      {quickAttributionItem && (
+        <AttributionQuickCopyModal
+          item={quickAttributionItem}
+          onClose={() => setQuickAttributionItem(null)}
+          t={t}
+        />
+      )}
+
+      {isGeminiModalOpen && (
+        <GeminiKeyModal
+          isOpen={isGeminiModalOpen}
+          onClose={() => setIsGeminiModalOpen(false)}
+          currentKey={geminiApiKey}
+          onSaveKey={saveGeminiKey}
+          onRemoveKey={removeGeminiKey}
+          t={t}
+          lastError={geminiLastError}
+        />
+      )}
+
+      {isLicenseGuideOpen && (
+        <LicenseGuideModal
+          isOpen={isLicenseGuideOpen}
+          onClose={() => setIsLicenseGuideOpen(false)}
+          t={t}
+        />
+      )}
+
+      {isTermsOpen && (
+        <WikimediaTermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} language={language} />
+      )}
+
+      {isDisclaimerOpen && (
+        <DisclaimerModal isOpen={isDisclaimerOpen} onClose={() => setIsDisclaimerOpen(false)} language={language} />
+      )}
+    </div>
+  );
+}
