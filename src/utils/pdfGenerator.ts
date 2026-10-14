@@ -431,13 +431,13 @@ export async function exportMediaAnalysisPdf(
 
   const linkY = currentY + 13 + discLines.length * 3.4;
   const policyLabel = isEn
-    ? 'Wikimedia AI Policy & Guidelines: https://commons.wikimedia.org/wiki/Commons:Artificial_intelligence'
-    : 'Ketentuan Penggunaan AI di Proyek Wikimedia: https://commons.wikimedia.org/wiki/Commons:Artificial_intelligence';
+    ? 'Wikimedia AI Policy & Guidelines: https://meta.wikimedia.org/wiki/Artificial_intelligence/Guidelines'
+    : 'Ketentuan Penggunaan AI di Proyek Wikimedia: https://meta.wikimedia.org/wiki/Artificial_intelligence/Guidelines';
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(6.5);
   doc.setTextColor(180, 83, 9);
   doc.textWithLink(policyLabel, margin + 4, linkY, {
-    url: 'https://commons.wikimedia.org/wiki/Commons:Artificial_intelligence',
+    url: 'https://meta.wikimedia.org/wiki/Artificial_intelligence/Guidelines',
   });
 
   currentY += discBoxH + 5;

@@ -1523,7 +1523,7 @@ return (
                           <div className="flex items-center justify-between flex-wrap gap-2">
                             <span className="font-semibold block text-xs">{t.modal.aiDisclaimerTitle}</span>
                             <a
-                              href="https://commons.wikimedia.org/wiki/Commons:Artificial_intelligence"
+                              href="https://meta.wikimedia.org/wiki/Artificial_intelligence/Guidelines"
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs font-medium text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-amber-400 inline-flex items-center gap-1 transition-colors"
