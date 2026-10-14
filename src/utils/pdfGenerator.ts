@@ -238,26 +238,25 @@ export async function exportMediaAnalysisPdf(
   const thumbBoxX = margin + cardPadding;
   const thumbBoxY = currentY + cardPadding;
 
+  // Ukuran bingkai dihitung dari rasio gambar agar gambar mengisi bingkai penuh
+  let frameW = thumbBoxWidth;
+  let frameH = thumbBoxHeight;
+  if (thumbImage?.dataUrl && thumbImage.width > 0 && thumbImage.height > 0) {
+    const aspect = thumbImage.width / thumbImage.height;
+    if (aspect > 1) {
+      frameH = Math.max(20, thumbBoxWidth / aspect);
+    } else {
+      frameW = Math.max(20, thumbBoxHeight * aspect);
+    }
+  }
+
   doc.setFillColor(241, 245, 249);
   doc.setDrawColor(203, 213, 225);
-  doc.roundedRect(thumbBoxX, thumbBoxY, thumbBoxWidth, thumbBoxHeight, 1.5, 1.5, 'FD');
+  doc.roundedRect(thumbBoxX, thumbBoxY, frameW, frameH, 1.5, 1.5, 'FD');
 
   if (thumbImage?.dataUrl) {
     try {
-      const imgAspect = thumbImage.width / thumbImage.height;
-      let drawW = thumbBoxWidth;
-      let drawH = thumbBoxHeight;
-
-      if (imgAspect > 1) {
-        drawH = thumbBoxWidth / imgAspect;
-      } else {
-        drawW = thumbBoxHeight * imgAspect;
-      }
-
-      const drawX = thumbBoxX + (thumbBoxWidth - drawW) / 2;
-      const drawY = thumbBoxY + (thumbBoxHeight - drawH) / 2;
-
-      doc.addImage(thumbImage.dataUrl, 'JPEG', drawX, drawY, drawW, drawH);
+      doc.addImage(thumbImage.dataUrl, 'JPEG', thumbBoxX, thumbBoxY, frameW, frameH);
     } catch {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
@@ -410,8 +409,8 @@ export async function exportMediaAnalysisPdf(
   doc.setTextColor(146, 64, 14);
   doc.text(
     isEn
-      ? `Assistant: ${assistantName}  |  LLM Model: ${modelName} (${modelVersion})  |  Zero Hallucination Grounding`
-      : `Asisten: ${assistantName}  |  Model LLM: ${modelName} (${modelVersion})  |  Zero Hallucination Grounding`,
+      ? `Assistant: ${assistantName}  |  Model: ${modelName} (${modelVersion})`
+      : `Asisten: ${assistantName}  |  Model: ${modelName} (${modelVersion})`,
     margin + 4,
     currentY + 4.8
   );
@@ -449,7 +448,7 @@ export async function exportMediaAnalysisPdf(
     subtitle: string,
     colorRgb: [number, number, number]
   ) => {
-    ensureSpace(16);
+    ensureSpace(28);
     doc.setFillColor(colorRgb[0], colorRgb[1], colorRgb[2]);
     doc.roundedRect(margin, currentY, 5, 10, 1, 1, 'F');
 
@@ -463,7 +462,7 @@ export async function exportMediaAnalysisPdf(
     doc.setTextColor(100, 116, 139);
     doc.text(subtitle, margin + 8, currentY + 8.5);
 
-    currentY += 13;
+    currentY += 17;
   };
 
   // --- SECTION 1: PENJELASAN OBJEK UNTUK PENGGUNA AWAM ---
@@ -770,30 +769,40 @@ export async function exportMediaAnalysisPdf(
     currentY += 4.2;
 
     for (const role of analysis.wikiUsage.projectRoles) {
-      ensureSpace(9);
+      const roleHeading = `• ${sanitizeForPdf(role.wikiName)} : "${sanitizeForPdf(role.article)}"`;
+      const linkLabel = isEn ? ' (search wiki)' : ' (buka wiki)';
+      const roleLines = doc.splitTextToSize(sanitizeForPdf(role.role), contentWidth - 6);
+      ensureSpace(14 + roleLines.length * 3.4);
+
+      // Judul (tebal), dibungkus bila panjang. Lebar diukur dengan font yang sama saat menggambar.
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7.5);
       doc.setTextColor(15, 23, 42);
+      const headingLines = doc.splitTextToSize(roleHeading, contentWidth - 4);
+      doc.text(headingLines, margin + 2, currentY);
+      const lastHeadingWidth = doc.getTextWidth(headingLines[headingLines.length - 1]);
+      currentY += (headingLines.length - 1) * 3.4;
 
-      const roleHeading = `• ${sanitizeForPdf(role.wikiName)} : "${sanitizeForPdf(role.article)}"`;
-      doc.text(roleHeading, margin + 2, currentY);
-
-      const articleUrl = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(role.article)}`;
-      doc.setTextColor(37, 99, 235);
+      // Tautan (kecil), di akhir baris terakhir judul atau di baris baru bila tidak muat
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(6.5);
-      doc.textWithLink(isEn ? ' (search wiki)' : ' (buka wiki)', margin + 2 + doc.getTextWidth(roleHeading), currentY, {
-        url: articleUrl,
-      });
+      doc.setTextColor(37, 99, 235);
+      const linkWidth = doc.getTextWidth(linkLabel);
+      const articleUrl = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(role.article)}`;
+      if (margin + 2 + lastHeadingWidth + linkWidth <= margin + contentWidth) {
+        doc.textWithLink(linkLabel, margin + 2 + lastHeadingWidth, currentY, { url: articleUrl });
+      } else {
+        currentY += 3.4;
+        doc.textWithLink(linkLabel.trim(), margin + 2, currentY, { url: articleUrl });
+      }
 
-      currentY += 3.6;
+      currentY += 4;
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       doc.setTextColor(71, 85, 105);
-      const roleLines = doc.splitTextToSize(sanitizeForPdf(role.role), contentWidth - 6);
       doc.text(roleLines, margin + 5, currentY);
-      currentY += roleLines.length * 3.4 + 1.5;
+      currentY += roleLines.length * 3.4 + 2.5;
     }
   }
 
