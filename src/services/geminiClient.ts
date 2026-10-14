@@ -2,6 +2,7 @@ import { CommonsMediaItem } from '../types/wikimedia';
 
 const PRIMARY_ENDPOINT =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const MODELS_LIST_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 const FALLBACK_ENDPOINT =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
 
@@ -37,6 +38,26 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
   }
 
   const cleanKey = apiKey.trim();
+
+  // Cek utama: daftar model. Tidak menjalankan model, jadi cepat dan tidak kena beban atau kuota generate.
+  try {
+    const listRes = await fetchWithTimeout(
+      `${MODELS_LIST_ENDPOINT}?pageSize=1&key=${encodeURIComponent(cleanKey)}`,
+      { method: 'GET' },
+      15000
+    );
+    if (listRes.ok) return { valid: true };
+    if (listRes.status === 429) {
+      return { valid: true, message: 'Kunci diterima, tetapi kuota Gemini sedang terbatas.' };
+    }
+    if (listRes.status === 400 || listRes.status === 401 || listRes.status === 403) {
+      const errData = await listRes.json().catch(() => ({}));
+      return { valid: false, message: errData?.error?.message || `HTTP ${listRes.status}: ${listRes.statusText}` };
+    }
+  } catch {
+    // Jaringan lambat atau terblokir: lanjut ke uji generate sebagai cadangan
+  }
+
   const endpoints = [PRIMARY_ENDPOINT, FALLBACK_ENDPOINT];
   // Kunci yang salah ditolak (400/403) sebelum cek kapasitas. Jadi 429/503 berarti kunci diterima Google.
   let keyAccepted = false;
