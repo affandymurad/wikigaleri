@@ -123,7 +123,7 @@ async function generateQrCodeDataUrl(text: string): Promise<string | null> {
       margin: 1,
       errorCorrectionLevel: 'M',
       color: {
-        dark: '#0f172a', // slate-900
+        dark: '#0f172a', // stone-900
         light: '#ffffff',
       },
     });

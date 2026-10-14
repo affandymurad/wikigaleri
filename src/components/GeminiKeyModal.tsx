@@ -63,27 +63,27 @@ export const GeminiKeyModal: React.FC<GeminiKeyModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-      <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-5">
+    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 animate-fadeIn">
+      <div className="w-full max-w-lg bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 p-6 space-y-5">
         
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <div className="w-10 h-10 rounded-lg bg-accent-50 dark:bg-accent-950/60 border border-accent-200 dark:border-accent-800 flex items-center justify-center text-accent-600 dark:text-accent-400">
               <Key className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-base sm:text-lg text-slate-900 dark:text-white">
+              <h3 className="font-display font-bold text-base sm:text-lg text-stone-900 dark:text-white">
                 {t.geminiModal.title}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-stone-500 dark:text-stone-400">
                 {t.geminiModal.subtitle}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -92,7 +92,7 @@ export const GeminiKeyModal: React.FC<GeminiKeyModalProps> = ({
         {/* Form */}
         <form onSubmit={handleSave} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+            <label className="block text-xs font-medium text-stone-700 dark:text-stone-300">
               {t.geminiModal.keyLabel}
             </label>
             <div className="relative flex items-center">
@@ -101,12 +101,12 @@ export const GeminiKeyModal: React.FC<GeminiKeyModalProps> = ({
                 value={inputKey}
                 onChange={(e) => setInputKey(e.target.value)}
                 placeholder={t.geminiModal.placeholder}
-                className="w-full pl-3.5 pr-20 py-2.5 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className="w-full pl-3.5 pr-20 py-2.5 text-xs font-mono rounded-lg bg-stone-50 dark:bg-stone-950 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-accent-600"
               />
               <button
                 type="button"
                 onClick={() => setShowKey(!showKey)}
-                className="absolute right-3 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs flex items-center gap-1"
+                className="absolute right-3 p-1 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 text-xs flex items-center gap-1"
                 title={showKey ? 'Hide' : 'Show'}
               >
                 {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -117,10 +117,10 @@ export const GeminiKeyModal: React.FC<GeminiKeyModalProps> = ({
           {/* Status Message */}
           {statusMessage && (
             <div
-              className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+              className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
                 statusMessage.type === 'success'
-                  ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800'
-                  : 'bg-rose-50 text-rose-800 dark:bg-rose-950/50 dark:text-rose-200 border border-rose-200 dark:border-rose-800'
+                  ? 'bg-moss-50 text-moss-800 dark:bg-moss-950/50 dark:text-moss-200 border border-moss-200 dark:border-moss-800'
+                  : 'bg-accent-50 text-accent-800 dark:bg-accent-950/50 dark:text-accent-200 border border-accent-200 dark:border-accent-800'
               }`}
             >
               {statusMessage.type === 'success' ? (
@@ -133,12 +133,12 @@ export const GeminiKeyModal: React.FC<GeminiKeyModalProps> = ({
           )}
 
           {/* Privacy & How to obtain card */}
-          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs text-slate-600 dark:text-slate-400">
-            <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-slate-200">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <div className="p-3.5 bg-stone-50 dark:bg-stone-800/40 rounded-lg border border-stone-200 dark:border-stone-800 space-y-2 text-xs text-stone-600 dark:text-stone-400">
+            <div className="flex items-center gap-1.5 font-medium text-stone-800 dark:text-stone-200">
+              <ShieldCheck className="w-4 h-4 text-moss-600 dark:text-moss-400" />
               <span>{t.geminiModal.privacyTitle}</span>
             </div>
-            <p className="text-[11px] leading-relaxed">
+            <p className="text-xs leading-relaxed">
               {t.geminiModal.privacyDesc}
             </p>
             <div className="pt-1">
@@ -146,7 +146,7 @@ export const GeminiKeyModal: React.FC<GeminiKeyModalProps> = ({
                 href="https://aistudio.google.com/app/apikey"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 font-medium text-[11px]"
+                className="text-accent-600 dark:text-accent-400 hover:underline inline-flex items-center gap-1 font-medium text-xs"
               >
                 <span>{t.geminiModal.getKeyLink}</span>
                 <ExternalLink className="w-3 h-3" />
@@ -160,7 +160,7 @@ export const GeminiKeyModal: React.FC<GeminiKeyModalProps> = ({
               <button
                 type="button"
                 onClick={handleRemove}
-                className="text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 font-medium px-2 py-1 transition-colors"
+                className="text-xs text-accent-600 hover:text-accent-700 dark:text-accent-400 font-medium px-2 py-1 transition-colors"
               >
                 {t.geminiModal.removeKey}
               </button>
@@ -170,14 +170,14 @@ export const GeminiKeyModal: React.FC<GeminiKeyModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                className="px-4 py-2 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg transition-colors"
               >
                 {t.geminiModal.cancel}
               </button>
               <button
                 type="submit"
                 disabled={isTesting}
-                className="px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
+                className="px-4 py-2 text-xs font-medium text-white bg-accent-600 hover:bg-accent-700 disabled:opacity-60 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
               >
                 {isTesting ? (
                   <>

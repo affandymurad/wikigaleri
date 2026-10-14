@@ -115,12 +115,12 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
           {skeletonHeights.map((hClass, idx) => (
             <div
               key={idx}
-              className="break-inside-avoid mb-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden animate-pulse flex flex-col p-2 space-y-3"
+              className="break-inside-avoid mb-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden animate-pulse flex flex-col p-2 space-y-3"
             >
-              <div className={`w-full ${hClass} bg-slate-200 dark:bg-slate-800 rounded-xl`} />
+              <div className={`w-full ${hClass} bg-stone-200 dark:bg-stone-800 rounded-lg`} />
               <div className="p-2 space-y-2">
-                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
-                <div className="h-3 bg-slate-100 dark:bg-slate-800/60 rounded w-1/2" />
+                <div className="h-4 bg-stone-200 dark:bg-stone-800 rounded w-3/4" />
+                <div className="h-3 bg-stone-100 dark:bg-stone-800/60 rounded w-1/2" />
               </div>
             </div>
           ))}
@@ -131,17 +131,17 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
 
   if (error && items.length === 0) {
     return (
-      <div className="p-12 text-center bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/50 rounded-2xl max-w-lg mx-auto space-y-4 my-8">
-        <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
+      <div className="p-12 text-center bg-white dark:bg-stone-900 border border-accent-200 dark:border-accent-900/50 rounded-lg max-w-lg mx-auto space-y-4 my-8">
+        <div className="w-12 h-12 rounded-full bg-accent-100 dark:bg-accent-950/60 text-accent-600 dark:text-accent-400 flex items-center justify-center mx-auto">
           <AlertCircle className="w-6 h-6" />
         </div>
         <div>
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white">{t.gallery.errorTitle}</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{error}</p>
+          <h3 className="text-base font-semibold text-stone-900 dark:text-white">{t.gallery.errorTitle}</h3>
+          <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">{error}</p>
         </div>
         <button
           onClick={onRetry}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-semibold transition-colors"
         >
           <RefreshCw className="w-4 h-4" />
           <span>{t.gallery.retryBtn}</span>
@@ -152,29 +152,29 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
 
   if (items.length === 0) {
     return (
-      <div className="p-16 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md mx-auto space-y-4 my-8">
-        <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+      <div className="p-16 text-center bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg max-w-md mx-auto space-y-4 my-8">
+        <div className="w-12 h-12 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-400 flex items-center justify-center mx-auto">
           {showSavedOnly ? <Bookmark className="w-6 h-6" /> : <Layers className="w-6 h-6" />}
         </div>
         <div>
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+          <h3 className="text-base font-semibold text-stone-900 dark:text-white">
             {showSavedOnly ? t.gallery.emptySavedTitle : t.gallery.emptyTitle}
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 leading-relaxed">
             {showSavedOnly ? t.gallery.emptySavedDesc : t.gallery.emptyDesc}
           </p>
         </div>
         {showSavedOnly ? (
           <button
             onClick={() => onSetShowSavedOnly(false)}
-            className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline"
+            className="text-xs text-accent-600 dark:text-accent-400 font-semibold hover:underline"
           >
             {t.gallery.backToAll}
           </button>
         ) : (
           <button
             onClick={onRetry}
-            className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold underline"
+            className="text-xs text-accent-600 hover:text-accent-700 dark:text-accent-400 font-semibold underline"
           >
             {t.gallery.reloadSelection}
           </button>
@@ -189,25 +189,25 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
   return (
     <div id="gallery-content" className="space-y-6">
       {/* Gallery Header Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-200 dark:border-slate-800 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-stone-200 dark:border-stone-800 text-xs">
         <div className="flex items-center gap-3">
           {isLatestUploads && !showSavedOnly ? (
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-moss-50 dark:bg-moss-950/60 border border-moss-200 dark:border-moss-800 text-moss-700 dark:text-moss-300 font-semibold text-xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-moss-500 animate-pulse" />
                 <span>{language === 'id' ? 'Unggahan Terbaru' : 'Live Feed'}</span>
               </span>
-              <span className="font-semibold text-slate-900 dark:text-white text-sm">
+              <span className="font-semibold text-stone-900 dark:text-white text-sm">
                 {t.gallery.latestUploads}
               </span>
             </div>
           ) : (
-            <span className="font-semibold text-slate-900 dark:text-white text-sm">
+            <span className="font-semibold text-stone-900 dark:text-white text-sm">
               {showSavedOnly ? t.gallery.savedCollection : t.gallery.catalog}
             </span>
           )}
-          <span className="text-slate-400">·</span>
-          <span className="text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+          <span className="text-stone-400">·</span>
+          <span className="text-stone-500 dark:text-stone-400 font-mono tabular-nums">
             {showSavedOnly
               ? t.gallery.savedCount(items.length)
               : t.gallery.itemsCount(startCount, endCount, totalHits)}
@@ -215,13 +215,13 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg">
+          <div className="flex items-center gap-0.5 p-0.5 bg-stone-100 dark:bg-stone-800 rounded-lg">
             <button
               onClick={() => onSetViewLayout('masonry')}
               className={`p-1.5 rounded-md transition-all ${
                 viewLayout === 'masonry'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs'
+                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
               }`}
               title={t.gallery.masonryView}
             >
@@ -231,8 +231,8 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
               onClick={() => onSetViewLayout('grid')}
               className={`p-1.5 rounded-md transition-all ${
                 viewLayout === 'grid'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs'
+                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
               }`}
               title={t.gallery.gridView}
             >
@@ -277,11 +277,11 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
 
       {/* Numbered Pagination Toolbar */}
       {!showSavedOnly && (totalPages > 1 || (isLatestUploads && (hasNextPage || hasPrevPage))) && (
-        <div className="pt-8 pb-12 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 dark:border-slate-800 text-xs">
+        <div className="pt-8 pb-12 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-stone-200 dark:border-stone-800 text-xs">
           <button
             onClick={onPrevPage}
             disabled={!hasPrevPage}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium shadow-xs cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
             <span>{t.gallery.previous}</span>
@@ -291,7 +291,7 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
             {getPageNumbers().map((p, idx) => {
               if (p === '...') {
                 return (
-                  <span key={`dots-${idx}`} className="px-2 text-slate-400 select-none">
+                  <span key={`dots-${idx}`} className="px-2 text-stone-400 select-none">
                     ...
                   </span>
                 );
@@ -304,10 +304,10 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
                 <button
                   key={pageNum}
                   onClick={() => onGoToPage(pageNum)}
-                  className={`w-9 h-9 rounded-xl font-mono text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
+                  className={`w-9 h-9 rounded-lg font-mono text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
                     isCurrent
-                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm scale-105'
-                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900 shadow-sm scale-105'
+                      : 'bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-800 hover:bg-stone-100 dark:hover:bg-stone-800'
                   }`}
                 >
                   {pageNum}
@@ -319,7 +319,7 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
           <div className="flex items-center gap-3">
             {!isLatestUploads && (
               <form onSubmit={handleJumpSubmit} className="flex items-center gap-1.5">
-                <label htmlFor="jump-page-input" className="text-slate-400">{t.gallery.jumpTo}</label>
+                <label htmlFor="jump-page-input" className="text-stone-400">{t.gallery.jumpTo}</label>
                 <input
                   id="jump-page-input"
                   type="number"
@@ -330,16 +330,16 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
                   onChange={(e) => setJumpPageInput(e.target.value)}
                   onFocus={(e) => e.target.select()}
                   onBlur={commitJump}
-                  className="w-12 p-1.5 text-center text-xs font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-12 p-1.5 text-center text-xs font-mono rounded-lg bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 focus:outline-none focus:ring-1 focus:ring-accent-500"
                 />
-                <span className="text-slate-400 font-mono">/ {totalPages}</span>
+                <span className="text-stone-400 font-mono">/ {totalPages}</span>
               </form>
             )}
 
             <button
               onClick={onNextPage}
               disabled={!hasNextPage}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium shadow-xs cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium shadow-xs cursor-pointer"
             >
               <span>{t.gallery.next}</span>
               <ChevronRight className="w-4 h-4" />
@@ -352,7 +352,8 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
 };
 
 /** Tampilan halaman pembicaraan (Talk Page) Wikimedia Commons: file talk / user talk. */
-export const TalkPageView: React.FC<{ title: string; emptyHint?: string }> = ({ title, emptyHint }) => {
+export const TalkPageView: React.FC<{ title: string; emptyHint?: string; language?: 'en' | 'id' }> = ({ title, emptyHint, language = 'id' }) => {
+  const en = language === 'en';
   const [data, setData] = useState<TalkPageResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -376,43 +377,43 @@ export const TalkPageView: React.FC<{ title: string; emptyHint?: string }> = ({ 
   return (
     <div className="space-y-3 text-xs">
       <div className="flex items-center justify-between gap-3">
-        <h4 className="flex min-w-0 items-center gap-2 font-bold text-slate-900 dark:text-white">
-          <MessageSquare className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-          <span className="truncate">{title.replace(/^User talk:/i, 'Pembicaraan Pengguna:').replace(/^File talk:/i, 'Pembicaraan Berkas:')}</span>
+        <h4 className="flex min-w-0 items-center gap-2 font-bold text-stone-900 dark:text-white">
+          <MessageSquare className="h-4 w-4 shrink-0 text-accent-600 dark:text-accent-400" />
+          <span className="truncate">{en ? title : title.replace(/^User talk:/i, 'Pembicaraan Pengguna:').replace(/^File talk:/i, 'Pembicaraan Berkas:')}</span>
         </h4>
         <a
           href={openUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-200 px-3 py-1 font-semibold text-blue-700 hover:bg-slate-50 dark:border-slate-700 dark:text-blue-300 dark:hover:bg-slate-800"
+          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-stone-200 px-3 py-1 font-semibold text-accent-700 hover:bg-stone-50 dark:border-stone-700 dark:text-accent-300 dark:hover:bg-stone-800"
         >
-          {data && !data.exists ? 'Mulai diskusi' : 'Buka di Commons'}
+          {data && !data.exists ? (en ? 'Start a discussion' : 'Mulai diskusi') : (en ? 'Open on Commons' : 'Buka di Commons')}
           <ExternalLink className="h-3 w-3" />
         </a>
       </div>
 
       {loading && (
-        <div role="status" className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+        <div role="status" className="flex items-center gap-2 rounded-lg border border-stone-200 bg-stone-50 p-4 text-stone-500 dark:border-stone-800 dark:bg-stone-800/50 dark:text-stone-400">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Memuat halaman pembicaraan…
+          {en ? 'Loading talk page…' : 'Memuat halaman pembicaraan…'}
         </div>
       )}
 
       {!loading && error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
-          Gagal memuat halaman pembicaraan: {error}
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+          {en ? 'Failed to load talk page: ' : 'Gagal memuat halaman pembicaraan: '}{error}
         </div>
       )}
 
       {!loading && !error && data && !data.exists && (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-slate-500 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400">
-          {emptyHint || 'Belum ada halaman pembicaraan untuk ini.'}
+        <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-5 text-center text-stone-500 dark:border-stone-700 dark:bg-stone-800/40 dark:text-stone-400">
+          {emptyHint || (en ? 'No talk page yet.' : 'Belum ada halaman pembicaraan untuk ini.')}
         </div>
       )}
 
       {!loading && !error && data && data.exists && (
         <div
-          className="rounded-xl border border-slate-200 bg-white p-4 text-[13px] leading-relaxed text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200 [&_a]:text-blue-600 [&_a]:underline dark:[&_a]:text-blue-400 [&_h2]:mt-4 [&_h2]:border-b [&_h2]:border-slate-200 [&_h2]:pb-1 [&_h2]:text-base [&_h2]:font-bold dark:[&_h2]:border-slate-700 [&_h3]:mt-3 [&_h3]:font-semibold [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_dl]:my-1 [&_dd]:ml-4 [&_table]:my-2 [&_table]:w-full [&_table]:text-xs [&_td]:p-1 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 break-words"
+          className="rounded-lg border border-stone-200 bg-white p-4 text-sm leading-relaxed text-stone-700 dark:border-stone-800 dark:bg-stone-900/60 dark:text-stone-200 [&_a]:text-accent-600 [&_a]:underline dark:[&_a]:text-accent-400 [&_h2]:mt-4 [&_h2]:border-b [&_h2]:border-stone-200 [&_h2]:pb-1 [&_h2]:text-base [&_h2]:font-bold dark:[&_h2]:border-stone-700 [&_h3]:mt-3 [&_h3]:font-semibold [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_dl]:my-1 [&_dd]:ml-4 [&_table]:my-2 [&_table]:w-full [&_table]:text-xs [&_td]:p-1 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 break-words"
           dangerouslySetInnerHTML={{ __html: data.html }}
         />
       )}
@@ -453,20 +454,20 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         {icon}
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{names.length}</span>
+        <h3 className="text-sm font-bold text-stone-900 dark:text-white">{title}</h3>
+        <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-semibold text-stone-600 dark:bg-stone-800 dark:text-stone-300">{names.length}</span>
       </div>
       {names.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">{emptyText}</p>
+        <p className="rounded-lg border border-dashed border-stone-300 p-4 text-center text-xs text-stone-500 dark:border-stone-700 dark:text-stone-400">{emptyText}</p>
       ) : (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {names.map((n) => (
-            <div key={n} className="group relative flex items-center rounded-xl border border-slate-200 bg-white shadow-xs transition hover:border-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-500">
+            <div key={n} className="group relative flex items-center rounded-lg border border-stone-200 bg-white shadow-xs transition hover:border-accent-400 dark:border-stone-700 dark:bg-stone-900 dark:hover:border-accent-500">
               <button type="button" onClick={() => onOpen(n)} className="min-w-0 flex-1 cursor-pointer px-3 py-3 text-left" title={n}>
-                <span className="block truncate text-xs font-semibold text-slate-800 dark:text-slate-100">{n}</span>
-                <span className="block text-[10px] text-slate-400">{en ? 'Open search' : 'Buka pencarian'}</span>
+                <span className="block truncate text-xs font-semibold text-stone-800 dark:text-stone-100">{n}</span>
+                <span className="block text-xs text-stone-400">{en ? 'Open search' : 'Buka pencarian'}</span>
               </button>
-              <button type="button" onClick={() => onRemove(n)} aria-label={en ? 'Remove bookmark' : 'Hapus bookmark'} className="mr-1.5 shrink-0 cursor-pointer rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600 dark:hover:bg-slate-800">
+              <button type="button" onClick={() => onRemove(n)} aria-label={en ? 'Remove bookmark' : 'Hapus bookmark'} className="mr-1.5 shrink-0 cursor-pointer rounded-md p-1 text-stone-400 hover:bg-stone-100 hover:text-red-600 dark:hover:bg-stone-800">
                 <XIcon className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -480,7 +481,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
     <div className="space-y-6">
       {renderGrid(
         en ? 'Saved usernames' : 'Nama pengguna tersimpan',
-        <UserIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />,
+        <UserIcon className="h-4 w-4 text-accent-600 dark:text-accent-400" />,
         savedUsers,
         onOpenUser,
         onRemoveUser,
@@ -488,7 +489,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
       )}
       {renderGrid(
         en ? 'Saved categories' : 'Kategori tersimpan',
-        <TagIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />,
+        <TagIcon className="h-4 w-4 text-accent-600 dark:text-accent-400" />,
         savedCategories,
         onOpenCategory,
         onRemoveCategory,
@@ -496,7 +497,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
       )}
       <div className="flex items-center gap-2 pt-2">
         <Bookmark className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">{en ? 'Saved media' : 'Media tersimpan'}</h3>
+        <h3 className="text-sm font-bold text-stone-900 dark:text-white">{en ? 'Saved media' : 'Media tersimpan'}</h3>
       </div>
     </div>
   );
@@ -585,7 +586,7 @@ export function BookmarkBackupBar({ language = 'id' }: { language?: string }) {
     }
   };
 
-  const btn = 'inline-flex items-center gap-1.5 rounded-full border border-slate-300 dark:border-slate-600 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer';
+  const btn = 'inline-flex items-center gap-1.5 rounded-full border border-stone-300 dark:border-stone-600 px-3.5 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800 cursor-pointer';
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button type="button" onClick={exportJson} className={btn}>
@@ -608,7 +609,7 @@ export function BookmarkBackupBar({ language = 'id' }: { language?: string }) {
         }}
       />
       {msg && (
-        <span role="status" className={`text-xs ${msg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+        <span role="status" className={`text-xs ${msg.ok ? 'text-moss-600 dark:text-moss-400' : 'text-red-600 dark:text-red-400'}`}>
           {msg.text}
         </span>
       )}

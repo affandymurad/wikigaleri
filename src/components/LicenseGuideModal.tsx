@@ -16,70 +16,70 @@ export const LicenseGuideModal: React.FC<LicenseGuideModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-      <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-6 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 animate-fadeIn">
+      <div className="w-full max-w-2xl bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 p-6 space-y-6 max-h-[90vh] overflow-y-auto">
         
         {/* Header */}
-        <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-start justify-between pb-3 border-b border-stone-100 dark:border-stone-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+            <div className="w-10 h-10 rounded-lg bg-moss-50 dark:bg-moss-950/60 border border-moss-200 dark:border-moss-800 flex items-center justify-center text-moss-600 dark:text-moss-400">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-lg text-slate-900 dark:text-white">
+              <h3 className="font-display font-bold text-lg text-stone-900 dark:text-white">
                 {t.guideModal.title}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-stone-500 dark:text-stone-400">
                 {t.guideModal.subtitle}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="space-y-5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+        <div className="space-y-5 text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
           
           {/* Section 1: Types of Licenses */}
           <div className="space-y-3">
-            <h4 className="font-semibold text-slate-900 dark:text-white text-sm">
+            <h4 className="font-semibold text-stone-900 dark:text-white text-sm">
               {t.guideModal.section1Title}
             </h4>
 
             <div className="space-y-2.5">
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between font-semibold text-slate-900 dark:text-white mb-1">
+              <div className="p-3 rounded-lg bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800">
+                <div className="flex items-center justify-between font-semibold text-stone-900 dark:text-white mb-1">
                   <span>{t.guideModal.pdTitle}</span>
-                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono">CC0 / PD</span>
+                  <span className="text-xs text-moss-600 dark:text-moss-400 font-mono">CC0 / PD</span>
                 </div>
                 <p>{t.guideModal.pdDesc}</p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between font-semibold text-slate-900 dark:text-white mb-1">
+              <div className="p-3 rounded-lg bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800">
+                <div className="flex items-center justify-between font-semibold text-stone-900 dark:text-white mb-1">
                   <span>{t.guideModal.ccbyTitle}</span>
-                  <span className="text-[11px] text-blue-600 dark:text-blue-400 font-mono">CC BY</span>
+                  <span className="text-xs text-accent-600 dark:text-accent-400 font-mono">CC BY</span>
                 </div>
                 <p>{t.guideModal.ccbyDesc}</p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between font-semibold text-slate-900 dark:text-white mb-1">
+              <div className="p-3 rounded-lg bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800">
+                <div className="flex items-center justify-between font-semibold text-stone-900 dark:text-white mb-1">
                   <span>{t.guideModal.ccbysaTitle}</span>
-                  <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-mono">CC BY-SA</span>
+                  <span className="text-xs text-accent-600 dark:text-accent-400 font-mono">CC BY-SA</span>
                 </div>
                 <p>{t.guideModal.ccbysaDesc}</p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between font-semibold text-slate-900 dark:text-white mb-1">
+              <div className="p-3 rounded-lg bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800">
+                <div className="flex items-center justify-between font-semibold text-stone-900 dark:text-white mb-1">
                   <span>{t.guideModal.gfdlTitle}</span>
-                  <span className="text-[11px] text-amber-600 dark:text-amber-400 font-mono">GFDL</span>
+                  <span className="text-xs text-amber-600 dark:text-amber-400 font-mono">GFDL</span>
                 </div>
                 <p>{t.guideModal.gfdlDesc}</p>
               </div>
@@ -87,15 +87,15 @@ export const LicenseGuideModal: React.FC<LicenseGuideModalProps> = ({
           </div>
 
           {/* Section 2: Rule of TASL */}
-          <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 space-y-2">
-            <h4 className="font-semibold text-blue-900 dark:text-blue-200 text-xs uppercase tracking-wider flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <div className="p-4 rounded-lg bg-accent-50/70 dark:bg-accent-950/40 border border-accent-200 dark:border-accent-900/60 space-y-2">
+            <h4 className="font-semibold text-accent-900 dark:text-accent-200 text-xs uppercase tracking-wider flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-accent-600 dark:text-accent-400" />
               <span>{t.guideModal.taslTitle}</span>
             </h4>
-            <p className="text-slate-700 dark:text-slate-300 text-xs">
+            <p className="text-stone-700 dark:text-stone-300 text-xs">
               {t.guideModal.taslDesc}
             </p>
-            <ul className="list-disc pl-4 space-y-1 text-slate-700 dark:text-slate-300 text-xs">
+            <ul className="list-disc pl-4 space-y-1 text-stone-700 dark:text-stone-300 text-xs">
               {t.guideModal.taslItems.map((item, idx) => (
                 <li key={idx}>{item}</li>
               ))}
@@ -103,31 +103,31 @@ export const LicenseGuideModal: React.FC<LicenseGuideModalProps> = ({
           </div>
 
           {/* Section 3: Ethical AI notice */}
-          <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2">
-            <div className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
+          <div className="p-4 rounded-lg bg-stone-100 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-800 space-y-2">
+            <div className="flex items-center gap-1.5 font-semibold text-stone-900 dark:text-white">
               <AlertTriangle className="w-4 h-4 text-amber-500" />
               <span>{t.guideModal.aiPolicyTitle}</span>
             </div>
-            <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+            <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-300">
               {t.guideModal.aiPolicyDesc}
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+        <div className="pt-3 border-t border-stone-100 dark:border-stone-800 flex justify-between items-center">
           <a
             href="https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium"
+            className="text-xs text-accent-600 dark:text-accent-400 hover:underline flex items-center gap-1 font-medium"
           >
             <span>{t.guideModal.docsLink}</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90 transition-opacity"
+            className="px-4 py-2 bg-stone-900 text-white dark:bg-white dark:text-stone-900 rounded-lg text-xs font-medium hover:opacity-90 transition-opacity"
           >
             {t.guideModal.closeBtn}
           </button>
@@ -177,63 +177,63 @@ export const WikimediaTermsModal: React.FC<WikimediaTermsModalProps> = ({ isOpen
     : <Ban className="w-4 h-4" />;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
       <div
-        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-6 max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-2xl bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 p-6 space-y-6 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-start justify-between pb-3 border-b border-stone-100 dark:border-stone-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <div className="w-10 h-10 rounded-lg bg-accent-50 dark:bg-accent-950/60 border border-accent-200 dark:border-accent-800 flex items-center justify-center text-accent-600 dark:text-accent-400">
               <HelpCircle className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-lg text-slate-900 dark:text-white">
+              <h3 className="font-display font-bold text-lg text-stone-900 dark:text-white">
                 {id ? 'Ketentuan Wikimedia' : 'Wikimedia Terms of Reuse'}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-stone-500 dark:text-stone-400">
                 {id ? 'Ringkasan singkat cara memakai ulang berkas Commons di luar Wikimedia' : 'A short summary of how to reuse Commons files outside Wikimedia'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+        <div className="space-y-2.5 text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
           {sections.map((s) => (
-            <div key={s.title} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white mb-1">
-                <span className="text-blue-600 dark:text-blue-400">{iconFor(s.icon)}</span>
+            <div key={s.title} className="p-3 rounded-lg bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800">
+              <div className="flex items-center gap-2 font-semibold text-stone-900 dark:text-white mb-1">
+                <span className="text-accent-600 dark:text-accent-400">{iconFor(s.icon)}</span>
                 <span>{s.title}</span>
               </div>
               <p>{s.body}</p>
             </div>
           ))}
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-stone-500 dark:text-stone-400">
             {id
               ? 'Ini ringkasan, bukan nasihat hukum. Baca halaman resminya untuk ketentuan lengkap dan terbaru.'
               : 'This is a summary, not legal advice. Read the official page for the full and current terms.'}
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex-wrap">
+        <div className="flex items-center justify-between gap-3 pt-3 border-t border-stone-100 dark:border-stone-800 flex-wrap">
           <a
             href={TERMS_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-medium transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />
             {id ? 'Buka halaman resminya di Wikimedia Commons' : 'Open the official page on Wikimedia Commons'}
           </a>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90 transition-opacity"
+            className="px-4 py-2 bg-stone-900 text-white dark:bg-white dark:text-stone-900 rounded-lg text-xs font-medium hover:opacity-90 transition-opacity"
           >
             {id ? 'Tutup' : 'Close'}
           </button>
@@ -285,38 +285,38 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ isOpen, onClos
     : <AlertTriangle className="w-4 h-4" />;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
       <div
-        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-6 max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-2xl bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 p-6 space-y-6 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-start justify-between pb-3 border-b border-stone-100 dark:border-stone-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <div className="w-10 h-10 rounded-lg bg-accent-50 dark:bg-accent-950/60 border border-accent-200 dark:border-accent-800 flex items-center justify-center text-accent-600 dark:text-accent-400">
               <Info className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-lg text-slate-900 dark:text-white">
+              <h3 className="font-display font-bold text-lg text-stone-900 dark:text-white">
                 {id ? 'Apa itu WikiGaleri' : 'What is WikiGaleri'}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-stone-500 dark:text-stone-400">
                 {id ? 'Masalah yang dijawab, peran Gemini, dan batasannya' : 'The problem it solves, what Gemini does, and its limits'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+        <div className="space-y-2.5 text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
           {sections.map((s) => (
-            <div key={s.title} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white mb-1">
-                <span className="text-blue-600 dark:text-blue-400">{iconFor(s.icon)}</span>
+            <div key={s.title} className="p-3 rounded-lg bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800">
+              <div className="flex items-center gap-2 font-semibold text-stone-900 dark:text-white mb-1">
+                <span className="text-accent-600 dark:text-accent-400">{iconFor(s.icon)}</span>
                 <span>{s.title}</span>
               </div>
               <p>{s.body}</p>
@@ -324,10 +324,10 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ isOpen, onClos
           ))}
         </div>
 
-        <div className="flex justify-end pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex justify-end pt-3 border-t border-stone-100 dark:border-stone-800">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-lg text-xs font-medium hover:opacity-90 transition-opacity"
+            className="px-4 py-2 bg-stone-900 text-white dark:bg-white dark:text-stone-900 rounded-lg text-xs font-medium hover:opacity-90 transition-opacity"
           >
             {id ? 'Tutup' : 'Close'}
           </button>

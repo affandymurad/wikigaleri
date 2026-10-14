@@ -85,64 +85,64 @@ const FileHistoryPanel: React.FC<{ title: string; onSearchUser?: (u: string) => 
   const chipCls = (on: boolean) =>
     `inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-medium transition-colors ${
       on
-        ? 'border-blue-600 bg-blue-600 text-white'
-        : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+        ? 'border-accent-600 bg-accent-600 text-white'
+        : 'border-stone-200 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
     }`;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => setView('versions')} className={chipCls(view === 'versions')}>
-          Versi Berkas{data ? ` (${data.versions.length})` : ''}
+          {language === 'en' ? 'File versions' : 'Versi Berkas'}{data ? ` (${data.versions.length})` : ''}
         </button>
         <button type="button" onClick={() => setView('edits')} className={chipCls(view === 'edits')}>
-          Suntingan Halaman{data ? ` (${data.edits.length})` : ''}
+          {language === 'en' ? 'Page edits' : 'Suntingan Halaman'}{data ? ` (${data.edits.length})` : ''}
         </button>
         <a
           href={historyUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="ml-auto inline-flex items-center gap-1 text-blue-700 hover:underline dark:text-blue-300"
+          className="ml-auto inline-flex items-center gap-1 text-accent-700 hover:underline dark:text-accent-300"
         >
-          Riwayat lengkap <ExternalLink className="h-3 w-3" />
+          {language === 'en' ? 'Full history' : 'Riwayat lengkap'} <ExternalLink className="h-3 w-3" />
         </a>
       </div>
 
       {loading && (
-        <div role="status" className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+        <div role="status" className="flex items-center gap-2 rounded-lg border border-stone-200 bg-stone-50 p-4 text-stone-500 dark:border-stone-800 dark:bg-stone-800/50 dark:text-stone-400">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Memuat riwayat…
+          {language === 'en' ? 'Loading history…' : 'Memuat riwayat…'}
         </div>
       )}
       {!loading && error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
-          Gagal memuat riwayat: {error}
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+          {language === 'en' ? 'Failed to load history: ' : 'Gagal memuat riwayat: '}{error}
         </div>
       )}
 
       {!loading && !error && data && view === 'versions' && (
         <ul className="space-y-2">
-          {data.versions.length === 0 && <li className="text-slate-500">Tidak ada data versi.</li>}
+          {data.versions.length === 0 && <li className="text-stone-500">{language === 'en' ? 'No version data.' : 'Tidak ada data versi.'}</li>}
           {data.versions.map((ver, idx) => (
-            <li key={ver.timestamp + idx} className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50">
+            <li key={ver.timestamp + idx} className="flex gap-3 rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-800/50">
               {ver.thumb ? (
-                <img src={ver.thumb} alt="" referrerPolicy="no-referrer" className="h-14 w-14 shrink-0 rounded-lg bg-slate-200 object-cover dark:bg-slate-700" />
+                <img src={ver.thumb} alt="" referrerPolicy="no-referrer" className="h-14 w-14 shrink-0 rounded-lg bg-stone-200 object-cover dark:bg-stone-700" />
               ) : (
-                <div className="h-14 w-14 shrink-0 rounded-lg bg-slate-200 dark:bg-slate-700" />
+                <div className="h-14 w-14 shrink-0 rounded-lg bg-stone-200 dark:bg-stone-700" />
               )}
               <div className="min-w-0 flex-1 space-y-0.5">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <span className="font-semibold text-slate-900 dark:text-white">{fmtDateTime(ver.timestamp)}</span>
+                  <span className="font-semibold text-stone-900 dark:text-white">{fmtDateTime(ver.timestamp)}</span>
                   {idx === 0 && (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Terkini</span>
+                    <span className="rounded-full bg-moss-100 px-2 py-0.5 text-xs font-semibold text-moss-700 dark:bg-moss-900/40 dark:text-moss-300">{language === 'en' ? 'Current' : 'Terkini'}</span>
                   )}
                 </div>
-                <div className="text-slate-500 dark:text-slate-400">
-                  <a href={userLink(ver.user)} onClick={(e) => { if (onSearchUser) { e.preventDefault(); onSearchUser(ver.user); } }} title={onSearchUser ? (language === 'en' ? 'Search this username' : 'Cari nama pengguna ini') : undefined} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline dark:text-blue-300">{ver.user}</a>
+                <div className="text-stone-500 dark:text-stone-400">
+                  <a href={userLink(ver.user)} onClick={(e) => { if (onSearchUser) { e.preventDefault(); onSearchUser(ver.user); } }} title={onSearchUser ? (language === 'en' ? 'Search this username' : 'Cari nama pengguna ini') : undefined} target="_blank" rel="noopener noreferrer" className="text-accent-700 hover:underline dark:text-accent-300">{ver.user}</a>
                   {ver.width > 0 && <span className="font-mono"> · {ver.width}×{ver.height} px</span>}
                   {ver.size > 0 && <span className="font-mono"> · {formatBytes(ver.size)}</span>}
                 </div>
-                {ver.comment && <div className="break-words text-slate-600 dark:text-slate-300">{ver.comment}</div>}
+                {ver.comment && <div className="break-words text-stone-600 dark:text-stone-300">{ver.comment}</div>}
               </div>
             </li>
           ))}
@@ -151,15 +151,15 @@ const FileHistoryPanel: React.FC<{ title: string; onSearchUser?: (u: string) => 
 
       {!loading && !error && data && view === 'edits' && (
         <ul className="space-y-2">
-          {data.edits.length === 0 && <li className="text-slate-500">Tidak ada data suntingan.</li>}
+          {data.edits.length === 0 && <li className="text-stone-500">{language === 'en' ? 'No edit data.' : 'Tidak ada data suntingan.'}</li>}
           {data.edits.map((ed) => (
-            <li key={ed.revid} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50">
-              <div className="flex flex-wrap items-center gap-x-2 text-slate-500 dark:text-slate-400">
-                <span className="font-semibold text-slate-900 dark:text-white">{fmtDateTime(ed.timestamp)}</span>
-                <a href={userLink(ed.user)} onClick={(e) => { if (onSearchUser) { e.preventDefault(); onSearchUser(ed.user); } }} title={onSearchUser ? (language === 'en' ? 'Search this username' : 'Cari nama pengguna ini') : undefined} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline dark:text-blue-300">{ed.user}</a>
-                {ed.size > 0 && <span className="font-mono">· {ed.size} byte</span>}
+            <li key={ed.revid} className="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-800/50">
+              <div className="flex flex-wrap items-center gap-x-2 text-stone-500 dark:text-stone-400">
+                <span className="font-semibold text-stone-900 dark:text-white">{fmtDateTime(ed.timestamp)}</span>
+                <a href={userLink(ed.user)} onClick={(e) => { if (onSearchUser) { e.preventDefault(); onSearchUser(ed.user); } }} title={onSearchUser ? (language === 'en' ? 'Search this username' : 'Cari nama pengguna ini') : undefined} target="_blank" rel="noopener noreferrer" className="text-accent-700 hover:underline dark:text-accent-300">{ed.user}</a>
+                {ed.size > 0 && <span className="font-mono">· {ed.size} bytes</span>}
               </div>
-              {ed.comment && <div className="mt-0.5 break-words text-slate-600 dark:text-slate-300">{ed.comment}</div>}
+              {ed.comment && <div className="mt-0.5 break-words text-stone-600 dark:text-stone-300">{ed.comment}</div>}
             </li>
           ))}
         </ul>
@@ -202,7 +202,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [hasNext, hasPrev, onNext, onPrev, onClose, item]);
 
-  const [activeTab, setActiveTab] = useState<DetailTab>('download');
+  const [activeTab, setActiveTab] = useState<DetailTab>('ai');
   const [attributionFormat, setAttributionFormat] = useState<'plain' | 'markdown' | 'html' | 'wikitext'>('plain');
   const [copiedFormat, setCopiedFormat] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
@@ -504,14 +504,14 @@ useEffect(() => {
   if (!item || !licenseInfo) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+    <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/70 flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
       {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh] lg:h-[88vh]">
+      <div className="relative w-full max-w-5xl bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 overflow-hidden flex flex-col max-h-[92vh] lg:h-[88vh]">
         
         {/* Header Bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/50">
           <div className="flex items-center gap-3 min-w-0 pr-4">
-            <h2 className="font-display font-semibold text-base sm:text-lg text-slate-900 dark:text-white truncate">
+            <h2 className="font-display font-semibold text-base sm:text-lg text-stone-900 dark:text-white truncate">
               {item.cleanTitle}
             </h2>
           </div>
@@ -526,10 +526,10 @@ useEffect(() => {
                 onClick={() => onToggleSave(item)}
                 className={`p-2 rounded-lg border transition-colors cursor-pointer ${
                   isSaved
-                    ? 'bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/60 dark:border-rose-900'
-                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-accent-50 border-accent-200 text-accent-600 dark:bg-accent-950/60 dark:border-accent-900'
+                    : 'text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200 border-stone-200 dark:border-stone-800 hover:bg-stone-100 dark:hover:bg-stone-800'
                 }`}
-                title={isSaved ? 'Hapus dari koleksi favorit' : 'Simpan ke koleksi favorit'}
+                title={language === 'en' ? (isSaved ? 'Remove from favorites' : 'Save to favorites') : (isSaved ? 'Hapus dari koleksi favorit' : 'Simpan ke koleksi favorit')}
               >
                 <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
               </button>
@@ -537,8 +537,8 @@ useEffect(() => {
 
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
-              aria-label="Tutup modal (Escape)"
+              className="p-2 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors shrink-0"
+              aria-label={language === 'en' ? 'Close (Escape)' : 'Tutup modal (Escape)'}
             >
               <X className="w-5 h-5" />
             </button>
@@ -549,7 +549,7 @@ useEffect(() => {
         <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden lg:grid-rows-1">
           
           {/* Kiri / atas: panggung media (stage) + toolbar */}
-          <div className="lg:col-span-7 relative isolate overflow-hidden bg-slate-950 flex flex-col min-h-[320px] lg:min-h-0 lg:h-full">
+          <div className="lg:col-span-7 relative isolate overflow-hidden bg-stone-950 flex flex-col min-h-[320px] lg:min-h-0 lg:h-full">
             {/* Latar ambient: gambar yang sama diburamkan + gradasi */}
             {(item.mediaType === 'image' || (item.mediaType === 'document' && item.thumbnailUrl)) && (
               <img
@@ -560,20 +560,20 @@ useEffect(() => {
                 className="pointer-events-none absolute inset-0 -z-10 h-full w-full scale-125 object-cover opacity-40 blur-3xl saturate-150"
               />
             )}
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-slate-950/50 via-slate-950/60 to-slate-950/90" />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-stone-950/50 via-stone-950/60 to-stone-950/90" />
 
             {/* Panggung */}
-            <div className="relative flex min-h-0 flex-1 items-center justify-center p-4 sm:p-8 lg:overflow-y-auto">
+            <div className="relative flex flex-1 lg:min-h-0 items-center justify-center px-12 py-4 sm:px-14 sm:py-8 lg:overflow-y-auto">
               {item.mediaType === 'image' ? (
-                <div className="relative max-h-[60vh] max-w-full flex items-center justify-center">
+                <div className="relative max-h-[min(60vh,calc(92vh-10rem))] lg:max-h-full lg:h-full max-w-full flex items-center justify-center">
                   {isMediaLoading && (
                     <div
                       role="status"
                       aria-live="polite"
-                      className="flex aspect-[4/3] w-[min(100%,440px)] animate-pulse flex-col items-center justify-center gap-3 rounded-xl bg-white/5 text-slate-300 ring-1 ring-white/10"
+                      className="flex aspect-[4/3] w-[min(100%,440px)] animate-pulse flex-col items-center justify-center gap-3 rounded-lg bg-white/5 text-stone-300 ring-1 ring-white/10"
                     >
-                      <Loader2 className="h-7 w-7 animate-spin text-blue-400" />
-                      <span className="text-xs font-medium tracking-wide">Memuat foto…</span>
+                      <Loader2 className="h-7 w-7 animate-spin text-accent-400" />
+                      <span className="text-xs font-medium tracking-wide">{language === 'en' ? 'Loading photo…' : 'Memuat foto…'}</span>
                     </div>
                   )}
                   <img
@@ -589,21 +589,21 @@ useEffect(() => {
                     className={
                       isMediaLoading
                         ? 'pointer-events-none absolute h-px w-px opacity-0'
-                        : 'max-h-[60vh] max-w-full object-contain rounded-xl ring-1 ring-white/15 shadow-2xl shadow-black/60 animate-in fade-in'
+                        : 'max-h-[min(60vh,calc(92vh-10rem))] lg:max-h-full max-w-full object-contain rounded-lg ring-1 ring-white/15 shadow-sm shadow-black/60 animate-in fade-in'
                     }
                   />
                 </div>
               ) : item.mediaType === 'audio' ? (
-                <div className="w-full max-w-md space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5 text-center backdrop-blur">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-500/20 text-blue-300">
+                <div className="w-full max-w-md space-y-4 rounded-lg border border-white/10 bg-white/5 p-5 text-center ">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent-500/20 text-accent-300">
                     <FileText className="h-7 w-7" />
                   </div>
                   <div>
                     <h4 className="font-display text-sm font-semibold text-white">{item.cleanTitle}</h4>
-                    <p className="mt-0.5 font-mono text-[11px] text-slate-400">{item.mimeType}</p>
+                    <p className="mt-0.5 font-mono text-xs text-stone-400">{item.mimeType}</p>
                   </div>
                   <audio controls src={item.fileUrl} className="w-full">
-                    Browser Anda tidak mendukung pemutar audio HTML5.
+                    {language === 'en' ? 'Your browser does not support the HTML5 audio player.' : 'Browser Anda tidak mendukung pemutar audio HTML5.'}
                   </audio>
                 </div>
               ) : item.mediaType === 'document' ? (
@@ -612,16 +612,16 @@ useEffect(() => {
                     type="button"
                     onClick={openReader}
                     title={language === 'en' ? 'Reading mode' : 'Mode Baca'}
-                    className="group relative cursor-pointer rounded-md shadow-2xl shadow-black/60 ring-1 ring-white/15 transition-transform hover:scale-[1.01]"
+                    className="group relative cursor-pointer rounded-md shadow-sm shadow-black/60 ring-1 ring-white/15 max-h-[min(56vh,calc(92vh-10rem))] lg:max-h-full lg:h-full max-w-full"
                   >
                     <img
                       src={item.thumbnailUrl}
                       alt={item.cleanTitle}
                       referrerPolicy="no-referrer"
-                      className="max-h-[56vh] max-w-full rounded-md bg-white object-contain"
+                      className="max-h-[min(56vh,calc(92vh-10rem))] lg:max-h-full lg:h-full max-w-full rounded-md bg-white object-contain"
                     />
                     <span className="absolute inset-0 flex items-center justify-center rounded-md bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-900">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-stone-900">
                         <BookOpen className="h-3.5 w-3.5" />
                         {language === 'en' ? 'Reading mode' : 'Mode Baca'}
                       </span>
@@ -637,9 +637,9 @@ useEffect(() => {
                   controls
                   poster={item.thumbnailUrl}
                   src={item.fileUrl}
-                  className="max-h-[56vh] w-full rounded-xl bg-black shadow-2xl ring-1 ring-white/10"
+                  className="block w-full max-h-[min(70vh,calc(92vh-10rem))] lg:max-h-full lg:h-full rounded-lg bg-black object-contain shadow-sm ring-1 ring-white/10"
                 >
-                  Browser Anda tidak mendukung pemutar video HTML5.
+                  {language === 'en' ? 'Your browser does not support the HTML5 video player.' : 'Browser Anda tidak mendukung pemutar video HTML5.'}
                 </video>
               )}
 
@@ -650,9 +650,9 @@ useEffect(() => {
                     type="button"
                     onClick={onPrev}
                     disabled={!hasPrev}
-                    title="Berkas Sebelumnya (Tombol Panah Kiri)"
-                    aria-label="Berkas Sebelumnya"
-                    className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-black/40 text-white backdrop-blur-md transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-30"
+                    title={language === 'en' ? 'Previous file (Left arrow)' : 'Berkas Sebelumnya (Tombol Panah Kiri)'}
+                    aria-label={language === 'en' ? 'Previous file' : 'Berkas Sebelumnya'}
+                    className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-black/40 text-white transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
@@ -660,9 +660,9 @@ useEffect(() => {
                     type="button"
                     onClick={onNext}
                     disabled={!hasNext}
-                    title="Berkas Berikutnya (Tombol Panah Kanan)"
-                    aria-label="Berkas Berikutnya"
-                    className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-black/40 text-white backdrop-blur-md transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-30"
+                    title={language === 'en' ? 'Next file (Right arrow)' : 'Berkas Berikutnya (Tombol Panah Kanan)'}
+                    aria-label={language === 'en' ? 'Next file' : 'Berkas Berikutnya'}
+                    className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-black/40 text-white transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     <ChevronRight className="h-5 w-5" />
                   </button>
@@ -671,8 +671,8 @@ useEffect(() => {
             </div>
 
             {/* Toolbar bawah: info berkas + aksi */}
-            <div className="relative flex flex-wrap items-center justify-between gap-2 border-t border-white/10 bg-black/35 px-3 py-2.5 backdrop-blur-md sm:px-5">
-              <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-slate-200">
+            <div className="relative flex flex-wrap items-center justify-between gap-2 border-t border-white/10 bg-black/35 px-3 py-2.5 sm:px-5">
+              <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs text-stone-200">
                 <span className="rounded-md bg-white/10 px-2 py-1 uppercase">{(item.mimeType.split('/')[1] || item.mediaType).replace(/^x-/, '')}</span>
                 {item.width > 0 && <span className="rounded-md bg-white/10 px-2 py-1">{item.width} × {item.height} px</span>}
                 {item.fileSize > 0 && <span className="rounded-md bg-white/10 px-2 py-1">{formatBytes(item.fileSize)}</span>}
@@ -685,7 +685,7 @@ useEffect(() => {
                   <button
                     type="button"
                     onClick={openReader}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-500"
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-accent-500"
                   >
                     <BookOpen className="h-3.5 w-3.5" />
                     {language === 'en' ? 'Reading mode' : 'Mode Baca'}
@@ -728,7 +728,7 @@ useEffect(() => {
                 </div>
                 <div ref={readerScrollRef} onScroll={onReaderScroll} className="min-h-0 flex-1 overflow-y-auto bg-neutral-900">
                   {readerLoading && (
-                    <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-300">
+                    <div className="flex items-center justify-center gap-2 py-16 text-sm text-stone-300">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       {language === 'en' ? 'Preparing pages…' : 'Menyiapkan halaman…'}
                     </div>
@@ -736,7 +736,7 @@ useEffect(() => {
                   {readerInfo && (
                     <div className="mx-auto max-w-3xl space-y-3 px-2 py-3 sm:px-4 sm:py-5">
                       {Array.from({ length: readerInfo.pages }, (_, i) => i + 1).map((n) => (
-                        <div key={n} data-page={n} className="overflow-hidden rounded-sm bg-white shadow-lg" style={{ minHeight: '40vh' }}>
+                        <div key={n} data-page={n} className="overflow-hidden rounded-sm bg-white shadow-sm" style={{ minHeight: '40vh' }}>
                           <img
                             src={readerPageUrl(n)}
                             alt={(language === 'en' ? 'Page ' : 'Halaman ') + n}
@@ -761,7 +761,7 @@ useEffect(() => {
                       value={readerPage}
                       onChange={(e) => jumpToPage(Number(e.target.value))}
                       aria-label={language === 'en' ? 'Jump to page' : 'Lompat ke halaman'}
-                      className="flex-1 accent-blue-500"
+                      className="flex-1 accent-accent-500"
                     />
                   </div>
                 )}
@@ -771,18 +771,31 @@ useEffect(() => {
           </div>
 
           {/* Right: Tabbed Details & Actions Pane (5 cols on lg) */}
-          <div className="lg:col-span-5 flex flex-col lg:min-h-0 lg:h-full lg:overflow-y-auto bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800">
+          <div className="lg:col-span-5 flex flex-col lg:min-h-0 lg:h-full lg:overflow-y-auto bg-white dark:bg-stone-900 border-t lg:border-t-0 lg:border-l border-stone-200 dark:border-stone-800">
             
             {/* Tabs Selector (chip) */}
-          <div className="sticky top-0 z-10 flex flex-wrap gap-2 border-b border-slate-200 bg-white px-4 py-3 text-xs font-medium dark:border-slate-800 dark:bg-slate-900">
+          <div className="sticky top-0 z-10 flex flex-wrap gap-2 border-b border-stone-200 bg-white px-4 py-3 text-xs font-medium dark:border-stone-800 dark:bg-stone-900">
+            <button
+              type="button"
+              onClick={() => setActiveTab('ai')}
+              aria-pressed={activeTab === 'ai'}
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors ${
+                activeTab === 'ai'
+                  ? 'border-accent-600 bg-accent-600 font-semibold text-white shadow-xs'
+                  : 'border-stone-200 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>{t.modal.aiTab}</span>
+            </button>
             <button
               type="button"
               onClick={() => setActiveTab('download')}
               aria-pressed={activeTab === 'download'}
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors ${
                 activeTab === 'download'
-                  ? 'border-blue-600 bg-blue-600 font-semibold text-white shadow-xs'
-                  : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  ? 'border-accent-600 bg-accent-600 font-semibold text-white shadow-xs'
+                  : 'border-stone-200 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
               }`}
             >
               <Download className="h-3.5 w-3.5" />
@@ -793,8 +806,8 @@ type="button"
 onClick={() => setActiveTab('cats')}
 aria-pressed={activeTab === 'cats'}
 className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors ' + (activeTab === 'cats'
-? 'border-blue-600 bg-blue-600 font-semibold text-white shadow-xs'
-: 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700')}
+? 'border-accent-600 bg-accent-600 font-semibold text-white shadow-xs'
+: 'border-stone-200 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700')}
 >
 <Tag className="h-3.5 w-3.5" />
 <span>{language === 'en' ? 'Categories & Usage' : 'Kategori & Penggunaan'}</span>
@@ -805,8 +818,8 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
               aria-pressed={activeTab === 'license'}
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors ${
                 activeTab === 'license'
-                  ? 'border-blue-600 bg-blue-600 font-semibold text-white shadow-xs'
-                  : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  ? 'border-accent-600 bg-accent-600 font-semibold text-white shadow-xs'
+                  : 'border-stone-200 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
               }`}
             >
               <ShieldCheck className="h-3.5 w-3.5" />
@@ -818,12 +831,12 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
               aria-pressed={activeTab === 'history'}
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors ${
                 activeTab === 'history'
-                  ? 'border-blue-600 bg-blue-600 font-semibold text-white shadow-xs'
-                  : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  ? 'border-accent-600 bg-accent-600 font-semibold text-white shadow-xs'
+                  : 'border-stone-200 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
               }`}
             >
               <History className="h-3.5 w-3.5" />
-              <span>Riwayat Versi</span>
+              <span>{language === 'en' ? 'Version History' : 'Riwayat Versi'}</span>
             </button>
             <button
               type="button"
@@ -831,25 +844,12 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
               aria-pressed={activeTab === 'talk'}
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors ${
                 activeTab === 'talk'
-                  ? 'border-blue-600 bg-blue-600 font-semibold text-white shadow-xs'
-                  : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  ? 'border-accent-600 bg-accent-600 font-semibold text-white shadow-xs'
+                  : 'border-stone-200 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
               }`}
             >
               <MessageSquare className="h-3.5 w-3.5" />
-              <span>Diskusi</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('ai')}
-              aria-pressed={activeTab === 'ai'}
-              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors ${
-                activeTab === 'ai'
-                  ? 'border-blue-600 bg-blue-600 font-semibold text-white shadow-xs'
-                  : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
-              }`}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>{t.modal.aiTab}</span>
+              <span>{language === 'en' ? 'Discussion' : 'Diskusi'}</span>
             </button>
           </div>
 
@@ -858,8 +858,8 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
               <div className="p-5 space-y-6 flex-1 overflow-y-auto text-sm">
                 {/* Download Options Box */}
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-slate-900 dark:text-white text-sm flex items-center gap-1.5">
-                    <Download className="w-4 h-4 text-blue-600" />
+                  <h4 className="font-semibold text-stone-900 dark:text-white text-sm flex items-center gap-1.5">
+                    <Download className="w-4 h-4 text-accent-600" />
                     <span>{t.modal.downloadTitle}</span>
                   </h4>
 
@@ -869,7 +869,7 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                       download={item.title.replace(/^File:/i, '')}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full flex items-center justify-between p-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-xs"
+                      className="w-full flex items-center justify-between p-3 rounded-lg bg-accent-600 hover:bg-accent-700 text-white font-medium transition-colors shadow-xs"
                     >
                       <div className="flex items-center gap-2">
                         <Download className="w-4 h-4" />
@@ -883,9 +883,9 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleCopyUrl(item.fileUrl)}
-                        className="flex-1 py-2 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-1.5"
+                        className="flex-1 py-2 px-3 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-1.5"
                       >
-                        {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedUrl ? <Check className="w-3.5 h-3.5 text-moss-600" /> : <Copy className="w-3.5 h-3.5" />}
                         <span>{copiedUrl ? t.modal.copied : t.modal.copyDirectLink}</span>
                       </button>
 
@@ -893,7 +893,7 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                         href={item.pageUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 py-2 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-1.5 text-center"
+                        className="flex-1 py-2 px-3 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-1.5 text-center"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         <span>{t.modal.commonsPage}</span>
@@ -902,7 +902,7 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
 
                     {item.width > 320 && item.height > 0 && (item.mediaType === 'image' || item.mediaType === 'document') && (
                       <div className="space-y-1.5 pt-1">
-                        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <div className="text-xs font-semibold text-stone-500 dark:text-stone-400">
                           {language === 'en' ? 'Other sizes (preview image)' : 'Ukuran lain (gambar pratinjau)'}
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -917,15 +917,15 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                                   href={href}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                                  className="flex items-center justify-between gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700"
                                 >
-                                  <span className="flex items-center gap-1.5 font-medium"><Download className="h-3.5 w-3.5 text-slate-400" />{w} px</span>
-                                  <span className="font-mono text-[10px] text-slate-400">{w}×{h}</span>
+                                  <span className="flex items-center gap-1.5 font-medium"><Download className="h-3.5 w-3.5 text-stone-400" />{w} px</span>
+                                  <span className="font-mono text-xs text-stone-400">{w}×{h}</span>
                                 </a>
                               );
                             })}
                         </div>
-                        <p className="text-[10px] leading-snug text-slate-400">
+                        <p className="text-xs leading-snug text-stone-400">
                           {language === 'en'
                             ? 'Resized copies are generated by Wikimedia (usually JPG/PNG). Open the link, then save the image.'
                             : 'Salinan berukuran lain dibuat oleh Wikimedia (umumnya JPG/PNG). Buka tautan, lalu simpan gambarnya.'}
@@ -936,25 +936,25 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                 </div>
 
                 {/* Metadata Details */}
-                <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <h4 className="font-semibold text-slate-900 dark:text-white text-[13px] uppercase tracking-wider">
+                <div className="space-y-3 pt-3 border-t border-stone-100 dark:border-stone-800">
+                  <h4 className="font-semibold text-stone-900 dark:text-white text-sm uppercase tracking-wider">
                     {t.modal.sourceInfo}
                   </h4>
 
-                  <dl className="space-y-2 text-slate-600 dark:text-slate-300">
+                  <dl className="space-y-2 text-stone-600 dark:text-stone-300">
                     <div className="flex items-start gap-2">
-                      <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                      <FileText className="w-3.5 h-3.5 text-stone-400 mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <dt className="text-slate-400 text-xs">{language === 'en' ? 'Name' : 'Nama'}</dt>
-                        <dd className="font-medium break-all text-slate-800 dark:text-slate-200">{item.title.replace(/^File:/i, '')}</dd>
+                        <dt className="text-stone-400 text-xs">{language === 'en' ? 'Name' : 'Nama'}</dt>
+                        <dd className="font-medium break-all text-stone-800 dark:text-stone-200">{item.title.replace(/^File:/i, '')}</dd>
                       </div>
                     </div>
 
                     <div className="flex items-start gap-2">
-                      <User className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                      <User className="w-3.5 h-3.5 text-stone-400 mt-0.5 shrink-0" />
                       <div>
-                        <dt className="text-slate-400 text-xs">{t.modal.creator}</dt>
-                        <dd className="font-medium text-slate-800 dark:text-slate-200">
+                        <dt className="text-stone-400 text-xs">{t.modal.creator}</dt>
+                        <dd className="font-medium text-stone-800 dark:text-stone-200">
                           {item.author && item.author !== 'Wikimedia Commons' ? (
                             item.author
                           ) : uploader ? (
@@ -962,7 +962,7 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                               type="button"
                               onClick={() => onSearchUser && onSearchUser(uploader)}
                               title={language === 'en' ? 'Search this username' : 'Cari nama pengguna ini'}
-                              className="cursor-pointer text-blue-700 hover:underline dark:text-blue-300"
+                              className="cursor-pointer text-accent-700 hover:underline dark:text-accent-300"
                             >
                               {uploader}
                             </button>
@@ -975,15 +975,15 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
 
                     {uploader && item.author && item.author !== 'Wikimedia Commons' && (
                       <div className="flex items-start gap-2">
-                        <User className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                        <User className="w-3.5 h-3.5 text-stone-400 mt-0.5 shrink-0" />
                         <div>
-                          <dt className="text-slate-400 text-xs">{language === 'en' ? 'Uploader' : 'Pengunggah'}</dt>
+                          <dt className="text-stone-400 text-xs">{language === 'en' ? 'Uploader' : 'Pengunggah'}</dt>
                           <dd className="font-medium">
                             <button
                               type="button"
                               onClick={() => onSearchUser && onSearchUser(uploader)}
                               title={language === 'en' ? 'Search this username' : 'Cari nama pengguna ini'}
-                              className="cursor-pointer text-blue-700 hover:underline dark:text-blue-300"
+                              className="cursor-pointer text-accent-700 hover:underline dark:text-accent-300"
                             >
                               {uploader}
                             </button>
@@ -993,23 +993,23 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                     )}
 
                     <div className="flex items-start gap-2">
-                      <FileCode className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                      <FileCode className="w-3.5 h-3.5 text-stone-400 mt-0.5 shrink-0" />
                       <div>
-                        <dt className="text-slate-400 text-xs">{t.modal.fileExtension}</dt>
-                        <dd className="font-mono flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
-                          <span className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold text-xs uppercase border border-blue-200 dark:border-blue-800">
+                        <dt className="text-stone-400 text-xs">{t.modal.fileExtension}</dt>
+                        <dd className="font-mono flex items-center gap-1.5 text-stone-800 dark:text-stone-200">
+                          <span className="px-2 py-0.5 rounded bg-accent-50 dark:bg-accent-950/60 text-accent-700 dark:text-accent-300 font-bold text-xs uppercase border border-accent-200 dark:border-accent-800">
                             {getFileExtension(item.title, item.fileUrl, item.mimeType)}
                           </span>
-                          <span className="text-slate-500 text-xs font-normal">({item.mimeType})</span>
+                          <span className="text-stone-500 text-xs font-normal">({item.mimeType})</span>
                         </dd>
                       </div>
                     </div>
 
                     {item.date && (
                       <div className="flex items-start gap-2">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                        <Calendar className="w-3.5 h-3.5 text-stone-400 mt-0.5 shrink-0" />
                         <div>
-                          <dt className="text-slate-400 text-xs">{t.modal.createdDate}</dt>
+                          <dt className="text-stone-400 text-xs">{t.modal.createdDate}</dt>
                           <dd className="font-mono">{item.date}</dd>
                         </div>
                       </div>
@@ -1017,9 +1017,9 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
 
                     {item.description && (
                       <div className="flex items-start gap-2">
-                        <Info className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                        <Info className="w-3.5 h-3.5 text-stone-400 mt-0.5 shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2"><dt className="text-slate-400 text-xs">{t.modal.description}</dt>{ttsSupported && (<button type="button" onClick={() => toggleSpeak(String(item.description))} className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 px-2.5 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800" aria-label={speaking ? (language === 'en' ? 'Stop reading' : 'Berhenti membaca') : (language === 'en' ? 'Read description aloud' : 'Bacakan deskripsi')}>{speaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}{speaking ? (language === 'en' ? 'Stop' : 'Berhenti') : (language === 'en' ? 'Read aloud' : 'Bacakan')}</button>)}</div>
+                          <div className="flex items-center justify-between gap-2"><dt className="text-stone-400 text-xs">{t.modal.description}</dt>{ttsSupported && (<button type="button" onClick={() => toggleSpeak(String(item.description))} className="inline-flex items-center gap-1 rounded-full border border-stone-200 dark:border-stone-700 px-2.5 py-0.5 text-xs font-medium text-accent-600 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-stone-800" aria-label={speaking ? (language === 'en' ? 'Stop reading' : 'Berhenti membaca') : (language === 'en' ? 'Read description aloud' : 'Bacakan deskripsi')}>{speaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}{speaking ? (language === 'en' ? 'Stop' : 'Berhenti') : (language === 'en' ? 'Read aloud' : 'Bacakan')}</button>)}</div>
                           <dd className="whitespace-pre-line break-words leading-relaxed">{item.description}</dd>
                         </div>
                       </div>
@@ -1027,9 +1027,9 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
 
                     {(item.latitude !== undefined && item.longitude !== undefined) && (
                       <div className="flex items-start gap-2">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                        <MapPin className="w-3.5 h-3.5 text-stone-400 mt-0.5 shrink-0" />
                         <div>
-                          <dt className="text-slate-400 text-xs">{t.modal.coordinates}</dt>
+                          <dt className="text-stone-400 text-xs">{t.modal.coordinates}</dt>
                           <dd className="font-mono">{item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}</dd>
                         </div>
                       </div>
@@ -1042,14 +1042,14 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                 {/* Depicts & Data Terstruktur */}
                 {extraDetail && extraDetail.depicts.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="text-[13px] font-bold uppercase tracking-wide text-slate-900 dark:text-white">
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-stone-900 dark:text-white">
                       Depicts &amp; Data Terstruktur
                     </h4>
                     <div className="flex flex-wrap gap-1.5">
                       {extraDetail.depicts.map((d) => (
                         <span
                           key={d}
-                          className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs text-slate-700 dark:border-slate-600 dark:text-slate-200"
+                          className="rounded-lg border border-stone-300 px-2.5 py-1 text-xs text-stone-700 dark:border-stone-600 dark:text-stone-200"
                         >
                           #{d}
                         </span>
@@ -1060,12 +1060,12 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
 
                 {/* Kamera & Data EXIF */}
                 <div className="space-y-2">
-                  <h4 className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-wide text-slate-900 dark:text-white">
-                    <Camera className="h-3.5 w-3.5 text-slate-500" />
+                  <h4 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-stone-900 dark:text-white">
+                    <Camera className="h-3.5 w-3.5 text-stone-500" />
                     Kamera &amp; Data EXIF
-                    {isExtraLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />}
+                    {isExtraLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-stone-400" />}
                   </h4>
-                  <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-slate-50 px-3.5 dark:divide-slate-700 dark:border-slate-800 dark:bg-slate-800/50">
+                  <div className="divide-y divide-stone-200 rounded-lg border border-stone-200 bg-stone-50 px-3.5 dark:divide-stone-700 dark:border-stone-800 dark:bg-stone-800/50">
                     {([
                       ['make', 'Produsen Kamera'],
                       ['model', 'Model Kamera'],
@@ -1080,63 +1080,63 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                       if (!found) return null;
                       return (
                         <div key={key} className="flex items-start justify-between gap-3 py-2.5">
-                          <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                          <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
                             {key === 'make' || key === 'model' ? (
-                              <Camera className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                              <Camera className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />
                             ) : (
-                              <Info className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                              <Info className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />
                             )}
                             {label}
                           </span>
-                          <span className="text-right font-medium text-slate-800 dark:text-slate-100">{found.value}</span>
+                          <span className="text-right font-medium text-stone-800 dark:text-stone-100">{found.value}</span>
                         </div>
                       );
                     })}
                     {item.width > 0 && (
                       <div className="flex items-start justify-between gap-3 py-2.5">
-                        <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                          <Info className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                        <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
+                          <Info className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />
                           Resolusi
                         </span>
-                        <span className="text-right font-medium text-slate-800 dark:text-slate-100">
+                        <span className="text-right font-medium text-stone-800 dark:text-stone-100">
                           {item.width} × {item.height} px
                         </span>
                       </div>
                     )}
                     {item.fileSize > 0 && (
                       <div className="flex items-start justify-between gap-3 py-2.5">
-                        <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                          <Info className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                        <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
+                          <Info className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />
                           Ukuran Berkas
                         </span>
-                        <span className="text-right font-medium text-slate-800 dark:text-slate-100">{formatBytes(item.fileSize)}</span>
+                        <span className="text-right font-medium text-stone-800 dark:text-stone-100">{formatBytes(item.fileSize)}</span>
                       </div>
                     )}
                     {item.date && (
                       <div className="flex items-start justify-between gap-3 py-2.5">
-                        <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                          <Info className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                        <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
+                          <Info className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />
                           Tanggal Pengambilan
                         </span>
-                        <span className="text-right font-medium text-slate-800 dark:text-slate-100">{item.date}</span>
+                        <span className="text-right font-medium text-stone-800 dark:text-stone-100">{item.date}</span>
                       </div>
                     )}
                     {item.mimeType && (
                       <div className="flex items-start justify-between gap-3 py-2.5">
-                        <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                          <Info className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                        <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
+                          <Info className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />
                           Tipe MIME
                         </span>
-                        <span className="text-right font-medium text-slate-800 dark:text-slate-100">{item.mimeType}</span>
+                        <span className="text-right font-medium text-stone-800 dark:text-stone-100">{item.mimeType}</span>
                       </div>
                     )}
                     {item.latitude !== undefined && item.longitude !== undefined && (
                       <div className="flex items-center justify-between gap-3 py-3">
-                        <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                        <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
                           <MapPin className="h-4 w-4 text-red-500" />
                           <span>
                             <span className="block text-xs">Geotag / Koordinat GPS</span>
-                            <span className="font-mono font-medium text-slate-800 dark:text-slate-100">
+                            <span className="font-mono font-medium text-stone-800 dark:text-stone-100">
                               {item.latitude.toFixed(6)}, {item.longitude.toFixed(6)}
                             </span>
                           </span>
@@ -1145,7 +1145,7 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                           href={`https://www.openstreetmap.org/?mlat=${item.latitude}&mlon=${item.longitude}#map=17/${item.latitude}/${item.longitude}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="shrink-0 rounded-full border border-slate-300 px-4 py-1.5 text-xs font-semibold text-blue-700 hover:bg-white dark:border-slate-600 dark:text-blue-300 dark:hover:bg-slate-700"
+                          className="shrink-0 rounded-full border border-stone-300 px-4 py-1.5 text-xs font-semibold text-accent-700 hover:bg-white dark:border-stone-600 dark:text-accent-300 dark:hover:bg-stone-700"
                         >
                           Peta
                         </a>
@@ -1163,9 +1163,9 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
 <div className="p-5 space-y-5 flex-1 overflow-y-auto text-xs">
 <div className="space-y-2.5">
 <div className="flex items-center gap-2">
-<Tag className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-<span className="text-sm font-bold text-slate-900 dark:text-white">{language === 'en' ? 'Categories' : 'Kategori'}</span>
-<span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">{categories.length}</span>
+<Tag className="h-4 w-4 text-accent-600 dark:text-accent-400" />
+<span className="text-sm font-bold text-stone-900 dark:text-white">{language === 'en' ? 'Categories' : 'Kategori'}</span>
+<span className="rounded-full bg-accent-100 px-2 py-0.5 text-xs font-semibold text-accent-700 dark:bg-accent-900/50 dark:text-accent-300">{categories.length}</span>
 </div>
 {categories.length > 0 ? (
 <div className="flex flex-wrap gap-1.5">
@@ -1174,14 +1174,14 @@ const name = c.replace(/^Category:/i, '');
 return (
 <span
   key={c}
-  className="inline-flex items-stretch overflow-hidden rounded-lg border border-slate-300 text-xs text-slate-700 dark:border-slate-600 dark:text-slate-200"
+  className="inline-flex items-stretch overflow-hidden rounded-lg border border-stone-300 text-xs text-stone-700 dark:border-stone-600 dark:text-stone-200"
 >
   {onSearchCategory ? (
     <button
       type="button"
       onClick={() => onSearchCategory(name)}
       title={language === 'en' ? 'Search this category' : 'Cari kategori ini'}
-      className="cursor-pointer px-2.5 py-1 hover:bg-slate-50 dark:hover:bg-slate-700"
+      className="cursor-pointer px-2.5 py-1 hover:bg-stone-50 dark:hover:bg-stone-700"
     >
       {name}
     </button>
@@ -1190,7 +1190,7 @@ return (
       href={'https://commons.wikimedia.org/wiki/Category:' + encodeURIComponent(name.replace(/ /g, '_'))}
       target="_blank"
       rel="noopener noreferrer"
-      className="px-2.5 py-1 hover:bg-slate-50 dark:hover:bg-slate-700"
+      className="px-2.5 py-1 hover:bg-stone-50 dark:hover:bg-stone-700"
     >
       {name}
     </a>
@@ -1201,9 +1201,9 @@ return (
       onClick={() => onToggleCategorySave(name)}
       aria-label={language === 'en' ? 'Bookmark category' : 'Simpan kategori'}
       title={language === 'en' ? 'Bookmark category' : 'Simpan kategori'}
-      className="cursor-pointer border-l border-slate-300 px-1.5 hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-700"
+      className="cursor-pointer border-l border-stone-300 px-1.5 hover:bg-stone-50 dark:border-stone-600 dark:hover:bg-stone-700"
     >
-      <Bookmark className={`h-3 w-3 ${isCategorySaved && isCategorySaved(name) ? 'fill-current text-purple-600 dark:text-purple-400' : 'text-slate-400'}`} />
+      <Bookmark className={`h-3 w-3 ${isCategorySaved && isCategorySaved(name) ? 'fill-current text-accent-600 dark:text-accent-400' : 'text-stone-400'}`} />
     </button>
   )}
 </span>
@@ -1211,28 +1211,28 @@ return (
 })}
 </div>
 ) : (
-<p className="text-slate-500 dark:text-slate-400">{language === 'en' ? 'No categories.' : 'Tidak ada kategori.'}</p>
+<p className="text-stone-500 dark:text-stone-400">{language === 'en' ? 'No categories.' : 'Tidak ada kategori.'}</p>
 )}
 </div>
 
-<div className="space-y-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
+<div className="space-y-2.5 pt-4 border-t border-stone-200 dark:border-stone-800">
 <div className="flex items-center gap-2">
-<Globe className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-<span className="text-sm font-bold text-slate-900 dark:text-white">{language === 'en' ? 'Usage across Wikimedia projects' : 'Penggunaan di berbagai proyek Wikimedia'}</span>
-<span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">{wikiUsages.length}</span>
+<Globe className="h-4 w-4 text-moss-600 dark:text-moss-400" />
+<span className="text-sm font-bold text-stone-900 dark:text-white">{language === 'en' ? 'Usage across Wikimedia projects' : 'Penggunaan di berbagai proyek Wikimedia'}</span>
+<span className="rounded-full bg-moss-100 px-2 py-0.5 text-xs font-semibold text-moss-700 dark:bg-moss-900/50 dark:text-moss-300">{wikiUsages.length}</span>
 </div>
 {usagesLoading ? (
-<div className="flex items-center gap-2 text-slate-500 dark:text-slate-400"><Loader2 className="h-4 w-4 animate-spin" />{language === 'en' ? 'Loading usage…' : 'Memuat penggunaan…'}</div>
+<div className="flex items-center gap-2 text-stone-500 dark:text-stone-400"><Loader2 className="h-4 w-4 animate-spin" />{language === 'en' ? 'Loading usage…' : 'Memuat penggunaan…'}</div>
 ) : wikiUsages.length === 0 ? (
-<p className="text-slate-500 dark:text-slate-400">{language === 'en' ? 'This file is not used on any other Wikimedia project yet.' : 'Berkas ini belum dipakai di proyek Wikimedia lain.'}</p>
+<p className="text-stone-500 dark:text-stone-400">{language === 'en' ? 'This file is not used on any other Wikimedia project yet.' : 'Berkas ini belum dipakai di proyek Wikimedia lain.'}</p>
 ) : (
 <div className="space-y-3">
 {Array.from(new Set(wikiUsages.map((u) => u.wiki))).map((w) => (
-<div key={w} className="rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50 p-3 space-y-1.5">
-<div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{w}</div>
+<div key={w} className="rounded-lg border border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-800/50 p-3 space-y-1.5">
+<div className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">{w}</div>
 <div className="flex flex-col gap-1">
 {wikiUsages.filter((u) => u.wiki === w).map((u, i) => (
-<a key={i} href={u.url} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-1.5 text-slate-700 hover:text-blue-700 dark:text-slate-200 dark:hover:text-blue-300">
+<a key={i} href={u.url} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-1.5 text-stone-700 hover:text-accent-700 dark:text-stone-200 dark:hover:text-accent-300">
 <span className="group-hover:underline">{u.title}</span>
 <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
 </a>
@@ -1251,52 +1251,52 @@ return (
               <div className="p-5 space-y-5 flex-1 overflow-y-auto text-xs">
                 
                 {/* Official License Badge & Deed */}
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="p-4 rounded-lg bg-stone-50 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-800 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-900 dark:text-white text-sm">
+                    <span className="font-semibold text-stone-900 dark:text-white text-sm">
                       {licenseInfo.label}
                     </span>
                     <a
                       href={licenseInfo.deedUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium"
+                      className="text-accent-600 dark:text-accent-400 hover:underline flex items-center gap-1 font-medium"
                     >
                       <span>Legal Deed</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
-                  <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
+                  <p className="text-stone-600 dark:text-stone-400 text-xs leading-relaxed">
                     {item.licenseFull}
                   </p>
                 </div>
 
                 {/* Permissions Matrix */}
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-slate-900 dark:text-white text-[13px] uppercase tracking-wider">
+                  <h4 className="font-semibold text-stone-900 dark:text-white text-sm uppercase tracking-wider">
                     {t.modal.termsTitle}
                   </h4>
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
-                    <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/40 text-emerald-900 dark:text-emerald-200">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2.5 rounded-lg bg-moss-50 dark:bg-moss-950/40 border border-moss-200 dark:border-moss-900/40 text-moss-900 dark:text-moss-200">
                       <span className="font-semibold block">{t.modal.commercialAllowed}</span>
                       <span>{t.modal.commercialDesc}</span>
                     </div>
-                    <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/40 text-emerald-900 dark:text-emerald-200">
+                    <div className="p-2.5 rounded-lg bg-moss-50 dark:bg-moss-950/40 border border-moss-200 dark:border-moss-900/40 text-moss-900 dark:text-moss-200">
                       <span className="font-semibold block">{t.modal.remixAllowed}</span>
                       <span>{t.modal.remixDesc}</span>
                     </div>
-                    <div className={`p-2.5 rounded-lg border text-[11px] ${
+                    <div className={`p-2.5 rounded-lg border text-xs ${
                       licenseInfo.requiresAttribution
-                        ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900/40 text-blue-900 dark:text-blue-200'
-                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                        ? 'bg-accent-50 dark:bg-accent-950/40 border-accent-200 dark:border-accent-900/40 text-accent-900 dark:text-accent-200'
+                        : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400'
                     }`}>
                       <span className="font-semibold block">{t.modal.attributionRule}</span>
                       <span>{t.modal.attributionDesc}</span>
                     </div>
-                    <div className={`p-2.5 rounded-lg border text-[11px] ${
+                    <div className={`p-2.5 rounded-lg border text-xs ${
                       licenseInfo.requiresShareAlike
                         ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/40 text-amber-900 dark:text-amber-200'
-                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                        : 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400'
                     }`}>
                       <span className="font-semibold block">{t.modal.shareAlikeRule}</span>
                       <span>{t.modal.shareAlikeDesc}</span>
@@ -1306,21 +1306,21 @@ return (
 
                 {/* Attribution Generator (TASL compliant) */}
                 <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-slate-900 dark:text-white text-[13px] uppercase tracking-wider">
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                    <h4 className="font-display font-semibold text-stone-900 dark:text-white text-base">
                       {t.modal.taslTitle}
                     </h4>
                     
                     {/* Format Selector */}
-                    <div className="flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-md text-[10px]">
+                    <div className="flex flex-wrap items-center gap-1 p-0.5 bg-stone-100 dark:bg-stone-800 rounded-md text-xs">
                       {(['plain', 'markdown', 'html', 'wikitext'] as const).map((fmt) => (
                         <button
                           key={fmt}
                           onClick={() => setAttributionFormat(fmt)}
-                          className={`px-2 py-0.5 rounded capitalize ${
+                          className={`px-2.5 py-1 rounded capitalize ${
                             attributionFormat === fmt
-                              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium shadow-2xs'
-                              : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'
+                              ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white font-medium shadow-2xs'
+                              : 'text-stone-500 hover:text-stone-900 dark:text-stone-400'
                           }`}
                         >
                           {fmt}
@@ -1329,18 +1329,20 @@ return (
                     </div>
                   </div>
 
-                  <div className="relative">
-                    <textarea
-                      readOnly
-                      rows={3}
-                      value={attributionText}
-                      className="w-full p-3 font-mono text-[11px] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 focus:outline-none"
-                    />
-                    <button
-                      onClick={handleCopyAttribution}
-                      className="absolute top-2.5 right-2.5 px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md font-medium text-[11px] text-slate-800 dark:text-slate-200 flex items-center gap-1 shadow-2xs transition-colors"
+                  <div className="space-y-2">
+                    <div
+                      tabIndex={0}
+                      aria-label={t.modal.taslTitle}
+                      className="w-full select-all whitespace-pre-wrap [overflow-wrap:anywhere] p-3 font-mono text-xs leading-relaxed bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg text-stone-800 dark:text-stone-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-600"
                     >
-                      {copiedFormat ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      {attributionText}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyAttribution}
+                      className="ml-auto w-fit px-3 py-1.5 bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 rounded-md font-medium text-xs text-stone-800 dark:text-stone-200 flex items-center gap-1 shadow-2xs transition-colors"
+                    >
+                      {copiedFormat ? <Check className="w-3.5 h-3.5 text-moss-600" /> : <Copy className="w-3.5 h-3.5" />}
                       <span>{copiedFormat ? t.modal.copied : t.modal.copyAttributionBtn}</span>
                     </button>
                   </div>
@@ -1360,7 +1362,8 @@ return (
             <div className="p-5 space-y-5 flex-1 overflow-y-auto">
               <TalkPageView
                 title={`File talk:${item.title.replace(/^File:/i, '')}`}
-                emptyHint="Belum ada diskusi untuk berkas ini."
+                emptyHint={language === 'en' ? 'No discussion for this file yet.' : 'Belum ada diskusi untuk berkas ini.'}
+                language={language}
               />
             </div>
           )}
@@ -1370,43 +1373,43 @@ return (
               <div className="p-5 space-y-4 flex-1 overflow-y-auto text-xs">
                 {/* Check if user configured their Gemini key */}
                 {!geminiApiKey ? (
-                  <div className="p-6 text-center bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3.5">
-                    <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto shadow-xs">
+                  <div className="p-6 text-center bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800 rounded-lg space-y-3.5">
+                    <div className="w-12 h-12 rounded-full bg-accent-100 dark:bg-accent-950/60 text-accent-600 dark:text-accent-400 flex items-center justify-center mx-auto shadow-xs">
                       <Key className="w-6 h-6" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-slate-900 dark:text-white text-sm">
+                      <h4 className="font-semibold text-stone-900 dark:text-white text-sm">
                         {t.modal.noKeyTitle}
                       </h4>
-                      <p className="text-slate-500 dark:text-slate-400 text-xs mt-1.5 leading-relaxed max-w-md mx-auto">
+                      <p className="text-stone-500 dark:text-stone-400 text-xs mt-1.5 leading-relaxed max-w-md mx-auto">
                         {t.modal.noKeyDesc}
                       </p>
                     </div>
                     <button
                       onClick={onOpenGeminiModal}
-                      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-xs transition-colors inline-flex items-center gap-2 shadow-xs"
+                      className="px-4 py-2.5 bg-accent-600 hover:bg-accent-700 text-white rounded-lg font-medium text-xs transition-colors inline-flex items-center gap-2 shadow-xs"
                     >
                       <Key className="w-4 h-4" />
                       <span>{t.modal.inputKeyBtn}</span>
                     </button>
                   </div>
                 ) : isAiLoading ? (
-                  <div className="p-10 text-center space-y-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                  <div className="p-10 text-center space-y-4 bg-stone-50/50 dark:bg-stone-800/30 rounded-lg border border-stone-200/60 dark:border-stone-800">
                     <div className="relative mx-auto w-12 h-12 flex items-center justify-center">
-                      <div className="absolute inset-0 rounded-full border-2 border-blue-500/30 border-t-blue-600 animate-spin" />
-                      <Sparkles className="w-5 h-5 text-blue-600 animate-pulse" />
+                      <div className="absolute inset-0 rounded-full border-2 border-accent-500/30 border-t-accent-600 animate-spin" />
+                      <Sparkles className="w-5 h-5 text-accent-600 animate-pulse" />
                     </div>
                     <div className="space-y-1.5">
-                      <p className="font-semibold text-slate-900 dark:text-white text-sm">
+                      <p className="font-semibold text-stone-900 dark:text-white text-sm">
                         {t.modal.aiLoading}
                       </p>
-                      <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mx-auto leading-relaxed">
+                      <p className="text-stone-500 dark:text-stone-400 text-xs max-w-sm mx-auto leading-relaxed">
                         {t.modal.aiLoadingDesc}
                       </p>
                     </div>
                   </div>
                 ) : aiError ? (
-                  <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl text-amber-900 dark:text-amber-200 text-xs space-y-3">
+                  <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg text-amber-900 dark:text-amber-200 text-xs space-y-3">
                     <div className="flex items-start gap-2.5">
                       <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                       <div className="space-y-1">
@@ -1418,7 +1421,7 @@ return (
                       <button
                         type="button"
                         onClick={handleRunAiAnalysis}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-xs transition-colors shadow-xs"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-accent-600 hover:bg-accent-700 text-white rounded-lg font-medium text-xs transition-colors shadow-xs"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
                         <span>{t.modal.retryAiBtn}</span>
@@ -1427,21 +1430,21 @@ return (
                   </div>
                 ) : !unifiedAnalysis ? (
                   /* Initial State: Call to Action */
-                  <div className="p-6 text-center bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4">
-                    <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto border border-blue-200 dark:border-blue-900/50 shadow-xs">
+                  <div className="p-6 text-center bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800 rounded-lg space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-accent-50 dark:bg-accent-950/50 text-accent-600 dark:text-accent-400 flex items-center justify-center mx-auto border border-accent-200 dark:border-accent-900/50 shadow-xs">
                       <Sparkles className="w-6 h-6" />
                     </div>
                     <div className="space-y-1 max-w-md mx-auto">
-                      <h4 className="font-semibold text-slate-900 dark:text-white text-sm">
+                      <h4 className="font-semibold text-stone-900 dark:text-white text-sm">
                         {t.modal.aiHeroTitle}
                       </h4>
-                      <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                      <p className="text-stone-500 dark:text-stone-400 text-xs leading-relaxed">
                         {t.modal.aiHeroSubtitle}
                       </p>
                     </div>
                     <button
                       onClick={handleRunAiAnalysis}
-                      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-xs transition-colors inline-flex items-center gap-2 shadow-xs"
+                      className="px-4 py-2.5 bg-accent-600 hover:bg-accent-700 text-white rounded-lg font-medium text-xs transition-colors inline-flex items-center gap-2 shadow-xs"
                     >
                       <Sparkles className="w-4 h-4" />
                       <span>{t.modal.runAiFullBtn}</span>
@@ -1451,20 +1454,20 @@ return (
                   /* Unified Analysis Result: 4 Structured Sections with Copy Icons */
                   <div className="space-y-4">
                     {/* Header Controls: Structured Badge, Copy All JSON, and Re-run */}
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-stone-800">
                       <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-semibold">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-moss-50 dark:bg-moss-950/50 text-moss-700 dark:text-moss-300 border border-moss-200 dark:border-moss-800 text-xs font-semibold">
                           <CheckCircle2 className="w-3 h-3" />
                           {t.modal.jsonBadge}
                         </span>
-                        <span className="text-slate-400 text-[11px]">{t.modal.fourSectionsBadge}</span>
+                        <span className="text-stone-400 text-xs">{t.modal.fourSectionsBadge}</span>
                       </div>
 
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={handleSaveToPdf}
                           disabled={isExportingPdf}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-[11px] font-medium transition-colors shadow-2xs"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent-600 hover:bg-accent-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors shadow-2xs"
                           title="Simpan dan unduh laporan analisis lengkap dalam format PDF"
                         >
                           {pdfSuccess ? (
@@ -1486,50 +1489,50 @@ return (
                         </button>
                         <button
                           onClick={handleRunAiAnalysis}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-[11px] font-medium transition-colors"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-xs font-medium transition-colors"
                           title="Muat ulang atau perbarui analisis berkas ini"
                         >
-                          <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                          <RefreshCw className="w-3.5 h-3.5 text-stone-500" />
                           <span>{t.modal.rerunAiBtn}</span>
                         </button>
                       </div>
                     </div>
 
                     {/* Assistant & LLM Model Info Bar with AI Disclaimer */}
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                    <div className="p-3 rounded-lg bg-stone-50 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-800 space-y-2.5">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-600 text-white font-medium text-[11px] shadow-2xs">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-accent-600 text-white font-medium text-xs shadow-2xs">
                             <Sparkles className="w-3.5 h-3.5" />
                             <span>{unifiedAnalysis.modelMeta?.assistantName || GEMINI_ASSISTANT_NAME}</span>
                           </span>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-medium">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs font-mono font-medium">
                             Model: {unifiedAnalysis.modelMeta?.modelName || GEMINI_MODEL_NAME} ({unifiedAnalysis.modelMeta?.modelVersion || 'gemini-2.5-flash'})
                           </span>
                         </div>
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium inline-flex items-center gap-1">
+                        <span className="text-xs text-moss-600 dark:text-moss-400 font-medium inline-flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" />
                           {language === 'en' ? 'Based on Commons metadata' : 'Berdasarkan metadata Commons'}
                         </span>
                       </div>
 
                       {/* AI Disclaimer Section with Official Wikimedia AI Link */}
-                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/50 text-[11px] text-amber-900 dark:text-amber-200">
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-200">
                         <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <div className="space-y-1 w-full">
                           <div className="flex items-center justify-between flex-wrap gap-2">
-                            <span className="font-semibold block text-[11px]">{t.modal.aiDisclaimerTitle}</span>
+                            <span className="font-semibold block text-xs">{t.modal.aiDisclaimerTitle}</span>
                             <a
                               href="https://commons.wikimedia.org/wiki/Commons:Artificial_intelligence"
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] font-medium text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-amber-400 inline-flex items-center gap-1 transition-colors"
+                              className="text-xs font-medium text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-amber-400 inline-flex items-center gap-1 transition-colors"
                             >
                               <span>{t.modal.aiDisclaimerLink}</span>
                               <ExternalLink className="w-2.5 h-2.5" />
                             </a>
                           </div>
-                          <p className="text-[10px] leading-relaxed text-amber-800 dark:text-amber-300">
+                          <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-300">
                             {unifiedAnalysis.modelMeta?.disclaimer ||
                               (language === 'en' ? AI_DISCLAIMER_TEXT_EN : AI_DISCLAIMER_TEXT_ID)}
                           </p>
@@ -1538,17 +1541,17 @@ return (
                     </div>
 
                     {/* SECTION 1: Penjelasan Objek untuk Pengguna Awam */}
-                    <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 space-y-3">
+                    <div className="p-4 rounded-lg bg-accent-50/50 dark:bg-accent-950/20 border border-accent-100 dark:border-accent-900/40 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                          <div className="w-7 h-7 rounded-lg bg-accent-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
                             <Sparkles className="w-4 h-4" />
                           </div>
                           <div>
-                            <h4 className="font-semibold text-slate-900 dark:text-white text-xs">
+                            <h4 className="font-semibold text-stone-900 dark:text-white text-xs">
                               {t.modal.sec1Title}
                             </h4>
-                            <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                            <span className="text-xs text-accent-600 dark:text-accent-400 font-medium">
                               {t.modal.sec1Subtitle}
                             </span>
                           </div>
@@ -1560,17 +1563,17 @@ return (
                               `[${t.modal.sec1Title}: ${item.cleanTitle}]\n${unifiedAnalysis.objectDescription.laymanSummary}\n\n${t.modal.sec1HighlightsTitle}\n${unifiedAnalysis.objectDescription.keyHighlights.map((k) => `• ${k}`).join('\n')}`
                             )
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] transition-colors shadow-2xs"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs transition-colors shadow-2xs"
                           title="Salin bagian penjelasan objek ini"
                         >
                           {copiedSection === 'object' ? (
                             <>
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                              <span className="text-emerald-600 font-medium">{t.modal.copiedSection}</span>
+                              <Check className="w-3.5 h-3.5 text-moss-600" />
+                              <span className="text-moss-600 font-medium">{t.modal.copiedSection}</span>
                             </>
                           ) : (
                             <>
-                              <Copy className="w-3.5 h-3.5 text-slate-500" />
+                              <Copy className="w-3.5 h-3.5 text-stone-500" />
                               <span>{t.modal.copySection}</span>
                             </>
                           )}
@@ -1578,23 +1581,23 @@ return (
                       </div>
 
                       {/* Layman summary block */}
-                      <div className="p-3 bg-white dark:bg-slate-900/80 rounded-lg border border-blue-200/60 dark:border-blue-900/60 text-slate-800 dark:text-slate-200 text-xs leading-relaxed font-medium">
+                      <div className="p-3 bg-white dark:bg-stone-900/80 rounded-lg border border-accent-200/60 dark:border-accent-900/60 text-stone-800 dark:text-stone-200 text-xs leading-relaxed font-medium">
                         {unifiedAnalysis.objectDescription.laymanSummary}
                       </div>
 
                       {/* Key highlights / bullets */}
                       {unifiedAnalysis.objectDescription.keyHighlights?.length > 0 && (
                         <div className="pt-1">
-                          <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
                             {t.modal.sec1HighlightsTitle}
                           </div>
                           <div className="flex flex-col gap-1.5">
                             {unifiedAnalysis.objectDescription.keyHighlights.map((highlight, idx) => (
                               <span
                                 key={idx}
-                                className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px]"
+                                className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-md bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-xs"
                               >
-                                <Tag className="w-2.5 h-2.5 text-blue-500 shrink-0" />
+                                <Tag className="w-2.5 h-2.5 text-accent-500 shrink-0" />
                                 <span>{highlight}</span>
                               </span>
                             ))}
@@ -1604,10 +1607,10 @@ return (
 
                     {Array.isArray(unifiedAnalysis.objectDescription.usageIdeas) && unifiedAnalysis.objectDescription.usageIdeas.length > 0 && (
                       <div className="pt-1">
-                        <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                        <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
                           {t.modal.sec1UsageTitle}
                         </div>
-                        <ul className="space-y-1 text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed list-disc pl-4">
+                        <ul className="space-y-1 text-xs text-stone-700 dark:text-stone-300 leading-relaxed list-disc pl-4">
                           {unifiedAnalysis.objectDescription.usageIdeas.map((idea, idx) => (
                             <li key={idx}>{idea}</li>
                           ))}
@@ -1620,17 +1623,17 @@ return (
                     </div>
 
                     {/* SECTION 2: Penjelasan Singkat Lisensi Foto */}
-                    <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 space-y-3">
+                    <div className="p-4 rounded-lg bg-moss-50/50 dark:bg-moss-950/20 border border-moss-100 dark:border-moss-900/40 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                          <div className="w-7 h-7 rounded-lg bg-moss-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
                             <ShieldCheck className="w-4 h-4" />
                           </div>
                           <div>
-                            <h4 className="font-semibold text-slate-900 dark:text-white text-xs">
+                            <h4 className="font-semibold text-stone-900 dark:text-white text-xs">
                               {t.modal.sec2Title}
                             </h4>
-                            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold font-mono">
+                            <span className="text-xs text-moss-700 dark:text-moss-400 font-semibold font-mono">
                               {unifiedAnalysis.licenseExplanation.licenseName}
                             </span>
                           </div>
@@ -1642,17 +1645,17 @@ return (
                               `[${t.modal.sec2Title}: ${unifiedAnalysis.licenseExplanation.licenseName}]\n${unifiedAnalysis.licenseExplanation.shortSummary}\n\n${t.modal.sec2CommTitle} ${unifiedAnalysis.licenseExplanation.commercialUse}\n${t.modal.sec2ModTitle} ${unifiedAnalysis.licenseExplanation.modificationRules}\n\n${t.modal.sec2AttrTitle}\n${unifiedAnalysis.licenseExplanation.attributionGuide}`
                             )
                           }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] transition-colors shadow-2xs"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs transition-colors shadow-2xs"
                           title="Salin penjelasan lisensi ini"
                         >
                           {copiedSection === 'license' ? (
                             <>
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                              <span className="text-emerald-600 font-medium">{t.modal.copiedSection}</span>
+                              <Check className="w-3.5 h-3.5 text-moss-600" />
+                              <span className="text-moss-600 font-medium">{t.modal.copiedSection}</span>
                             </>
                           ) : (
                             <>
-                              <Copy className="w-3.5 h-3.5 text-slate-500" />
+                              <Copy className="w-3.5 h-3.5 text-stone-500" />
                               <span>{t.modal.copySection}</span>
                             </>
                           )}
@@ -1660,54 +1663,54 @@ return (
                       </div>
 
                       {/* Plain-language license description */}
-                      <p className="text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed">
+                      <p className="text-stone-700 dark:text-stone-300 text-xs leading-relaxed">
                         {unifiedAnalysis.licenseExplanation.shortSummary}
                       </p>
 
                       {/* Commercial & Modification rules grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-                        <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/60">
-                          <span className="font-semibold text-emerald-700 dark:text-emerald-300 block mb-0.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div className="p-2.5 rounded-lg bg-white dark:bg-stone-900 border border-moss-200 dark:border-moss-800/60">
+                          <span className="font-semibold text-moss-700 dark:text-moss-300 block mb-0.5">
                             {t.modal.sec2CommTitle}
                           </span>
-                          <span className="text-slate-600 dark:text-slate-300">
+                          <span className="text-stone-600 dark:text-stone-300">
                             {unifiedAnalysis.licenseExplanation.commercialUse}
                           </span>
                         </div>
-                        <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/60">
-                          <span className="font-semibold text-emerald-700 dark:text-emerald-300 block mb-0.5">
+                        <div className="p-2.5 rounded-lg bg-white dark:bg-stone-900 border border-moss-200 dark:border-moss-800/60">
+                          <span className="font-semibold text-moss-700 dark:text-moss-300 block mb-0.5">
                             {t.modal.sec2ModTitle}
                           </span>
-                          <span className="text-slate-600 dark:text-slate-300">
+                          <span className="text-stone-600 dark:text-stone-300">
                             {unifiedAnalysis.licenseExplanation.modificationRules}
                           </span>
                         </div>
                       </div>
 
                       {unifiedAnalysis.licenseExplanation.watchOut && (
-                        <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 text-[11px]">
+                        <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 text-xs">
                           <span className="font-semibold text-amber-800 dark:text-amber-300 block mb-0.5">
                             {t.modal.sec2WatchTitle}
                           </span>
-                          <span className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                          <span className="text-stone-700 dark:text-stone-300 leading-relaxed">
                             {unifiedAnalysis.licenseExplanation.watchOut}
                           </span>
                         </div>
                       )}
 
                       {/* Practical attribution guide */}
-                      <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] space-y-1 min-w-0 overflow-hidden">
-                        <span className="font-semibold text-slate-900 dark:text-white block">
+                      <div className="p-2.5 rounded-lg bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-xs space-y-1 min-w-0 overflow-hidden">
+                        <span className="font-semibold text-stone-900 dark:text-white block">
                           {t.modal.sec2AttrTitle}
                         </span>
-                        <p className="text-slate-600 dark:text-slate-300 font-mono text-[10px] leading-relaxed whitespace-pre-wrap break-all min-w-0">
+                        <p className="text-stone-600 dark:text-stone-300 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all min-w-0">
                           {unifiedAnalysis.licenseExplanation.attributionGuide}
                         </p>
                       </div>
                     </div>
 
                     {/* Ethical notice */}
-                    <div className="p-3 bg-slate-100 dark:bg-slate-800/30 rounded-lg text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
+                    <div className="p-3 bg-stone-100 dark:bg-stone-800/30 rounded-lg text-xs text-stone-500 dark:text-stone-400 leading-normal">
                       {t.modal.ethicalNotice}
                     </div>
                   </div>
@@ -1731,20 +1734,20 @@ export const RelatedWikimediaLinks: React.FC<{
   const en = language === 'en';
   const groups = Array.from(new Set(links.map((l) => l.project)));
   return (
-    <div className="mt-3 pt-3 border-t border-blue-100 dark:border-blue-900/40 space-y-2">
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+    <div className="mt-3 pt-3 border-t border-accent-100 dark:border-accent-900/40 space-y-2">
+      <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
         <Globe className="w-3.5 h-3.5" />
         {en ? 'Related Wikimedia projects' : 'Proyek Wikimedia terkait'}
         {loading && <Loader2 className="w-3 h-3 animate-spin" />}
       </div>
       {!loading && links.length === 0 && (
-        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-stone-500 dark:text-stone-400">
           {en ? 'No related pages found.' : 'Tidak ada halaman terkait yang ditemukan.'}
         </p>
       )}
       {groups.map((g) => (
         <div key={g} className="space-y-1">
-          <div className="text-[10px] font-semibold text-slate-400">{g}</div>
+          <div className="text-xs font-semibold text-stone-400">{g}</div>
           <div className="flex flex-wrap gap-1.5">
             {links.filter((l) => l.project === g).map((l) => (
               <a
@@ -1753,7 +1756,7 @@ export const RelatedWikimediaLinks: React.FC<{
                 target="_blank"
                 rel="noopener noreferrer"
                 title={l.description || l.title}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700 hover:bg-stone-50 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700"
               >
                 <span>{l.title}</span>
                 <ExternalLink className="w-2.5 h-2.5 opacity-60" />

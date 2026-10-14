@@ -57,7 +57,7 @@ export const MediaTypeFilter: React.FC<MediaTypeFilterProps> = ({
   return (
     <div className="w-full flex justify-center sm:justify-start">
       <div
-        className="inline-flex items-center gap-1 p-1.5 bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl max-w-full overflow-x-auto text-xs sm:text-sm font-medium shadow-2xs"
+        className="inline-flex items-center gap-1 p-1.5 bg-stone-100 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-800 rounded-lg max-w-full overflow-x-auto text-xs sm:text-sm font-medium shadow-2xs"
         role="tablist"
         aria-label="Filter Jenis Dokumen"
       >
@@ -71,10 +71,10 @@ export const MediaTypeFilter: React.FC<MediaTypeFilterProps> = ({
               aria-selected={isActive}
               onClick={() => { onSelectMediaType(opt.id); if (userMode) onSetUserMode?.(false);
               if (categoryMode) onSetCategoryMode?.(false); }}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                 isActive
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold scale-[1.01]'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
+                  ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs font-semibold '
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-200/50 dark:hover:bg-stone-700/50'
               }`}
             >
               {opt.icon}
@@ -88,10 +88,10 @@ export const MediaTypeFilter: React.FC<MediaTypeFilterProps> = ({
             role="tab"
             aria-selected={userMode}
             onClick={() => { if (categoryMode) onSetCategoryMode?.(false); onSetUserMode(true); }}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                 userMode
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold scale-[1.01]'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
+                  ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs font-semibold '
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-200/50 dark:hover:bg-stone-700/50'
               }`}
           >
             <User className="w-4 h-4" />
@@ -104,10 +104,10 @@ export const MediaTypeFilter: React.FC<MediaTypeFilterProps> = ({
             role="tab"
             aria-selected={categoryMode}
             onClick={() => onSetCategoryMode(true)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all whitespace-nowrap cursor-pointer ${
               categoryMode
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold scale-[1.01]'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
+                ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs font-semibold '
+                : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-200/50 dark:hover:bg-stone-700/50'
             }`}
           >
             <FolderTree className="w-4 h-4" />

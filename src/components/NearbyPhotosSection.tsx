@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 
 // Explicitly register MapLibre Web Worker URL for Vite bundler
 if (typeof (maplibregl as { setWorkerUrl?: (url: string) => void }).setWorkerUrl === 'function') {
@@ -176,11 +176,11 @@ return () => ro.disconnect();
                 'interpolate',
                 ['linear'],
                 ['coalesce', ['get', 'render_height'], 15],
-                0, '#e2e8f0',
-                20, '#cbd5e1',
-                50, '#94a3b8',
-                100, '#64748b',
-                200, '#475569',
+                0, '#e7e0d2',
+                20, '#d3cab8',
+                50, '#a99f8c',
+                100, '#80776a',
+                200, '#61594e',
               ],
               // Tinggi ekstrusi 3D dengan transisi halus saat zoom
               'fill-extrusion-height': [
@@ -253,10 +253,10 @@ return () => ro.disconnect();
         pinEl.className = 'maplibre-center-pin';
         pinEl.style.width = '16px';
         pinEl.style.height = '16px';
-        pinEl.style.backgroundColor = '#ef4444';
+        pinEl.style.backgroundColor = '#211c18';
         pinEl.style.border = '3px solid #ffffff';
         pinEl.style.borderRadius = '50%';
-        pinEl.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.4), 0 2px 6px rgba(0,0,0,0.3)';
+        pinEl.style.boxShadow = '0 0 0 4px rgba(33, 28, 24, 0.35), 0 2px 6px rgba(0,0,0,0.3)';
         pinEl.style.cursor = 'pointer';
 
         const marker = new maplibregl.Marker({
@@ -349,8 +349,8 @@ return () => ro.disconnect();
 
       if (isMulti) {
         // Dot clustering with number count
-        const dotBg = isSelected ? '#10b981' : '#2563eb';
-        const dotRing = isSelected ? 'rgba(16, 185, 129, 0.65)' : 'rgba(37, 99, 235, 0.35)';
+        const dotBg = isSelected ? '#6b8541' : '#a8482a';
+        const dotRing = isSelected ? 'rgba(107, 133, 65, 0.6)' : 'rgba(168, 72, 42, 0.35)';
 
         markerEl.className = 'maplibre-cluster-marker';
         markerEl.style.width = isSelected ? '36px' : '32px';
@@ -372,8 +372,8 @@ return () => ro.disconnect();
         markerEl.textContent = String(cluster.items.length);
       } else {
         // Single photo dot
-        const dotBg = isSelected ? '#10b981' : '#3b82f6';
-        const dotRing = isSelected ? 'rgba(16, 185, 129, 0.65)' : 'rgba(59, 130, 246, 0.4)';
+        const dotBg = isSelected ? '#6b8541' : '#bf5c38';
+        const dotRing = isSelected ? 'rgba(107, 133, 65, 0.6)' : 'rgba(191, 92, 56, 0.4)';
 
         markerEl.className = 'maplibre-single-marker';
         markerEl.style.width = isSelected ? '26px' : '20px';
@@ -450,10 +450,10 @@ setSelectedPhoto(activeItem);
       const userEl = document.createElement('div');
       userEl.style.width = '18px';
       userEl.style.height = '18px';
-      userEl.style.backgroundColor = '#ef4444';
+      userEl.style.backgroundColor = '#211c18';
       userEl.style.border = '3px solid #ffffff';
       userEl.style.borderRadius = '50%';
-      userEl.style.boxShadow = '0 0 0 5px rgba(239, 68, 68, 0.35), 0 2px 8px rgba(0,0,0,0.3)';
+      userEl.style.boxShadow = '0 0 0 5px rgba(33, 28, 24, 0.3), 0 2px 8px rgba(0,0,0,0.3)';
 
       if (tooltipText) {
         userEl.title = tooltipText;
@@ -609,7 +609,7 @@ if (reqId !== analysisRequestIdRef.current) return;
       console.error('Gemini area analysis error:', err);
 if (reqId !== analysisRequestIdRef.current) return;
       setAreaAnalysisError(
-        err instanceof Error ? err.message : 'Gagal menghasilkan analisis area Gemini.'
+        err instanceof Error ? err.message : (language === 'en' ? 'Failed to generate the Gemini area analysis.' : 'Gagal menghasilkan analisis area Gemini.')
       );
     } finally {
 if (reqId === analysisRequestIdRef.current) setIsAnalyzingArea(false);
@@ -796,14 +796,14 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-2xs">
+            <div className="w-7 h-7 rounded-lg bg-accent-600 text-white flex items-center justify-center shadow-2xs">
               <MapPin className="w-4 h-4" />
             </div>
-            <h2 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="font-display text-base sm:text-lg font-bold text-stone-900 dark:text-white tracking-tight">
               {t.nearby.title}
             </h2>
           </div>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+          <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-400">
             {t.nearby.subtitle}
           </p>
         </div>
@@ -812,15 +812,15 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
 
       {/* Helpful Location Notice (e.g. Switched to Network Location) */}
       {locationNotice && (
-        <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-xl text-blue-900 dark:text-blue-200 text-xs flex items-center justify-between gap-3 animate-fadeIn">
+        <div className="p-3 bg-accent-50 dark:bg-accent-950/40 border border-accent-200 dark:border-accent-900 rounded-lg text-accent-900 dark:text-accent-200 text-xs flex items-center justify-between gap-3 animate-fadeIn">
           <div className="flex items-center gap-2">
-            <Info className="w-4 h-4 text-blue-600 shrink-0" />
+            <Info className="w-4 h-4 text-accent-600 shrink-0" />
             <span>{locationNotice}</span>
           </div>
           <button
             type="button"
             onClick={() => setLocationNotice(null)}
-            className="text-blue-700 hover:text-blue-900 dark:text-blue-400 p-1 rounded-md"
+            className="text-accent-700 hover:text-accent-900 dark:text-accent-400 p-1 rounded-md"
           >
             <X className="w-4 h-4" />
           </button>
@@ -829,7 +829,7 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
 
       {/* Error or Notice Alert */}
       {locationError && (
-        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-3 animate-fadeIn">
+        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-3 animate-fadeIn">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
             <span className="font-medium">{locationError}</span>
@@ -847,7 +847,7 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
 <div className="flex flex-col lg:flex-row gap-4 items-stretch">
 <div className="flex-1 min-w-0 space-y-4">
       {/* MAPLIBRE GL MAP CONTAINER: Modern WebGL rendering for OpenStreetMap */}
-      <div className="relative isolate z-0 w-full h-[460px] sm:h-[500px] lg:h-[620px] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md bg-slate-100 dark:bg-slate-900">
+      <div className="relative isolate z-0 w-full h-[460px] sm:h-[500px] lg:h-[620px] rounded-lg overflow-hidden border border-stone-200 dark:border-stone-800 shadow-md bg-stone-100 dark:bg-stone-900">
         {/* MapLibre DOM container */}
         <div ref={mapContainerRef} className="w-full h-full z-0" />
 
@@ -860,10 +860,10 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
             disabled={isLocatingUser}
             aria-label={t.nearby.locationBtn}
             title={t.nearby.locationBtn}
-            className="w-10 h-10 rounded-lg shadow-md bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center border border-slate-200/80 dark:border-slate-700 transition-colors cursor-pointer disabled:opacity-60"
+            className="w-10 h-10 rounded-lg shadow-md bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 flex items-center justify-center border border-stone-200/80 dark:border-stone-700 transition-colors cursor-pointer disabled:opacity-60"
           >
             <LocateFixed
-              className={`w-5 h-5 text-blue-600 dark:text-blue-400 ${
+              className={`w-5 h-5 text-accent-600 dark:text-accent-400 ${
                 isLocatingUser ? 'animate-spin' : ''
               }`}
             />
@@ -873,7 +873,7 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
           <button
             type="button"
             onClick={toggle3D}
-            aria-label="Mode 3D"
+            aria-label={language === 'en' ? '3D mode' : 'Mode 3D'}
             title={
               is3DMode
                 ? (language === 'en' ? 'Disable 3D Mode' : 'Nonaktifkan Mode 3D')
@@ -881,42 +881,42 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
             }
             className={`w-10 h-10 rounded-lg shadow-md flex items-center justify-center border transition-all cursor-pointer font-bold text-xs ${
               is3DMode
-                ? 'bg-blue-600 text-white border-blue-600 shadow-blue-500/25 ring-2 ring-blue-400/40'
-                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200/80 dark:border-slate-700'
+                ? 'bg-accent-600 text-white border-accent-600 shadow-accent-500/25 ring-2 ring-accent-400/40'
+                : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 border-stone-200/80 dark:border-stone-700'
             }`}
           >
-            <span className="font-display font-extrabold text-[12px] tracking-tight">3D</span>
+            <span className="font-display font-extrabold text-xs tracking-tight">3D</span>
           </button>
         </div>
 
         {/* Kolom overlay kiri-atas: legenda, tombol aksi, dan badge 3D (tersusun vertikal agar tidak tumpang tindih) */}
         <div className="absolute top-3 left-3 right-16 z-20 flex flex-col items-start gap-2 pointer-events-none">
         {/* Legend / Info Bar Overlay (Top Left inside map container) */}
-        <div className="relative z-20 max-w-full flex-wrap bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 text-[11px] shadow-sm flex items-center gap-3 pointer-events-auto">
+        <div className="relative z-20 max-w-full flex-wrap bg-white/95 dark:bg-stone-900/95 px-3 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800 text-xs shadow-sm flex items-center gap-3 pointer-events-auto">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
-            <span className="text-slate-600 dark:text-slate-300 font-medium">Foto Commons</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-accent-600 inline-block" />
+            <span className="text-stone-600 dark:text-stone-300 font-medium">{language === 'en' ? 'Commons photo' : 'Foto Commons'}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-            <span className="text-slate-600 dark:text-slate-300 font-medium">Dipilih</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-moss-500 inline-block" />
+            <span className="text-stone-600 dark:text-stone-300 font-medium">{language === 'en' ? 'Selected' : 'Dipilih'}</span>
           </div>
           {nearbyPhotos.length > 0 && (
-            <span className="text-slate-400 font-mono text-[10px]">
+            <span className="text-stone-400 font-mono text-xs">
               • {t.nearby.foundPhotos(nearbyPhotos.length)}
             </span>
           )}
         </div>
 
         {/* Overlay aksi di depan peta: Cari Commons Terdekat & Asisten Gemini */}
-        <div className="relative flex flex-wrap items-center gap-2 pointer-events-auto [&_button]:shadow-lg">
+        <div className="relative flex flex-wrap items-center gap-2 pointer-events-auto [&_button]:shadow-sm">
           {/* Button 1: Tombol Cari Commons Terdekat */}
           <button
             type="button"
             onClick={handleFindNearbyCommons}
             disabled={isLoadingNearby}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-all shadow-xs hover:shadow-sm disabled:opacity-60 cursor-pointer"
-            title="Cari foto bergeotag di Wikimedia Commons pada koordinat geotag saat ini"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-semibold transition-all shadow-xs hover:shadow-sm disabled:opacity-60 cursor-pointer"
+            title={language === 'en' ? 'Search geotagged photos on Wikimedia Commons near the current coordinates' : 'Cari foto bergeotag di Wikimedia Commons pada koordinat geotag saat ini'}
           >
             <Search className={`w-4 h-4 ${isLoadingNearby ? 'animate-spin' : ''}`} />
             <span>{isLoadingNearby ? t.nearby.searching : t.nearby.findCommonsBtn}</span>
@@ -927,7 +927,7 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
             type="button"
             onClick={handleRunAreaGeminiAssistant}
             disabled={isAnalyzingArea}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl text-xs font-semibold transition-all shadow-xs hover:shadow-sm disabled:opacity-60 cursor-pointer"
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-accent-600 to-accent-600 hover:from-accent-700 hover:to-accent-700 text-white rounded-lg text-xs font-semibold transition-all shadow-xs hover:shadow-sm disabled:opacity-60 cursor-pointer"
             title={t.nearby.geminiAssistantBtn}
           >
             <Sparkles className={`w-4 h-4 ${isAnalyzingArea ? 'animate-spin' : ''}`} />
@@ -937,11 +937,11 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
 
         {/* 3D Mode Active Status Badge Overlay */}
         {is3DMode && (
-          <div className="relative z-20 max-w-full pointer-events-auto bg-indigo-950/85 backdrop-blur-md text-white border border-indigo-500/30 px-3 py-1.5 rounded-xl text-[10px] font-mono shadow-sm flex items-center gap-2 animate-fadeIn pointer-events-none">
-            <Box className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <div className="relative z-20 max-w-full pointer-events-auto bg-accent-950/85 text-white border border-accent-500/30 px-3 py-1.5 rounded-lg text-xs font-mono shadow-sm flex items-center gap-2 animate-fadeIn pointer-events-none">
+            <Box className="w-3.5 h-3.5 text-accent-400 shrink-0" />
             <span>
               {language === 'en'
-                ? '3D Mode: Gedung 3D (fill-extrusion) • Drag with right-click / Ctrl to tilt & rotate'
+                ? '3D Mode: 3D buildings • Right-click drag / Ctrl+drag to tilt & rotate'
                 : 'Mode 3D: Gedung 3D (fill-extrusion) • Klik kanan / Ctrl+geser untuk kemiringan & rotasi'}
             </span>
           </div>
@@ -949,18 +949,18 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
         </div>
 
         {/* Floating Search Status & Interactive Click Hint (Bottom Left) */}
-        <div className="absolute bottom-3 left-3 z-20 max-w-[calc(100%-4.75rem)] bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-2.5 py-1 rounded-lg text-[10px] leading-snug text-slate-500 dark:text-slate-400 font-mono border border-slate-200/50 dark:border-slate-800/50 pointer-events-none">
+        <div className="absolute bottom-3 left-3 z-20 max-w-[calc(100%-4.75rem)] bg-white/90 dark:bg-stone-900/90 px-2.5 py-1 rounded-lg text-xs leading-snug text-stone-500 dark:text-stone-400 font-mono border border-stone-200/50 dark:border-stone-800/50 pointer-events-none">
           {t.nearby.radiusHint} • {t.nearby.clickMapHint}
         </div>
 
         {/* Dismissable Detail Popup Overlay (Top Right inside map, offset to left of overlay buttons) */}
         {activeClusterPhoto && (
-          <div className="absolute top-3 right-16 z-30 w-80 max-w-[calc(100%-76px)] bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-fadeIn text-xs transition-all">
+          <div className="absolute top-3 right-16 z-30 w-80 max-w-[calc(100%-76px)] bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 overflow-hidden animate-fadeIn text-xs transition-all">
             {/* Header: Title & Dismiss button */}
-            <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+            <div className="flex items-center justify-between p-3 border-b border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-800/40">
               <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="font-semibold text-slate-900 dark:text-white truncate text-[11px]">
+                <span className="w-2 h-2 rounded-full bg-moss-500 shrink-0" />
+                <span className="font-semibold text-stone-900 dark:text-white truncate text-xs">
                   {activeClusterPhoto.cleanTitle}
                 </span>
               </div>
@@ -973,7 +973,7 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
                   setSelectedCluster(null);
                   setSelectedClusterItemIndex(0);
                 }}
-                className="w-6 h-6 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors shrink-0 cursor-pointer"
+                className="w-6 h-6 rounded-lg hover:bg-stone-200 dark:hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition-colors shrink-0 cursor-pointer"
                 title={t.nearby.dismiss}
               >
                 <X className="w-3.5 h-3.5" />
@@ -981,18 +981,18 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
             </div>
 
             {/* Thumbnail Image */}
-            <div className="relative aspect-video bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div className="relative aspect-video bg-stone-100 dark:bg-stone-800 overflow-hidden">
 {loadedPreviewId !== activeClusterPhoto.id && failedPreviewId !== activeClusterPhoto.id && (
-<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 animate-pulse" role="status" aria-live="polite">
-<div className="w-6 h-6 rounded-full border-2 border-slate-300 dark:border-slate-600 border-t-blue-600 animate-spin" />
-<span className="text-xs text-slate-500 dark:text-slate-400">{language === 'en' ? 'Loading photo…' : 'Memuat foto…'}</span>
+<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-stone-100 dark:bg-stone-800 animate-pulse" role="status" aria-live="polite">
+<div className="w-6 h-6 rounded-full border-2 border-stone-300 dark:border-stone-600 border-t-accent-600 animate-spin" />
+<span className="text-xs text-stone-500 dark:text-stone-400">{language === 'en' ? 'Loading photo…' : 'Memuat foto…'}</span>
 </div>
 )}
 {failedPreviewId === activeClusterPhoto.id && (
-<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400">
 <ImageIcon className="w-6 h-6" />
 <span className="text-xs">{language === 'en' ? 'Photo failed to load' : 'Foto gagal dimuat'}</span>
-<button type="button" onClick={() => { setFailedPreviewId(null); setPreviewRetry((n) => n + 1); }} className="px-2 py-1 text-[11px] font-semibold rounded-md bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 cursor-pointer">{language === 'en' ? 'Retry' : 'Coba lagi'}</button>
+<button type="button" onClick={() => { setFailedPreviewId(null); setPreviewRetry((n) => n + 1); }} className="px-2 py-1 text-xs font-semibold rounded-md bg-white dark:bg-stone-700 border border-stone-200 dark:border-stone-600 hover:bg-stone-50 cursor-pointer">{language === 'en' ? 'Retry' : 'Coba lagi'}</button>
 </div>
 )}
 <img
@@ -1006,7 +1006,7 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
 
               {/* Cluster Navigation Controls if multiple photos at this coordinate */}
               {selectedCluster && selectedCluster.items.length > 1 && (
-                <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-center justify-between text-white text-[11px]">
+                <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-center justify-between text-white text-xs">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1016,12 +1016,12 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
                       );
                     }}
                     className="p-1 rounded-full bg-white/20 hover:bg-white/40 transition-colors cursor-pointer"
-                    title="Foto sebelumnya"
+                    title={language === 'en' ? 'Previous photo' : 'Foto sebelumnya'}
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
 
-                  <span className="font-mono text-[10px] tracking-wider">
+                  <span className="font-mono text-xs tracking-wider">
                     {selectedClusterItemIndex + 1} / {selectedCluster.items.length}
                   </span>
 
@@ -1034,7 +1034,7 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
                       );
                     }}
                     className="p-1 rounded-full bg-white/20 hover:bg-white/40 transition-colors cursor-pointer"
-                    title="Foto selanjutnya"
+                    title={language === 'en' ? 'Next photo' : 'Foto selanjutnya'}
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
@@ -1045,11 +1045,11 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
             {/* Content Body */}
             <div className="p-3 space-y-2.5">
               <div className="space-y-1">
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">
-                  {activeClusterPhoto.description || 'Berkas foto bergeotag dari Wikimedia Commons'}
+                <p className="text-xs text-stone-500 dark:text-stone-400 line-clamp-2">
+                  {activeClusterPhoto.description || (language === 'en' ? 'Geotagged photo file from Wikimedia Commons' : 'Berkas foto bergeotag dari Wikimedia Commons')}
                 </p>
 
-                <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                <div className="flex items-center gap-2 text-xs text-stone-400 dark:text-stone-500 font-mono">
                   <span>{activeClusterPhoto.author || 'Commons'}</span>
                   <span>•</span>
                   <span>{activeClusterPhoto.licenseShort}</span>
@@ -1057,11 +1057,11 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
               </div>
 
               {/* Action buttons */}
-              <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2 pt-1 border-t border-stone-100 dark:border-stone-800">
                 <button
                   type="button"
                   onClick={() => onOpenDetail(activeClusterPhoto)}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   <span>{t.nearby.viewInModal}</span>
@@ -1071,8 +1071,8 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
                   href={activeClusterPhoto.pageUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors"
-                  title="Lihat di Wikimedia Commons"
+                  className="p-1.5 rounded-lg border border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-400 transition-colors"
+                  title={language === 'en' ? 'View on Wikimedia Commons' : 'Lihat di Wikimedia Commons'}
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
@@ -1087,14 +1087,14 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
       {/* Horizontal Strip of Found Photos with Pagination */}
       {nearbyPhotos.length > 0 && (
 <div className="relative w-full lg:w-[340px] xl:w-[380px] lg:shrink-0 lg:min-h-[320px]">
-<div className="space-y-3 pt-2 lg:pt-0 lg:px-3 lg:pb-3 lg:absolute lg:inset-0 lg:overflow-y-auto lg:rounded-2xl lg:border lg:border-slate-200 dark:lg:border-slate-800 lg:bg-white dark:lg:bg-slate-900/60">
+<div className="space-y-3 pt-2 lg:pt-0 lg:px-3 lg:pb-3 lg:absolute lg:inset-0 lg:overflow-y-auto lg:rounded-lg lg:border lg:border-stone-200 dark:lg:border-stone-800 lg:bg-white dark:lg:bg-stone-900/60">
           {/* Baris Kontrol Strip: Jumlah foto & Navigasi Pagination */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch lg:sticky lg:top-0 lg:z-20 lg:-mx-3 lg:px-4 lg:pt-3 lg:pb-3 lg:bg-white dark:lg:bg-slate-900 lg:border-b lg:border-slate-200 dark:lg:border-slate-800 lg:shadow-[0_6px_10px_-8px_rgba(15,23,42,0.25)] lg:rounded-t-2xl text-xs text-slate-600 dark:text-slate-400 px-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch lg:sticky lg:top-0 lg:z-20 lg:-mx-3 lg:px-4 lg:pt-3 lg:pb-3 lg:bg-white dark:lg:bg-stone-900 lg:border-b lg:border-stone-200 dark:lg:border-stone-800 lg:shadow-[0_6px_10px_-8px_rgba(33,28,24,0.25)] lg:rounded-t-lg text-xs text-stone-600 dark:text-stone-400 px-1">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
-              <span className="font-semibold text-slate-800 dark:text-slate-200">
+              <span className="font-semibold text-stone-800 dark:text-stone-200">
                 {t.nearby.previewTitle}
               </span>
-              <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+              <span className="font-mono text-xs text-stone-500 dark:text-stone-400">
                 ({t.nearby.previewRange(previewStart, previewEnd, nearbyPhotos.length)})
               </span>
             </div>
@@ -1106,13 +1106,13 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
                   type="button"
                   onClick={() => setPreviewPage((p) => Math.max(1, p - 1))}
                   disabled={previewPage === 1}
-                  className="p-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                  className="p-1 rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
                   title={t.nearby.previewPrev}
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
 
-                <span className="text-[11px] font-mono px-1.5 tabular-nums whitespace-nowrap">
+                <span className="text-xs font-mono px-1.5 tabular-nums whitespace-nowrap">
                   {previewPage} / {totalPreviewPages}
                 </span>
 
@@ -1120,7 +1120,7 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
                   type="button"
                   onClick={() => setPreviewPage((p) => Math.min(totalPreviewPages, p + 1))}
                   disabled={previewPage === totalPreviewPages}
-                  className="p-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                  className="p-1 rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
                   title={t.nearby.previewNext}
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -1139,29 +1139,29 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
                 <div
                   key={photo.id}
                   onClick={() => focusPhotoOnMap(photo)}
-                  className={`group relative rounded-xl overflow-hidden border bg-white dark:bg-slate-900 cursor-pointer transition-all hover:shadow-md ${
+                  className={`group relative rounded-lg overflow-hidden border bg-white dark:bg-stone-900 cursor-pointer transition-all hover:shadow-md ${
                     isSelected
-                      ? 'border-blue-600 dark:border-blue-500 ring-2 ring-blue-600/50 dark:ring-blue-500/50 shadow-md scale-[1.02]'
-                      : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                      ? 'border-accent-600 dark:border-accent-500 ring-2 ring-accent-600/50 dark:ring-accent-500/50 shadow-md '
+                      : 'border-stone-200 dark:border-stone-800 hover:border-stone-300 dark:hover:border-stone-700'
                   }`}
                 >
                   {/* Aspect Ratio Container */}
-                  <div className="relative aspect-[4/3] bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div className="relative aspect-[4/3] bg-stone-100 dark:bg-stone-800 overflow-hidden">
                     <img
                       src={photo.thumbnailUrl || photo.fileUrl}
                       alt={photo.cleanTitle}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="w-full h-full object-cover transition-transform duration-300 "
                       loading="lazy"
                     />
 
                     {/* Badge Ekstensi */}
-                    <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/60 text-white font-mono text-[9px] uppercase tracking-wider backdrop-blur-2xs">
+                    <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/60 text-white font-mono text-xs uppercase tracking-wider ">
                       {ext}
                     </span>
 
                     {/* Selection Indicator */}
                     {isSelected && (
-                      <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                      <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-accent-600 text-white flex items-center justify-center shadow-xs">
                         <CheckCircle2 className="w-3 h-3" />
                       </div>
                     )}
@@ -1169,10 +1169,10 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
 
                   {/* Metadata Ringkas */}
                   <div className="p-2 space-y-1">
-                    <p className="text-[10px] font-medium text-slate-900 dark:text-white truncate">
+                    <p className="text-xs font-medium text-stone-900 dark:text-white truncate">
                       {photo.cleanTitle}
                     </p>
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400">
                       <span className="truncate max-w-[56px]">{photo.author || 'Commons'}</span>
                       <span className="font-mono">{photo.licenseShort}</span>
                     </div>
@@ -1192,17 +1192,17 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
           ref={analysisLoadingRef}
           role="status"
           aria-live="polite"
-          className="p-4 sm:p-5 bg-gradient-to-br from-purple-50/90 via-blue-50/50 to-white dark:from-slate-900 dark:via-purple-950/20 dark:to-slate-900 border border-purple-200/80 dark:border-purple-900/50 rounded-2xl shadow-sm space-y-4 animate-fadeIn"
+          className="p-4 sm:p-5 bg-gradient-to-br from-accent-50/90 via-accent-50/50 to-white dark:from-stone-900 dark:via-accent-950/20 dark:to-stone-900 border border-accent-200/80 dark:border-accent-900/50 rounded-lg shadow-sm space-y-4 animate-fadeIn"
         >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 text-white flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-accent-600 to-accent-600 text-white flex items-center justify-center shrink-0">
               <Sparkles className="w-4 h-4 animate-spin" />
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-bold text-slate-900 dark:text-white">
+              <div className="text-sm font-bold text-stone-900 dark:text-white">
                 {language === 'en' ? 'Gemini is analyzing this area…' : 'Gemini sedang menganalisis area ini…'}
               </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+              <div className="text-xs text-stone-500 dark:text-stone-400">
                 {language === 'en'
                   ? 'Reading nearby Commons metadata and finding related Wikimedia projects. This can take a few seconds.'
                   : 'Membaca metadata Commons terdekat dan mencari proyek Wikimedia terkait. Ini bisa memakan beberapa detik.'}
@@ -1211,11 +1211,11 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-pulse">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="rounded-xl border border-slate-200/70 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 p-3 space-y-2">
-                <div className="h-3 w-1/2 rounded bg-slate-200 dark:bg-slate-700" />
-                <div className="h-2.5 w-full rounded bg-slate-200 dark:bg-slate-700" />
-                <div className="h-2.5 w-5/6 rounded bg-slate-200 dark:bg-slate-700" />
-                <div className="h-2.5 w-2/3 rounded bg-slate-200 dark:bg-slate-700" />
+              <div key={i} className="rounded-lg border border-stone-200/70 dark:border-stone-800 bg-white/70 dark:bg-stone-900/60 p-3 space-y-2">
+                <div className="h-3 w-1/2 rounded bg-stone-200 dark:bg-stone-700" />
+                <div className="h-2.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
+                <div className="h-2.5 w-5/6 rounded bg-stone-200 dark:bg-stone-700" />
+                <div className="h-2.5 w-2/3 rounded bg-stone-200 dark:bg-stone-700" />
               </div>
             ))}
           </div>
@@ -1226,19 +1226,19 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
       {areaAnalysis && !isAnalyzingArea && (
         <div
           ref={analysisResultRef}
-          className="p-4 sm:p-5 bg-gradient-to-br from-purple-50/90 via-blue-50/50 to-white dark:from-slate-900 dark:via-purple-950/20 dark:to-slate-900 border border-purple-200/80 dark:border-purple-900/50 rounded-2xl shadow-sm space-y-4 animate-fadeIn"
+          className="p-4 sm:p-5 bg-gradient-to-br from-accent-50/90 via-accent-50/50 to-white dark:from-stone-900 dark:via-accent-950/20 dark:to-stone-900 border border-accent-200/80 dark:border-accent-900/50 rounded-lg shadow-sm space-y-4 animate-fadeIn"
         >
           {/* Header of AI Analysis */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-100 dark:border-purple-900/40 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-accent-100 dark:border-accent-900/40 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 text-white flex items-center justify-center shadow-2xs">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-accent-600 to-accent-600 text-white flex items-center justify-center shadow-2xs">
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white">
+                <h3 className="font-display font-bold text-sm sm:text-base text-stone-900 dark:text-white">
                   {t.nearby.geminiAreaAnalysisTitle}
                 </h3>
-                <div className="flex items-center gap-2 text-[10px] text-purple-700 dark:text-purple-300 font-mono">
+                <div className="flex items-center gap-2 text-xs text-accent-700 dark:text-accent-300 font-mono">
                   <span>{areaAnalysis.modelMeta?.assistantName || GEMINI_ASSISTANT_NAME}</span>
                   <span>•</span>
                   <span>{areaAnalysis.modelMeta?.modelVersion || GEMINI_MODEL_VERSION}</span>
@@ -1246,7 +1246,7 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
               </div>
             </div>
 
-            <span className="text-[10px] px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 font-medium self-start sm:self-auto">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-accent-100 dark:bg-accent-900/60 text-accent-800 dark:text-accent-200 font-medium self-start sm:self-auto">
               {areaAnalysis.modelMeta?.source === 'local'
                 ? (language === 'en' ? 'Local summary (not Gemini)' : 'Ringkasan lokal (bukan Gemini)')
                 : (language === 'en' ? 'Gemini summary' : 'Ringkasan Gemini')}
@@ -1255,14 +1255,14 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
 
           {/* Location Context Line */}
           {areaAnalysis.address && (
-            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-medium">
-              <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <div className="flex items-center gap-2 text-xs text-stone-600 dark:text-stone-300 font-medium">
+              <MapPin className="w-3.5 h-3.5 text-accent-600 shrink-0" />
               <span>{areaAnalysis.address}</span>
             </div>
           )}
 
           {/* Narrative Summary / Area Overview */}
-          <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+          <p className="text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed">
             {areaAnalysis.areaOverview}
           </p>
 
@@ -1270,12 +1270,12 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
             {/* 1. Photos Summary */}
             {areaAnalysis.photosSummary && (
-              <div className="p-3 bg-white/80 dark:bg-slate-800/60 rounded-xl border border-purple-100/60 dark:border-slate-800 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                  <ImageIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <div className="p-3 bg-white/80 dark:bg-stone-800/60 rounded-lg border border-accent-100/60 dark:border-stone-800 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-800 dark:text-stone-200">
+                  <ImageIcon className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400" />
                   <span>{t.nearby.photosSummaryTitle}</span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                   {areaAnalysis.photosSummary}
                 </p>
               </div>
@@ -1283,15 +1283,15 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
 
             {/* 2. Key Identified Landmarks */}
             {areaAnalysis.identifiedLandmarks && areaAnalysis.identifiedLandmarks.length > 0 && (
-              <div className="p-3 bg-white/80 dark:bg-slate-800/60 rounded-xl border border-purple-100/60 dark:border-slate-800 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                  <Landmark className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+              <div className="p-3 bg-white/80 dark:bg-stone-800/60 rounded-lg border border-accent-100/60 dark:border-stone-800 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-800 dark:text-stone-200">
+                  <Landmark className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400" />
                   <span>{t.nearby.keyLandmarks}</span>
                 </div>
-                <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                <ul className="text-xs text-stone-600 dark:text-stone-400 space-y-1">
                   {areaAnalysis.identifiedLandmarks.slice(0, 4).map((landmark, idx) => (
                     <li key={idx} className="flex items-start gap-1.5">
-                      <span className="text-purple-500 font-bold">•</span>
+                      <span className="text-accent-500 font-bold">•</span>
                       <span>{landmark}</span>
                     </li>
                   ))}
@@ -1301,12 +1301,12 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
 
             {/* 3. Curator Insight */}
             {areaAnalysis.curatorInsight && (
-              <div className="p-3 bg-white/80 dark:bg-slate-800/60 rounded-xl border border-purple-100/60 dark:border-slate-800 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                  <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <div className="p-3 bg-white/80 dark:bg-stone-800/60 rounded-lg border border-accent-100/60 dark:border-stone-800 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-800 dark:text-stone-200">
+                  <Globe className="w-3.5 h-3.5 text-moss-600 dark:text-moss-400" />
                   <span>{t.nearby.curatorInsight}</span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
                   {areaAnalysis.curatorInsight}
                 </p>
               </div>
@@ -1317,7 +1317,7 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
           <RelatedWikimediaLinks links={areaRelatedLinks} loading={areaRelatedLoading} language={language} />
 
           {/* AI Model Disclaimer */}
-          <div className="flex items-center justify-between pt-2 border-t border-purple-100/60 dark:border-purple-900/30 text-[10px] text-slate-400 dark:text-slate-500">
+          <div className="flex items-center justify-between pt-2 border-t border-accent-100/60 dark:border-accent-900/30 text-xs text-stone-400 dark:text-stone-500">
             <span>
               {language === 'en' ? AI_DISCLAIMER_TEXT_EN : AI_DISCLAIMER_TEXT_ID}
             </span>
@@ -1327,15 +1327,15 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
 
       {/* Area Analysis Error notice */}
       {areaAnalysisError && (
-        <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-900 dark:text-rose-200 text-xs flex items-center justify-between gap-3">
+        <div className="p-3 bg-accent-50 dark:bg-accent-950/40 border border-accent-200 dark:border-accent-900 rounded-lg text-accent-900 dark:text-accent-200 text-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-accent-600 shrink-0" />
             <span>{areaAnalysisError}</span>
           </div>
           <button
             type="button"
             onClick={() => setAreaAnalysisError(null)}
-            className="text-rose-700 hover:text-rose-900 dark:text-rose-400 p-1"
+            className="text-accent-700 hover:text-accent-900 dark:text-accent-400 p-1"
           >
             <X className="w-4 h-4" />
           </button>

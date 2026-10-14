@@ -2,9 +2,88 @@
 
 @custom-variant dark (&:is(.dark, .dark *));
 
+/*
+  Design tokens — arah "editorial hangat":
+  kertas krem + tinta cokelat gelap, aksen terakota, pendukung hijau lumut.
+  Skala `stone` ditimpa agar seluruh UI otomatis memakai netral hangat.
+*/
+@theme {
+  --font-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Skala teks: lantai 13px, semua dalam rem agar mengikuti pengaturan browser */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.4rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.55rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+
+  --radius-md: 0.25rem;
+  --radius-lg: 0.5rem;
+
+  /* Netral hangat (kertas → tinta) */
+  --color-stone-50: #faf7f1;
+  --color-stone-100: #f3eee4;
+  --color-stone-200: #e7e0d2;
+  --color-stone-300: #d3cab8;
+  --color-stone-400: #a99f8c;
+  --color-stone-500: #80776a;
+  --color-stone-600: #61594e;
+  --color-stone-700: #483f37;
+  --color-stone-800: #2f2924;
+  --color-stone-900: #211c18;
+  --color-stone-950: #161310;
+
+  /* Aksen terakota */
+  --color-accent-50: #fbf1ec;
+  --color-accent-100: #f6e1d6;
+  --color-accent-200: #ecc3ad;
+  --color-accent-300: #de9c7c;
+  --color-accent-400: #d4805b;
+  --color-accent-500: #bf5c38;
+  --color-accent-600: #a8482a;
+  --color-accent-700: #8a3a22;
+  --color-accent-800: #70311f;
+  --color-accent-900: #5c2b1d;
+  --color-accent-950: #33150d;
+
+  /* Pendukung hijau lumut */
+  --color-moss-50: #f2f5ec;
+  --color-moss-100: #e1e8d3;
+  --color-moss-200: #c6d3ab;
+  --color-moss-300: #a4b87e;
+  --color-moss-400: #86a05a;
+  --color-moss-500: #6b8541;
+  --color-moss-600: #546a33;
+  --color-moss-700: #425329;
+  --color-moss-800: #364324;
+  --color-moss-900: #2e3920;
+  --color-moss-950: #171e0e;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.animate-fadeIn { animation: fadeIn 0.15s ease-out; }
+
 @layer base {
+  /* Tipografi fluid: ukuran dasar naik pelan di layar lebar, semua rem ikut skala */
+  html {
+    font-size: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+  @media (min-width: 1280px) {
+    html { font-size: 106.25%; }
+  }
+  @media (min-width: 1920px) {
+    html { font-size: 118.75%; }
+  }
+
   :root {
-    font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-sans);
   }
 
   :root.dark,
@@ -14,12 +93,21 @@
   }
 
   h1, h2, h3, h4, .font-display {
-    font-family: 'Outfit', 'DM Sans', system-ui, sans-serif;
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
   }
 
   .font-mono, code, pre {
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Target sentuh minimal di layar sentuh */
+  @media (pointer: coarse) {
+    button, [role="button"], [role="tab"] {
+      min-height: 2.5rem;
+    }
   }
 }
 
@@ -32,9 +120,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.35);
+  background: rgba(128, 119, 106, 0.35);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.55);
+  background: rgba(128, 119, 106, 0.55);
 }

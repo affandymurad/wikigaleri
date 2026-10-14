@@ -162,7 +162,7 @@ export function getLicenseInfo(item: CommonsMediaItem): {
     case 'pd':
       return {
         label: short || 'Domain Publik / CC0',
-        badgeClass: 'text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60',
+        badgeClass: 'text-moss-700 bg-moss-50 dark:text-moss-300 dark:bg-moss-950/60 border border-moss-200 dark:border-moss-800/60',
         isFreeForCommercial: true,
         requiresAttribution: false,
         requiresShareAlike: false,
@@ -172,7 +172,7 @@ export function getLicenseInfo(item: CommonsMediaItem): {
     case 'cc_by':
       return {
         label: short || 'CC BY (Atribusi)',
-        badgeClass: 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/60',
+        badgeClass: 'text-accent-700 bg-accent-50 dark:text-accent-300 dark:bg-accent-950/60 border border-accent-200 dark:border-accent-800/60',
         isFreeForCommercial: true,
         requiresAttribution: true,
         requiresShareAlike: false,
@@ -182,7 +182,7 @@ export function getLicenseInfo(item: CommonsMediaItem): {
     case 'cc_by_sa':
       return {
         label: short || 'CC BY-SA (BerbagiSerupa)',
-        badgeClass: 'text-indigo-700 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800/60',
+        badgeClass: 'text-accent-700 bg-accent-50 dark:text-accent-300 dark:bg-accent-950/60 border border-accent-200 dark:border-accent-800/60',
         isFreeForCommercial: true,
         requiresAttribution: true,
         requiresShareAlike: true,
@@ -202,7 +202,7 @@ export function getLicenseInfo(item: CommonsMediaItem): {
     default:
       return {
         label: short || 'Lisensi Bebas',
-        badgeClass: 'text-slate-700 bg-slate-100 dark:text-slate-300 dark:bg-slate-800 border border-slate-200 dark:border-slate-700',
+        badgeClass: 'text-stone-700 bg-stone-100 dark:text-stone-300 dark:bg-stone-800 border border-stone-200 dark:border-stone-700',
         isFreeForCommercial: true,
         requiresAttribution: true,
         requiresShareAlike: false,
