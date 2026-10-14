@@ -8,12 +8,14 @@ interface AttributionQuickCopyModalProps {
   item: CommonsMediaItem | null;
   onClose: () => void;
   t: Translations;
+  language?: 'en' | 'id';
 }
 
 export const AttributionQuickCopyModal: React.FC<AttributionQuickCopyModalProps> = ({
   item,
   onClose,
   t,
+  language = 'id',
 }) => {
   const [format, setFormat] = useState<'plain' | 'markdown' | 'html' | 'wikitext'>('plain');
   const [copied, setCopied] = useState(false);
@@ -21,7 +23,7 @@ export const AttributionQuickCopyModal: React.FC<AttributionQuickCopyModalProps>
   if (!item) return null;
 
   const licenseInfo = getLicenseInfo(item);
-  const text = generateAttribution(item, format);
+  const text = generateAttribution(item, format, language);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text);

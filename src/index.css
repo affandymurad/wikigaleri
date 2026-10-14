@@ -3,9 +3,9 @@
 @custom-variant dark (&:is(.dark, .dark *));
 
 /*
-  Design tokens — arah "editorial hangat":
-  kertas krem + tinta cokelat gelap, aksen terakota, pendukung hijau lumut.
-  Skala `stone` ditimpa agar seluruh UI otomatis memakai netral hangat.
+  Design tokens — arah "editorial tinta":
+  kertas abu kebiruan + tinta gelap, aksen biru tinta, pendukung hijau lumut.
+  Skala `stone` ditimpa agar seluruh UI otomatis memakai netral abu kebiruan.
 */
 @theme {
   --font-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -26,31 +26,31 @@
   --radius-md: 0.25rem;
   --radius-lg: 0.5rem;
 
-  /* Netral hangat (kertas → tinta) */
-  --color-stone-50: #faf7f1;
-  --color-stone-100: #f3eee4;
-  --color-stone-200: #e7e0d2;
-  --color-stone-300: #d3cab8;
-  --color-stone-400: #a99f8c;
-  --color-stone-500: #80776a;
-  --color-stone-600: #61594e;
-  --color-stone-700: #483f37;
-  --color-stone-800: #2f2924;
-  --color-stone-900: #211c18;
-  --color-stone-950: #161310;
+  /* Netral abu kebiruan (kertas → tinta) */
+  --color-stone-50: #f6f7f9;
+  --color-stone-100: #eceff3;
+  --color-stone-200: #dde2e9;
+  --color-stone-300: #c5ccd7;
+  --color-stone-400: #98a2b3;
+  --color-stone-500: #6b7687;
+  --color-stone-600: #4f5a6b;
+  --color-stone-700: #3a4454;
+  --color-stone-800: #262e3b;
+  --color-stone-900: #181e29;
+  --color-stone-950: #0f131b;
 
-  /* Aksen terakota */
-  --color-accent-50: #fbf1ec;
-  --color-accent-100: #f6e1d6;
-  --color-accent-200: #ecc3ad;
-  --color-accent-300: #de9c7c;
-  --color-accent-400: #d4805b;
-  --color-accent-500: #bf5c38;
-  --color-accent-600: #a8482a;
-  --color-accent-700: #8a3a22;
-  --color-accent-800: #70311f;
-  --color-accent-900: #5c2b1d;
-  --color-accent-950: #33150d;
+  /* Aksen biru tinta */
+  --color-accent-50: #eff3f9;
+  --color-accent-100: #dce5f2;
+  --color-accent-200: #bccce5;
+  --color-accent-300: #92aad0;
+  --color-accent-400: #6683b8;
+  --color-accent-500: #46659f;
+  --color-accent-600: #34508a;
+  --color-accent-700: #2a4170;
+  --color-accent-800: #243658;
+  --color-accent-900: #1f2e4a;
+  --color-accent-950: #111a2e;
 
   /* Pendukung hijau lumut */
   --color-moss-50: #f2f5ec;
@@ -120,9 +120,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(128, 119, 106, 0.35);
+  background: rgba(107, 118, 135, 0.35);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(128, 119, 106, 0.55);
+  background: rgba(107, 118, 135, 0.55);
 }

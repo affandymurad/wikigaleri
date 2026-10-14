@@ -689,6 +689,7 @@ export default function App() {
           item={quickAttributionItem}
           onClose={() => setQuickAttributionItem(null)}
           t={t}
+          language={language}
         />
       )}
 

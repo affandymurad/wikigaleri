@@ -193,6 +193,12 @@ export const AI_DISCLAIMER_TEXT_ID =
 export const AI_DISCLAIMER_TEXT_EN =
   'Heads up: Google Gemini (gemini-2.5-flash) wrote this automatically from Wikimedia Commons metadata. It can get things wrong, so double-check before using it for research, legal matters, or publication.';
 
+export const AI_LOCAL_DISCLAIMER_TEXT_ID =
+  'Catatan: ringkasan ini dibuat otomatis oleh WikiGaleri dari judul dan metadata berkas, bukan ditulis oleh Gemini. Isinya terbatas dan bisa kurang tepat, jadi cek lagi sebelum dipakai untuk riset, urusan hukum, atau terbitan resmi.';
+
+export const AI_LOCAL_DISCLAIMER_TEXT_EN =
+  'Heads up: WikiGaleri built this summary automatically from file titles and metadata; it was not written by Gemini. It is limited and may be imprecise, so double-check before using it for research, legal matters, or publication.';
+
 export const AI_DISCLAIMER_TEXT = AI_DISCLAIMER_TEXT_ID;
 
 export interface UnifiedMediaAiAnalysis {
@@ -672,10 +678,10 @@ Kembalikan JSON dengan skema ini:
         ? 'Local summary built from file titles only, not written by Gemini.'
         : 'Ringkasan lokal yang dibuat dari judul berkas saja, bukan tulisan Gemini.',
       modelMeta: {
-        assistantName: GEMINI_ASSISTANT_NAME,
-        modelName: GEMINI_MODEL_NAME,
-        modelVersion: GEMINI_MODEL_VERSION,
-        disclaimer: disclaimerText,
+        assistantName: 'WikiGaleri',
+        modelName: isEn ? 'Local summary' : 'Ringkasan lokal',
+        modelVersion: 'local',
+        disclaimer: isEn ? AI_LOCAL_DISCLAIMER_TEXT_EN : AI_LOCAL_DISCLAIMER_TEXT_ID,
         language: lang,
         source: 'local',
       },
@@ -725,10 +731,10 @@ Kembalikan JSON dengan skema ini:
       photosSummary: isEn ? `${photos.length} Wikimedia Commons photos found within this radius.` : `Ada ${photos.length} foto Wikimedia Commons dalam radius ini.`,
       curatorInsight: isEn ? 'Gemini could not be reached, so this is a local summary.' : 'Gemini tidak bisa dihubungi, jadi ini ringkasan lokal.',
       modelMeta: {
-        assistantName: GEMINI_ASSISTANT_NAME,
-        modelName: GEMINI_MODEL_NAME,
-        modelVersion: GEMINI_MODEL_VERSION,
-        disclaimer: disclaimerText,
+        assistantName: 'WikiGaleri',
+        modelName: isEn ? 'Local summary' : 'Ringkasan lokal',
+        modelVersion: 'local',
+        disclaimer: isEn ? AI_LOCAL_DISCLAIMER_TEXT_EN : AI_LOCAL_DISCLAIMER_TEXT_ID,
         language: lang,
         source: 'local',
       },

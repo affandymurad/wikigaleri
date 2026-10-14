@@ -400,7 +400,7 @@ useEffect(() => {
 }, [unifiedAnalysis, item?.id]);
 
   const licenseInfo = item ? getLicenseInfo(item) : null;
-  const attributionText = item ? generateAttribution(item, attributionFormat) : '';
+  const attributionText = item ? generateAttribution(item, attributionFormat, language) : '';
 
   const handleCopyAttribution = () => {
     navigator.clipboard.writeText(attributionText);
@@ -410,7 +410,7 @@ useEffect(() => {
 
   const handleQuickCopyAttribution = () => {
     if (!item) return;
-    const text = generateAttribution(item, 'plain');
+    const text = generateAttribution(item, 'plain', language);
     navigator.clipboard.writeText(text);
     setCopiedQuickAttr(true);
     setTimeout(() => setCopiedQuickAttr(false), 2000);

@@ -74,7 +74,7 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   const analysisResultRef = useRef<HTMLDivElement | null>(null);
 
   // States
-  const [mapCenter, setMapCenter] = useState<[number, number]>([-6.2088, 106.8456]); // [lat, lng] Default Jakarta
+  const [mapCenter, setMapCenter] = useState<[number, number]>([-6.1753924, 106.8271528]); // [lat, lng] Default: Monumen Nasional (Monas), Jakarta
   const [nearbyPhotos, setNearbyPhotos] = useState<CommonsMediaItem[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<CommonsMediaItem | null>(null);
   const [selectedCluster, setSelectedCluster] = useState<PhotoCluster | null>(null);
@@ -176,11 +176,11 @@ return () => ro.disconnect();
                 'interpolate',
                 ['linear'],
                 ['coalesce', ['get', 'render_height'], 15],
-                0, '#e7e0d2',
-                20, '#d3cab8',
-                50, '#a99f8c',
-                100, '#80776a',
-                200, '#61594e',
+                0, '#dde2e9',
+                20, '#c5ccd7',
+                50, '#98a2b3',
+                100, '#6b7687',
+                200, '#4f5a6b',
               ],
               // Tinggi ekstrusi 3D dengan transisi halus saat zoom
               'fill-extrusion-height': [
@@ -253,10 +253,10 @@ return () => ro.disconnect();
         pinEl.className = 'maplibre-center-pin';
         pinEl.style.width = '16px';
         pinEl.style.height = '16px';
-        pinEl.style.backgroundColor = '#211c18';
+        pinEl.style.backgroundColor = '#181e29';
         pinEl.style.border = '3px solid #ffffff';
         pinEl.style.borderRadius = '50%';
-        pinEl.style.boxShadow = '0 0 0 4px rgba(33, 28, 24, 0.35), 0 2px 6px rgba(0,0,0,0.3)';
+        pinEl.style.boxShadow = '0 0 0 4px rgba(24, 30, 41, 0.35), 0 2px 6px rgba(0,0,0,0.3)';
         pinEl.style.cursor = 'pointer';
 
         const marker = new maplibregl.Marker({
@@ -349,8 +349,8 @@ return () => ro.disconnect();
 
       if (isMulti) {
         // Dot clustering with number count
-        const dotBg = isSelected ? '#6b8541' : '#a8482a';
-        const dotRing = isSelected ? 'rgba(107, 133, 65, 0.6)' : 'rgba(168, 72, 42, 0.35)';
+        const dotBg = isSelected ? '#d97706' : '#34508a';
+        const dotRing = isSelected ? 'rgba(217, 119, 6, 0.55)' : 'rgba(52, 80, 138, 0.35)';
 
         markerEl.className = 'maplibre-cluster-marker';
         markerEl.style.width = isSelected ? '36px' : '32px';
@@ -372,8 +372,8 @@ return () => ro.disconnect();
         markerEl.textContent = String(cluster.items.length);
       } else {
         // Single photo dot
-        const dotBg = isSelected ? '#6b8541' : '#bf5c38';
-        const dotRing = isSelected ? 'rgba(107, 133, 65, 0.6)' : 'rgba(191, 92, 56, 0.4)';
+        const dotBg = isSelected ? '#d97706' : '#46659f';
+        const dotRing = isSelected ? 'rgba(217, 119, 6, 0.55)' : 'rgba(70, 101, 159, 0.4)';
 
         markerEl.className = 'maplibre-single-marker';
         markerEl.style.width = isSelected ? '26px' : '20px';
@@ -450,10 +450,10 @@ setSelectedPhoto(activeItem);
       const userEl = document.createElement('div');
       userEl.style.width = '18px';
       userEl.style.height = '18px';
-      userEl.style.backgroundColor = '#211c18';
+      userEl.style.backgroundColor = '#181e29';
       userEl.style.border = '3px solid #ffffff';
       userEl.style.borderRadius = '50%';
-      userEl.style.boxShadow = '0 0 0 5px rgba(33, 28, 24, 0.3), 0 2px 8px rgba(0,0,0,0.3)';
+      userEl.style.boxShadow = '0 0 0 5px rgba(24, 30, 41, 0.3), 0 2px 8px rgba(0,0,0,0.3)';
 
       if (tooltipText) {
         userEl.title = tooltipText;
@@ -898,7 +898,7 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
             <span className="text-stone-600 dark:text-stone-300 font-medium">{language === 'en' ? 'Commons photo' : 'Foto Commons'}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-moss-500 inline-block" />
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block" />
             <span className="text-stone-600 dark:text-stone-300 font-medium">{language === 'en' ? 'Selected' : 'Dipilih'}</span>
           </div>
           {nearbyPhotos.length > 0 && (
@@ -915,7 +915,7 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
             type="button"
             onClick={handleFindNearbyCommons}
             disabled={isLoadingNearby}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-semibold transition-all shadow-xs hover:shadow-sm disabled:opacity-60 cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-60 cursor-pointer"
             title={language === 'en' ? 'Search geotagged photos on Wikimedia Commons near the current coordinates' : 'Cari foto bergeotag di Wikimedia Commons pada koordinat geotag saat ini'}
           >
             <Search className={`w-4 h-4 ${isLoadingNearby ? 'animate-spin' : ''}`} />
@@ -927,7 +927,7 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
             type="button"
             onClick={handleRunAreaGeminiAssistant}
             disabled={isAnalyzingArea}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-accent-600 to-accent-600 hover:from-accent-700 hover:to-accent-700 text-white rounded-lg text-xs font-semibold transition-all shadow-xs hover:shadow-sm disabled:opacity-60 cursor-pointer"
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-60 cursor-pointer"
             title={t.nearby.geminiAssistantBtn}
           >
             <Sparkles className={`w-4 h-4 ${isAnalyzingArea ? 'animate-spin' : ''}`} />
@@ -1089,7 +1089,7 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
 <div className="relative w-full lg:w-[340px] xl:w-[380px] lg:shrink-0 lg:min-h-[320px]">
 <div className="space-y-3 pt-2 lg:pt-0 lg:px-3 lg:pb-3 lg:absolute lg:inset-0 lg:overflow-y-auto lg:rounded-lg lg:border lg:border-stone-200 dark:lg:border-stone-800 lg:bg-white dark:lg:bg-stone-900/60">
           {/* Baris Kontrol Strip: Jumlah foto & Navigasi Pagination */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch lg:sticky lg:top-0 lg:z-20 lg:-mx-3 lg:px-4 lg:pt-3 lg:pb-3 lg:bg-white dark:lg:bg-stone-900 lg:border-b lg:border-stone-200 dark:lg:border-stone-800 lg:shadow-[0_6px_10px_-8px_rgba(33,28,24,0.25)] lg:rounded-t-lg text-xs text-stone-600 dark:text-stone-400 px-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch lg:sticky lg:top-0 lg:z-20 lg:-mx-3 lg:px-4 lg:pt-3 lg:pb-3 lg:bg-white dark:lg:bg-stone-900 lg:border-b lg:border-stone-200 dark:lg:border-stone-800 lg:shadow-[0_6px_10px_-8px_rgba(24,30,41,0.25)] lg:rounded-t-lg text-xs text-stone-600 dark:text-stone-400 px-1">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
               <span className="font-semibold text-stone-800 dark:text-stone-200">
                 {t.nearby.previewTitle}
@@ -1106,7 +1106,7 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
                   type="button"
                   onClick={() => setPreviewPage((p) => Math.max(1, p - 1))}
                   disabled={previewPage === 1}
-                  className="p-1 rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
+                  className="p-2 rounded-lg border border-stone-300 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
                   title={t.nearby.previewPrev}
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
@@ -1120,7 +1120,7 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
                   type="button"
                   onClick={() => setPreviewPage((p) => Math.min(totalPreviewPages, p + 1))}
                   disabled={previewPage === totalPreviewPages}
-                  className="p-1 rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
+                  className="p-2 rounded-lg border border-stone-300 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
                   title={t.nearby.previewNext}
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -1130,19 +1130,22 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
           </div>
 
           {/* Grid Preview Cards */}
-<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-3 gap-2">
+<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-2 gap-3">
             {currentPreviewSlice.map((photo) => {
               const isSelected = selectedPhoto?.id === photo.id;
               const ext = getFileExtension(photo.title);
+              const rawAuthor = (photo.author || 'Commons').trim();
+              const half = rawAuthor.length / 2;
+              const authorLabel = Number.isInteger(half) && half > 0 && rawAuthor.slice(0, half) === rawAuthor.slice(half) ? rawAuthor.slice(0, half) : rawAuthor;
 
               return (
                 <div
                   key={photo.id}
                   onClick={() => focusPhotoOnMap(photo)}
-                  className={`group relative rounded-lg overflow-hidden border bg-white dark:bg-stone-900 cursor-pointer transition-all hover:shadow-md ${
+                  className={`group relative rounded-lg overflow-hidden border bg-white dark:bg-stone-900 cursor-pointer transition-colors ${
                     isSelected
-                      ? 'border-accent-600 dark:border-accent-500 ring-2 ring-accent-600/50 dark:ring-accent-500/50 shadow-md '
-                      : 'border-stone-200 dark:border-stone-800 hover:border-stone-300 dark:hover:border-stone-700'
+                      ? 'border-accent-600 dark:border-accent-400 ring-2 ring-accent-600/40 dark:ring-accent-400/40'
+                      : 'border-stone-300 dark:border-stone-800 hover:border-accent-600 dark:hover:border-accent-400'
                   }`}
                 >
                   {/* Aspect Ratio Container */}
@@ -1150,32 +1153,36 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
                     <img
                       src={photo.thumbnailUrl || photo.fileUrl}
                       alt={photo.cleanTitle}
-                      className="w-full h-full object-cover transition-transform duration-300 "
+                      className="w-full h-full object-cover"
                       loading="lazy"
                     />
 
                     {/* Badge Ekstensi */}
-                    <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/60 text-white font-mono text-xs uppercase tracking-wider ">
+                    <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-stone-900/80 text-white font-mono text-xs uppercase">
                       {ext}
                     </span>
 
                     {/* Selection Indicator */}
                     {isSelected && (
-                      <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-accent-600 text-white flex items-center justify-center shadow-xs">
-                        <CheckCircle2 className="w-3 h-3" />
+                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-accent-600 text-white flex items-center justify-center">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
                       </div>
                     )}
                   </div>
 
                   {/* Metadata Ringkas */}
-                  <div className="p-2 space-y-1">
-                    <p className="text-xs font-medium text-stone-900 dark:text-white truncate">
+                  <div className="p-2.5 space-y-1">
+                    <p className="text-sm font-medium leading-snug text-stone-900 dark:text-white line-clamp-2" title={photo.cleanTitle}>
                       {photo.cleanTitle}
                     </p>
-                    <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400">
-                      <span className="truncate max-w-[56px]">{photo.author || 'Commons'}</span>
-                      <span className="font-mono">{photo.licenseShort}</span>
-                    </div>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 truncate" title={authorLabel}>
+                      {authorLabel}
+                    </p>
+                    {photo.licenseShort && (
+                      <span className="inline-block max-w-full truncate rounded bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 text-xs font-medium text-stone-600 dark:text-stone-300 align-top">
+                        {photo.licenseShort}
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -1192,10 +1199,10 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
           ref={analysisLoadingRef}
           role="status"
           aria-live="polite"
-          className="p-4 sm:p-5 bg-gradient-to-br from-accent-50/90 via-accent-50/50 to-white dark:from-stone-900 dark:via-accent-950/20 dark:to-stone-900 border border-accent-200/80 dark:border-accent-900/50 rounded-lg shadow-sm space-y-4 animate-fadeIn"
+          className="p-4 sm:p-5 bg-accent-50/60 dark:bg-stone-900 border border-accent-200/80 dark:border-accent-900/50 rounded-lg shadow-sm space-y-4 animate-fadeIn"
         >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-accent-600 to-accent-600 text-white flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-accent-600 text-white flex items-center justify-center shrink-0">
               <Sparkles className="w-4 h-4 animate-spin" />
             </div>
             <div className="min-w-0">
@@ -1226,17 +1233,19 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
       {areaAnalysis && !isAnalyzingArea && (
         <div
           ref={analysisResultRef}
-          className="p-4 sm:p-5 bg-gradient-to-br from-accent-50/90 via-accent-50/50 to-white dark:from-stone-900 dark:via-accent-950/20 dark:to-stone-900 border border-accent-200/80 dark:border-accent-900/50 rounded-lg shadow-sm space-y-4 animate-fadeIn"
+          className="p-4 sm:p-5 bg-accent-50/60 dark:bg-stone-900 border border-accent-200/80 dark:border-accent-900/50 rounded-lg shadow-sm space-y-4 animate-fadeIn"
         >
           {/* Header of AI Analysis */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-accent-100 dark:border-accent-900/40 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-accent-600 to-accent-600 text-white flex items-center justify-center shadow-2xs">
+              <div className="w-7 h-7 rounded-lg bg-accent-600 text-white flex items-center justify-center shadow-2xs">
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
                 <h3 className="font-display font-bold text-sm sm:text-base text-stone-900 dark:text-white">
-                  {t.nearby.geminiAreaAnalysisTitle}
+                  {areaAnalysis.modelMeta?.source === 'local'
+                    ? (language === 'en' ? 'About this area' : 'Tentang area ini')
+                    : t.nearby.geminiAreaAnalysisTitle}
                 </h3>
                 <div className="flex items-center gap-2 text-xs text-accent-700 dark:text-accent-300 font-mono">
                   <span>{areaAnalysis.modelMeta?.assistantName || GEMINI_ASSISTANT_NAME}</span>
@@ -1319,7 +1328,7 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
           {/* AI Model Disclaimer */}
           <div className="flex items-center justify-between pt-2 border-t border-accent-100/60 dark:border-accent-900/30 text-xs text-stone-400 dark:text-stone-500">
             <span>
-              {language === 'en' ? AI_DISCLAIMER_TEXT_EN : AI_DISCLAIMER_TEXT_ID}
+              {areaAnalysis.modelMeta?.disclaimer || (language === 'en' ? AI_DISCLAIMER_TEXT_EN : AI_DISCLAIMER_TEXT_ID)}
             </span>
           </div>
         </div>

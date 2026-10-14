@@ -218,26 +218,32 @@ export function getLicenseInfo(item: CommonsMediaItem): {
  */
 export function generateAttribution(
   item: CommonsMediaItem,
-  format: 'plain' | 'markdown' | 'html' | 'wikitext' = 'plain'
+  format: 'plain' | 'markdown' | 'html' | 'wikitext' = 'plain',
+  language: 'en' | 'id' = 'id'
 ): string {
+  const en = language === 'en';
   const title = item.cleanTitle || item.title.replace(/^File:/i, '');
-  const author = item.author || item.credit || 'Kontributor Wikimedia Commons';
+  const author = item.author || item.credit || (en ? 'Wikimedia Commons contributor' : 'Kontributor Wikimedia Commons');
   const sourceUrl = item.pageUrl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(item.title)}`;
-  const licenseName = item.licenseShort || item.licenseFull || 'Lisensi Terbuka';
+  const licenseName = item.licenseShort || item.licenseFull || (en ? 'Open license' : 'Lisensi Terbuka');
   const licenseUrl = item.licenseUrl || 'https://commons.wikimedia.org/';
 
   switch (format) {
     case 'markdown':
-      return `"${title}" oleh [${author}](${sourceUrl}) dilisensikan di bawah [${licenseName}](${licenseUrl}) via Wikimedia Commons.`;
+      return en
+        ? `"${title}" by [${author}](${sourceUrl}) licensed under [${licenseName}](${licenseUrl}) via Wikimedia Commons.`
+        : `"${title}" oleh [${author}](${sourceUrl}) dilisensikan di bawah [${licenseName}](${licenseUrl}) via Wikimedia Commons.`;
 
     case 'html':
-      return `<p>"<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${title}</a>" oleh ${author}, dilisensikan di bawah <a href="${licenseUrl}" target="_blank" rel="noopener noreferrer">${licenseName}</a> via Wikimedia Commons.</p>`;
+      return `<p>"<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${title}</a>" ${en ? 'by' : 'oleh'} ${author}, ${en ? 'licensed under' : 'dilisensikan di bawah'} <a href="${licenseUrl}" target="_blank" rel="noopener noreferrer">${licenseName}</a> via Wikimedia Commons.</p>`;
 
     case 'wikitext':
       return `{{Information\n|description = ${title}\n|source = {{own}}\n|author = ${author}\n|permission = {{${item.licenseShort ? item.licenseShort.toLowerCase().replace(/\s+/g, '-') : 'cc-by-sa-4.0'}}}\n}}`;
 
     case 'plain':
     default:
-      return `"${title}" oleh ${author}, Sumber: ${sourceUrl}, Lisensi: ${licenseName} (${licenseUrl})`;
+      return en
+        ? `"${title}" by ${author}, Source: ${sourceUrl}, License: ${licenseName} (${licenseUrl})`
+        : `"${title}" oleh ${author}, Sumber: ${sourceUrl}, Lisensi: ${licenseName} (${licenseUrl})`;
   }
 }

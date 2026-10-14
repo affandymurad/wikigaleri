@@ -587,32 +587,66 @@ export function BookmarkBackupBar({ language = 'id' }: { language?: string }) {
   };
 
   const btn = 'inline-flex items-center gap-1.5 rounded-full border border-stone-300 dark:border-stone-600 px-3.5 py-1.5 text-xs font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800 cursor-pointer';
+  const points = en
+    ? [
+        ['Saved only on this device.', 'Your bookmarks live in this browser. They are not on a server and not tied to an account, so clearing site data or switching browser or device loses them.'],
+        ['Export = make a backup.', 'Downloads one JSON file (wikigaleri-bookmarks-date.json) with your saved files, usernames, and categories.'],
+        ['Import = restore or move.', 'Pick a JSON exported from WikiGaleri. Items are merged with what you already have, duplicates are skipped, and nothing is deleted. The page reloads when done.'],
+      ]
+    : [
+        ['Hanya tersimpan di perangkat ini.', 'Markah Anda disimpan di peramban ini, bukan di server dan tidak terkait akun. Jika data situs dihapus atau Anda pindah peramban atau perangkat, markah ikut hilang.'],
+        ['Ekspor = membuat cadangan.', 'Mengunduh satu berkas JSON (wikigaleri-bookmarks-tanggal.json) berisi berkas, nama pengguna, dan kategori yang Anda simpan.'],
+        ['Impor = memulihkan atau memindahkan.', 'Pilih JSON hasil ekspor WikiGaleri. Isinya digabung dengan markah yang sudah ada, duplikat dilewati, dan tidak ada yang dihapus. Halaman dimuat ulang setelah selesai.'],
+      ];
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button type="button" onClick={exportJson} className={btn}>
-        <DownloadIcon className="h-3.5 w-3.5" />
-        {en ? 'Export JSON' : 'Ekspor JSON'}
-      </button>
-      <button type="button" onClick={() => fileRef.current?.click()} className={btn}>
-        <UploadIcon className="h-3.5 w-3.5" />
-        {en ? 'Import JSON' : 'Impor JSON'}
-      </button>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="application/json,.json"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) importJson(f);
-          e.target.value = '';
-        }}
-      />
-      {msg && (
-        <span role="status" className={`text-xs ${msg.ok ? 'text-moss-600 dark:text-moss-400' : 'text-red-600 dark:text-red-400'}`}>
-          {msg.text}
-        </span>
-      )}
+    <div className="rounded-lg border border-stone-300 dark:border-stone-800 bg-white dark:bg-stone-900 p-4 sm:p-5 space-y-4">
+      <div className="space-y-1">
+        <h3 className="font-display text-base font-semibold text-stone-900 dark:text-white">
+          {en ? 'Back up and move your bookmarks' : 'Cadangkan dan pindahkan markah Anda'}
+        </h3>
+        <p className="text-sm text-stone-600 dark:text-stone-400">
+          {en
+            ? 'Keep your saved files, usernames, and categories safe, or carry them to another browser or device.'
+            : 'Amankan berkas, nama pengguna, dan kategori yang Anda simpan, atau bawa ke peramban atau perangkat lain.'}
+        </p>
+      </div>
+      <ul className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
+        {points.map(([title, text]) => (
+          <li key={title} className="flex gap-2.5">
+            <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-600 dark:bg-accent-400" />
+            <span>
+              <strong className="font-semibold text-stone-800 dark:text-stone-200">{title}</strong> {text}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={exportJson} className={btn}>
+          <DownloadIcon className="h-3.5 w-3.5" />
+          {en ? 'Export JSON' : 'Ekspor JSON'}
+        </button>
+        <button type="button" onClick={() => fileRef.current?.click()} className={btn}>
+          <UploadIcon className="h-3.5 w-3.5" />
+          {en ? 'Import JSON' : 'Impor JSON'}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) importJson(f);
+            e.target.value = '';
+          }}
+        />
+        {msg && (
+          <span role="status" className={`text-xs ${msg.ok ? 'text-moss-600 dark:text-moss-400' : 'text-red-600 dark:text-red-400'}`}>
+            {msg.text}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
