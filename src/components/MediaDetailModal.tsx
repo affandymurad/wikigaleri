@@ -612,13 +612,13 @@ useEffect(() => {
                     type="button"
                     onClick={openReader}
                     title={language === 'en' ? 'Reading mode' : 'Mode Baca'}
-                    className="group relative cursor-pointer rounded-md shadow-sm shadow-black/60 ring-1 ring-white/15 max-h-[min(56vh,calc(92vh-10rem))] lg:max-h-full lg:h-full max-w-full"
+                    className="group relative cursor-pointer rounded-md shadow-sm shadow-black/60 ring-1 ring-white/15 max-h-[min(56vh,calc(92vh-10rem))] max-w-full"
                   >
                     <img
                       src={item.thumbnailUrl}
                       alt={item.cleanTitle}
                       referrerPolicy="no-referrer"
-                      className="max-h-[min(56vh,calc(92vh-10rem))] lg:max-h-full lg:h-full max-w-full rounded-md bg-white object-contain"
+                      className="max-h-[min(56vh,calc(92vh-10rem))] lg:max-h-[calc(88vh-13rem)] max-w-full rounded-md bg-white object-contain"
                     />
                     <span className="absolute inset-0 flex items-center justify-center rounded-md bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-stone-900">

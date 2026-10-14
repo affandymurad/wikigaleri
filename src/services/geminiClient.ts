@@ -38,6 +38,9 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
 
   const cleanKey = apiKey.trim();
   const endpoints = [PRIMARY_ENDPOINT, FALLBACK_ENDPOINT];
+  // Kunci yang salah ditolak (400/403) sebelum cek kapasitas. Jadi 429/503 berarti kunci diterima Google.
+  let keyAccepted = false;
+  let timedOut = false;
 
   for (const endpoint of endpoints) {
     try {
@@ -67,14 +70,20 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
       const errData = await response.json().catch(() => ({}));
       const msg = errData?.error?.message || `HTTP ${response.status}: ${response.statusText}`;
 
-      // If it's a 404 or 503, try fallback endpoint
-      if (response.status === 404 || response.status === 503) {
+      // 429 (kuota/laju) dan 503 (beban tinggi): kunci sudah lolos autentikasi, coba model berikutnya
+      if (response.status === 429 || response.status === 503) {
+        keyAccepted = true;
+        continue;
+      }
+      // 404: model tidak tersedia di endpoint ini, coba model berikutnya
+      if (response.status === 404) {
         continue;
       }
 
       return { valid: false, message: msg };
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
+        timedOut = true;
         continue;
       }
       const errorMsg =
@@ -87,7 +96,13 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
     }
   }
 
-  return { valid: false, message: 'Model Gemini sedang mengalami lonjakan beban. Silakan coba sesaat lagi.' };
+  if (keyAccepted) {
+    return { valid: true, message: 'Kunci diterima. Model Gemini sedang sibuk atau kuotanya terbatas, jadi hasil AI mungkin tertunda sesaat.' };
+  }
+  if (timedOut) {
+    return { valid: false, message: 'Koneksi ke Gemini terlalu lambat sehingga kunci belum bisa diuji. Periksa jaringan lalu coba lagi.' };
+  }
+  return { valid: false, message: 'Model Gemini tidak tersedia untuk kunci ini. Pastikan kunci berasal dari Google AI Studio dan fitur Gemini API aktif.' };
 }
 
 // Setelah kuota habis (429), analisis otomatis memakai sintesis lokal agar tidak memicu panggilan gagal berulang
