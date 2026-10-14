@@ -1455,20 +1455,20 @@ return (
                   /* Unified Analysis Result: 4 Structured Sections with Copy Icons */
                   <div className="space-y-4">
                     {/* Header Controls: Structured Badge, Copy All JSON, and Re-run */}
-                    <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-stone-800">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-moss-50 dark:bg-moss-950/50 text-moss-700 dark:text-moss-300 border border-moss-200 dark:border-moss-800 text-xs font-semibold">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pb-3 border-b border-stone-200 dark:border-stone-800">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-0.5 rounded-full bg-moss-50 dark:bg-moss-950/50 text-moss-700 dark:text-moss-300 border border-moss-200 dark:border-moss-800 text-xs font-semibold">
                           <CheckCircle2 className="w-3 h-3" />
                           {t.modal.jsonBadge}
                         </span>
-                        <span className="text-stone-400 text-xs">{t.modal.fourSectionsBadge}</span>
+                        <span className="text-stone-500 dark:text-stone-400 text-xs whitespace-nowrap">{t.modal.fourSectionsBadge}</span>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
                         <button
                           onClick={handleSaveToPdf}
                           disabled={isExportingPdf}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent-600 hover:bg-accent-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors shadow-2xs"
+                          className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 bg-accent-600 hover:bg-accent-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
                           title="Simpan dan unduh laporan analisis lengkap dalam format PDF"
                         >
                           {pdfSuccess ? (
@@ -1490,7 +1490,7 @@ return (
                         </button>
                         <button
                           onClick={handleRunAiAnalysis}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-xs font-medium transition-colors"
+                          className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-xs font-medium transition-colors"
                           title="Muat ulang atau perbarui analisis berkas ini"
                         >
                           <RefreshCw className="w-3.5 h-3.5 text-stone-500" />
@@ -1502,13 +1502,14 @@ return (
                     {/* Assistant & LLM Model Info Bar with AI Disclaimer */}
                     <div className="p-3 rounded-lg bg-stone-50 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-800 space-y-2.5">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-accent-600 text-white font-medium text-xs shadow-2xs">
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-accent-600 text-white font-medium text-xs">
                             <Sparkles className="w-3.5 h-3.5" />
                             <span>{unifiedAnalysis.modelMeta?.assistantName || GEMINI_ASSISTANT_NAME}</span>
                           </span>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs font-mono font-medium">
-                            Model: {unifiedAnalysis.modelMeta?.modelName || GEMINI_MODEL_NAME} ({unifiedAnalysis.modelMeta?.modelVersion || GEMINI_MODEL_VERSION})
+                          <span className="inline-flex flex-wrap items-baseline gap-x-1.5 px-2 py-0.5 rounded-md bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs font-medium">
+                            <span>{unifiedAnalysis.modelMeta?.modelName || GEMINI_MODEL_NAME}</span>
+                            <span className="font-mono font-normal text-stone-500 dark:text-stone-400 break-all">{unifiedAnalysis.modelMeta?.modelVersion || GEMINI_MODEL_VERSION}</span>
                           </span>
                         </div>
                         <span className="text-xs text-moss-600 dark:text-moss-400 font-medium inline-flex items-center gap-1">

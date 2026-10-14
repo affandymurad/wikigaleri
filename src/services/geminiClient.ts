@@ -1,15 +1,11 @@
 import { CommonsMediaItem } from '../types/wikimedia';
 
-// Urutan model: 3.1 Flash-Lite (hemat, utama), 3.8 Flash, alias -latest, lalu 2.5 Flash (hanya tersedia untuk akun lama)
+// Hanya model Flash-Lite (hemat): 3.1 Flash-Lite sebagai utama, 3.5 Flash-Lite sebagai cadangan jika model utama tidak ditemukan atau sibuk
 const PRIMARY_ENDPOINT =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent';
 const SECONDARY_ENDPOINT =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent';
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent';
 const MODELS_LIST_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
-const FALLBACK_ENDPOINT =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
-const LEGACY_ENDPOINT =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 export interface GeminiAnalysisResult {
   text: string;
@@ -63,7 +59,7 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
     // Jaringan lambat atau terblokir: lanjut ke uji generate sebagai cadangan
   }
 
-  const endpoints = [PRIMARY_ENDPOINT, SECONDARY_ENDPOINT, FALLBACK_ENDPOINT, LEGACY_ENDPOINT];
+  const endpoints = [PRIMARY_ENDPOINT, SECONDARY_ENDPOINT];
   // Kunci yang salah ditolak (400/403) sebelum cek kapasitas. Jadi 429/503 berarti kunci diterima Google.
   let keyAccepted = false;
   let timedOut = false;
@@ -131,15 +127,25 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
   return { valid: false, message: 'Model Gemini tidak tersedia untuk kunci ini. Pastikan kunci berasal dari Google AI Studio dan fitur Gemini API aktif.' };
 }
 
-// Setelah kuota habis (429), analisis otomatis memakai sintesis lokal agar tidak memicu panggilan gagal berulang
+// Setelah kuota habis (429), analisis otomatis tidak memanggil Gemini lagi untuk sementara dan langsung menampilkan error kuota
 let geminiQuotaBlockedUntil = 0;
+
+function uiIsEnglish(): boolean {
+  return typeof document !== 'undefined' && document.documentElement.lang === 'en';
+}
+
+function quotaErrorMessage(): string {
+  return uiIsEnglish()
+    ? 'Gemini API quota is used up or there were too many requests (429). Try again in a few minutes, or check your quota in Google AI Studio.'
+    : 'Kuota Gemini API habis atau terlalu banyak permintaan (429). Coba lagi beberapa menit lagi, atau cek kuota di Google AI Studio.';
+}
 
 /**
  * Generic caller for Gemini with automatic model fallback and retry on transient spikes (503/429)
  */
 async function callGemini(apiKey: string, prompt: string, systemInstruction?: string): Promise<string> {
   const cleanKey = apiKey.trim();
-  const endpoints = [PRIMARY_ENDPOINT, SECONDARY_ENDPOINT, FALLBACK_ENDPOINT, LEGACY_ENDPOINT];
+  const endpoints = [PRIMARY_ENDPOINT, SECONDARY_ENDPOINT];
 
   const payload: Record<string, unknown> = {
     contents: [
@@ -188,7 +194,7 @@ if (response.status === 429) geminiQuotaBlockedUntil = Date.now() + 90 * 1000;
             continue;
           }
 
-          const fatalErr = new Error(response.status === 429 ? 'Kuota Gemini API habis atau terlalu banyak permintaan (429). Coba lagi beberapa menit lagi.' : errMsg) as Error & { fatal?: boolean };
+          const fatalErr = new Error(response.status === 429 ? quotaErrorMessage() : errMsg) as Error & { fatal?: boolean };
 fatalErr.fatal = true;
 throw fatalErr;
         }
@@ -699,7 +705,7 @@ Kembalikan JSON dengan skema ini:
 }`;
 
   // If no API key provided, produce a rich, strictly factual metadata synthesis immediately
-  if (!apiKey || apiKey.trim().length === 0 || (!force && Date.now() < geminiQuotaBlockedUntil)) {
+  if (!apiKey || apiKey.trim().length === 0) {
     const landmarks = Array.from(
       new Set(
         photos
@@ -743,6 +749,11 @@ Kembalikan JSON dengan skema ini:
     };
   }
 
+  if (force) geminiQuotaBlockedUntil = 0;
+  if (Date.now() < geminiQuotaBlockedUntil) {
+    throw new Error(quotaErrorMessage());
+  }
+
   try {
     const raw = await callGemini(apiKey, prompt, systemInstruction);
     const match = raw.match(/\{[\s\S]*\}/);
@@ -768,34 +779,10 @@ Kembalikan JSON dengan skema ini:
     };
   } catch (err) {
     console.error('Nearby Area AI analysis failed:', err);
-    const reason = (err instanceof Error ? err.message : String(err)).slice(0, 160);
-    const landmarks = Array.from(
-      new Set(
-        photos
-          .map((p) => p.cleanTitle.replace(/\.(jpg|jpeg|png|tif|tiff|webp|svg|gif)$/i, '').trim())
-          .filter((t) => t.length > 2 && t.length < 50)
-      )
-    ).slice(0, 4);
-
-    return {
-      coordinates: { lat, lng },
-      address: address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
-      photosCount: photos.length,
-      areaOverview: address || (isEn ? `Coordinates ${lat.toFixed(4)}, ${lng.toFixed(4)}` : `Koordinat ${lat.toFixed(4)}, ${lng.toFixed(4)}`),
-      identifiedLandmarks: landmarks.length > 0 ? landmarks : [address.split(',')[0] || (isEn ? 'Nearby area' : 'Area terdekat')],
-      photosSummary: isEn ? `${photos.length} Wikimedia Commons photos found within this radius.` : `Ada ${photos.length} foto Wikimedia Commons dalam radius ini.`,
-      curatorInsight: isEn
-        ? `Gemini did not return a usable answer (${reason}), so this is a local summary.`
-        : `Gemini tidak memberi jawaban yang bisa dipakai (${reason}), jadi ini ringkasan lokal.`,
-      modelMeta: {
-        assistantName: 'WikiGaleri',
-        modelName: isEn ? 'Local summary' : 'Ringkasan lokal',
-        modelVersion: 'local',
-        disclaimer: isEn ? AI_LOCAL_DISCLAIMER_TEXT_EN : AI_LOCAL_DISCLAIMER_TEXT_ID,
-        language: lang,
-        source: 'local',
-      },
-    };
+    if (err instanceof SyntaxError) {
+      throw new Error(isEn ? 'Gemini returned an answer that could not be read. Please try again.' : 'Jawaban Gemini tidak bisa dibaca. Silakan coba lagi.');
+    }
+    throw err;
   }
 }
 

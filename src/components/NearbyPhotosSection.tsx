@@ -1336,9 +1336,9 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
 
       {/* Area Analysis Error notice */}
       {areaAnalysisError && (
-        <div className="p-3 bg-accent-50 dark:bg-accent-950/40 border border-accent-200 dark:border-accent-900 rounded-lg text-accent-900 dark:text-accent-200 text-xs flex items-center justify-between gap-3">
+        <div role="alert" className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg text-red-900 dark:text-red-200 text-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-accent-600 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
             <span>{areaAnalysisError}</span>
           </div>
           <button

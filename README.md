@@ -44,7 +44,7 @@ WikiGaleri is a web app that closes that gap. Live at **https://wikigaleri.web.a
 | File details | Download sizes, source info, categories and usage, version history and discussion, with a reading mode for documents |
 | Gemini assistant | Two short sections per file: what the file is, and what you can do with it |
 | Credit line | A TASL credit line in plain text, Markdown, HTML or wikitext, plus a quick-copy modal |
-| Nearby map | Find Commons photos around a point, with an area summary from Gemini (or a local summary when Gemini is not available) |
+| Nearby map | Find Commons photos around a point, with an area summary from Gemini (or a local summary when no key is set) |
 | Bookmarks | Save files, usernames and categories in your browser, and export or import them as JSON |
 | Guides | In-app guides for CC licenses, Wikimedia terms and what WikiGaleri is |
 | PDF report | Save the Gemini analysis of a file as a PDF |
@@ -56,7 +56,7 @@ Gemini 3.1 Flash-Lite (through the Gemini API) reads the official Commons metada
 1. **What this file is**: a plain-language explanation, key facts and ideas for using it.
 2. **What you can do with it**: a license summary, notes on commercial use and remixing, things to double-check, and a credit line.
 
-For the Nearby map, Gemini also summarizes the area around the chosen point from the titles and descriptions of nearby photos. When no key is set or Gemini cannot be reached, the app shows a clearly labelled local summary instead, and says it was not written by Gemini.
+For the Nearby map, Gemini also summarizes the area around the chosen point from the titles and descriptions of nearby photos. When no key is set, the app shows a clearly labelled local summary instead, and says it was not written by Gemini. When a key is set but Gemini fails (for example the quota is used up), the app shows the error right away instead of hiding it behind a local summary.
 
 Every AI result carries a notice, with a link to the [Wikimedia AI guidelines](https://meta.wikimedia.org/wiki/Artificial_intelligence/Guidelines). Gemini can be wrong or miss context. The license summary is a guide, not legal advice. Always check the file page on Commons before you reuse anything.
 
@@ -84,7 +84,7 @@ firebase deploy --only hosting
 - React 19, TypeScript, Vite
 - Tailwind CSS 4
 - MapLibre GL (nearby map, OpenFreeMap tiles)
-- Google Gemini API (REST, model `gemini-3.1-flash-lite`, with `gemini-3.8-flash`, `gemini-flash-latest` and `gemini-2.5-flash` as fallbacks)
+- Google Gemini API (REST, model `gemini-3.1-flash-lite`, with `gemini-3.5-flash-lite` as the fallback)
 - Wikimedia Commons and Wikidata APIs
 - jsPDF and qrcode for the PDF report
 - Firebase Hosting for deployment
@@ -168,7 +168,7 @@ WikiGaleri adalah aplikasi web yang menutup celah itu. Tersedia di **https://wik
 | Detail berkas | Ukuran unduhan, info sumber, kategori dan penggunaan, riwayat versi, serta diskusi, dengan mode baca untuk dokumen |
 | Asisten Gemini | Dua bagian singkat per berkas: apa isi berkas ini, dan boleh dipakai untuk apa |
 | Teks kredit | Teks kredit TASL dalam teks biasa, Markdown, HTML, atau wikitext, plus jendela salin cepat |
-| Peta terdekat | Temukan foto Commons di sekitar satu titik, dengan ringkasan area dari Gemini (atau ringkasan lokal bila Gemini tidak tersedia) |
+| Peta terdekat | Temukan foto Commons di sekitar satu titik, dengan ringkasan area dari Gemini (atau ringkasan lokal bila kunci belum diisi) |
 | Markah | Simpan berkas, nama pengguna, dan kategori di browsermu, lalu ekspor atau impor sebagai JSON |
 | Panduan | Panduan lisensi CC, ketentuan Wikimedia, dan penjelasan tentang WikiGaleri langsung di aplikasi |
 | Laporan PDF | Simpan analisis Gemini sebuah berkas sebagai PDF |
@@ -180,7 +180,7 @@ Gemini 3.1 Flash-Lite (lewat Gemini API) membaca metadata resmi dari Commons (ju
 1. **Apa isi berkas ini**: penjelasan bahasa awam, fakta penting, dan ide pemakaian.
 2. **Boleh dipakai untuk apa**: ringkasan lisensi, catatan soal pemakaian komersial dan remix, hal yang perlu dicek, serta teks kredit.
 
-Untuk peta terdekat, Gemini juga merangkum area di sekitar titik pilihan dari judul dan deskripsi foto di sekitarnya. Bila kunci belum diisi atau Gemini tidak bisa dihubungi, aplikasi menampilkan ringkasan lokal yang diberi label jelas dan menyebut bahwa ringkasan itu bukan tulisan Gemini.
+Untuk peta terdekat, Gemini juga merangkum area di sekitar titik pilihan dari judul dan deskripsi foto di sekitarnya. Bila kunci belum diisi, aplikasi menampilkan ringkasan lokal yang diberi label jelas dan menyebut bahwa ringkasan itu bukan tulisan Gemini. Bila kunci sudah diisi tetapi Gemini gagal (misalnya kuota habis), aplikasi langsung menampilkan error-nya, tidak menyembunyikannya di balik ringkasan lokal.
 
 Setiap hasil AI disertai catatan, dengan tautan ke [pedoman AI Wikimedia](https://meta.wikimedia.org/wiki/Artificial_intelligence/Guidelines). Gemini bisa salah atau melewatkan konteks. Ringkasan lisensi hanya penuntun, bukan nasihat hukum. Selalu cek halaman berkas di Commons sebelum memakainya kembali.
 
@@ -208,7 +208,7 @@ firebase deploy --only hosting
 - React 19, TypeScript, Vite
 - Tailwind CSS 4
 - MapLibre GL (peta terdekat, tile OpenFreeMap)
-- Google Gemini API (REST, model `gemini-3.1-flash-lite`, dengan `gemini-3.8-flash`, `gemini-flash-latest`, dan `gemini-2.5-flash` sebagai cadangan)
+- Google Gemini API (REST, model `gemini-3.1-flash-lite`, dengan `gemini-3.5-flash-lite` sebagai cadangan)
 - API Wikimedia Commons dan Wikidata
 - jsPDF dan qrcode untuk laporan PDF
 - Firebase Hosting untuk deployment
