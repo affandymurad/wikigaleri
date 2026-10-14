@@ -1,7 +1,9 @@
 import { CommonsMediaItem } from '../types/wikimedia';
 
-// Urutan model: 3.8 Flash (rekomendasi saat ini), alias -latest, lalu 2.5 Flash (hanya tersedia untuk akun lama)
+// Urutan model: 3.1 Flash-Lite (hemat, utama), 3.8 Flash, alias -latest, lalu 2.5 Flash (hanya tersedia untuk akun lama)
 const PRIMARY_ENDPOINT =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent';
+const SECONDARY_ENDPOINT =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent';
 const MODELS_LIST_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 const FALLBACK_ENDPOINT =
@@ -61,7 +63,7 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
     // Jaringan lambat atau terblokir: lanjut ke uji generate sebagai cadangan
   }
 
-  const endpoints = [PRIMARY_ENDPOINT, FALLBACK_ENDPOINT, LEGACY_ENDPOINT];
+  const endpoints = [PRIMARY_ENDPOINT, SECONDARY_ENDPOINT, FALLBACK_ENDPOINT, LEGACY_ENDPOINT];
   // Kunci yang salah ditolak (400/403) sebelum cek kapasitas. Jadi 429/503 berarti kunci diterima Google.
   let keyAccepted = false;
   let timedOut = false;
@@ -137,7 +139,7 @@ let geminiQuotaBlockedUntil = 0;
  */
 async function callGemini(apiKey: string, prompt: string, systemInstruction?: string): Promise<string> {
   const cleanKey = apiKey.trim();
-  const endpoints = [PRIMARY_ENDPOINT, FALLBACK_ENDPOINT, LEGACY_ENDPOINT];
+  const endpoints = [PRIMARY_ENDPOINT, SECONDARY_ENDPOINT, FALLBACK_ENDPOINT, LEGACY_ENDPOINT];
 
   const payload: Record<string, unknown> = {
     contents: [
@@ -224,8 +226,8 @@ if (err instanceof Error && (err as Error & { fatal?: boolean }).fatal) throw er
 }
 
 export const GEMINI_ASSISTANT_NAME = 'Gemini';
-export const GEMINI_MODEL_NAME = 'Gemini 3.8 Flash';
-export const GEMINI_MODEL_VERSION = 'gemini-3.8-flash';
+export const GEMINI_MODEL_NAME = 'Gemini 3.1 Flash-Lite';
+export const GEMINI_MODEL_VERSION = 'gemini-3.1-flash-lite';
 
 // Model yang benar-benar menjawab pada panggilan terakhir (bisa model cadangan)
 let lastGeminiModel = GEMINI_MODEL_VERSION;
@@ -233,7 +235,7 @@ let lastGeminiModel = GEMINI_MODEL_VERSION;
 export function getGeminiModelMeta(): { modelName: string; modelVersion: string } {
   const m = lastGeminiModel.match(/^gemini-(\d+(?:\.\d+)?)-flash(-lite)?$/);
   return {
-    modelName: m ? `Gemini ${m[1]} Flash${m[2] ? ' Lite' : ''}` : `Gemini (${lastGeminiModel})`,
+    modelName: m ? `Gemini ${m[1]} Flash${m[2] ? '-Lite' : ''}` : `Gemini (${lastGeminiModel})`,
     modelVersion: lastGeminiModel,
   };
 }
