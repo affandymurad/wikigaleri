@@ -58,6 +58,8 @@ Gemini 3.1 Flash-Lite (through the Gemini API) reads the official Commons metada
 
 For the Nearby map, Gemini also summarizes the area around the chosen point from the titles and descriptions of nearby photos. When no key is set, the app shows a clearly labelled local summary instead, and says it was not written by Gemini. When a key is set but Gemini fails (for example the quota is used up), the app shows the error right away instead of hiding it behind a local summary.
 
+When a Gemini key is set, the file explanation starts by itself as soon as you open a file. The result is kept in memory until you refresh the page, so opening the same file again does not use more quota (the Re-analyze button always asks Gemini again). Without a key, or when Gemini fails (for example the quota is used up), the app shows a clearly labelled summary built from the Commons metadata and license rules, and when a call failed it also shows the error with a retry button.
+
 Every AI result carries a notice, with a link to the [Wikimedia AI guidelines](https://meta.wikimedia.org/wiki/Artificial_intelligence/Guidelines). Gemini can be wrong or miss context. The license summary is a guide, not legal advice. Always check the file page on Commons before you reuse anything.
 
 ### Architecture and deployment
@@ -181,6 +183,8 @@ Gemini 3.1 Flash-Lite (lewat Gemini API) membaca metadata resmi dari Commons (ju
 2. **Boleh dipakai untuk apa**: ringkasan lisensi, catatan soal pemakaian komersial dan remix, hal yang perlu dicek, serta teks kredit.
 
 Untuk peta terdekat, Gemini juga merangkum area di sekitar titik pilihan dari judul dan deskripsi foto di sekitarnya. Bila kunci belum diisi, aplikasi menampilkan ringkasan lokal yang diberi label jelas dan menyebut bahwa ringkasan itu bukan tulisan Gemini. Bila kunci sudah diisi tetapi Gemini gagal (misalnya kuota habis), aplikasi langsung menampilkan error-nya, tidak menyembunyikannya di balik ringkasan lokal.
+
+Bila kunci Gemini sudah diisi, penjelasan berkas berjalan otomatis begitu berkas dibuka. Hasilnya disimpan di memori sampai halaman dimuat ulang, jadi membuka berkas yang sama lagi tidak memakai kuota tambahan (tombol Analisis ulang selalu bertanya ke Gemini lagi). Tanpa kunci, atau bila Gemini gagal (misalnya kuota habis), aplikasi menampilkan ringkasan berlabel jelas yang dibuat dari metadata Commons dan aturan lisensi, dan bila panggilan gagal, error-nya ikut ditampilkan beserta tombol coba lagi.
 
 Setiap hasil AI disertai catatan, dengan tautan ke [pedoman AI Wikimedia](https://meta.wikimedia.org/wiki/Artificial_intelligence/Guidelines). Gemini bisa salah atau melewatkan konteks. Ringkasan lisensi hanya penuntun, bukan nasihat hukum. Selalu cek halaman berkas di Commons sebelum memakainya kembali.
 

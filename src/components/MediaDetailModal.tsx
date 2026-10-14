@@ -5,6 +5,10 @@ import { getLicenseInfo, generateAttribution, formatBytes, getFileExtension } fr
 import {
   UnifiedMediaAiAnalysis,
   generateUnifiedMediaAnalysis,
+  buildLocalMediaAnalysis,
+  getCachedUnifiedAnalysis,
+  setCachedUnifiedAnalysis,
+  getGeminiQuotaBlockMessage,
   GEMINI_ASSISTANT_NAME,
   GEMINI_MODEL_NAME,
   GEMINI_MODEL_VERSION,
@@ -461,38 +465,89 @@ useEffect(() => {
     return `https://id.wikipedia.org/wiki/Special:Search?search=${encoded}`;
   };
 
-  const handleRunAiAnalysis = async () => {
+  // Id berkas yang sedang ditampilkan, agar hasil yang terlambat tidak menimpa berkas lain
+  const currentItemIdRef = useRef<string | number | null>(item ? item.id : null);
+  currentItemIdRef.current = item ? item.id : null;
+
+  /**
+   * Menjalankan analisis berkas.
+   * auto = true: dipakai otomatis saat tab Gemini terbuka. Memakai cache memori (sampai halaman dimuat ulang)
+   * dan tidak memanggil Gemini lagi saat kuota baru saja habis.
+   * auto = false: tombol manual (Analisis ulang / Coba lagi), selalu memanggil Gemini.
+   * Tanpa kunci atau bila Gemini gagal, ditampilkan ringkasan lokal dari metadata Commons.
+   */
+  const runAiAnalysis = async (auto: boolean) => {
     if (!item) return;
+    const target = item;
+
     if (!geminiApiKey) {
-      onOpenGeminiModal();
+      setAiError(null);
+      setUnifiedAnalysis(buildLocalMediaAnalysis(target, language, wikiUsages));
+      if (!auto) onOpenGeminiModal();
       return;
+    }
+
+    if (auto) {
+      const cached = getCachedUnifiedAnalysis(target.id, language);
+      if (cached) {
+        setAiError(null);
+        setUnifiedAnalysis(cached);
+        return;
+      }
+      const blocked = getGeminiQuotaBlockMessage();
+      if (blocked) {
+        setAiError(blocked);
+        setUnifiedAnalysis(buildLocalMediaAnalysis(target, language, wikiUsages));
+        return;
+      }
     }
 
     setIsAiLoading(true);
     setAiError(null);
 
+    let usages: WikiGlobalUsageItem[] = wikiUsages;
     try {
-      // 1. Fetch live wiki global usage concurrently
-      let usages: WikiGlobalUsageItem[] = wikiUsages;
+      // 1. Ambil pemakaian berkas di proyek Wikimedia (tidak menggagalkan analisis bila gagal)
       if (usages.length === 0) {
         try {
-          usages = await fetchFileGlobalUsage(item.title);
-          setWikiUsages(usages);
+          usages = await fetchFileGlobalUsage(target.title);
+          if (currentItemIdRef.current === target.id) setWikiUsages(usages);
         } catch (uErr) {
           console.warn('Failed to fetch wiki usage:', uErr);
         }
       }
 
-      // 2. Run Gemini unified analysis with structured JSON according to interface language
-      const res = await generateUnifiedMediaAnalysis(geminiApiKey, item, usages, language);
-      setUnifiedAnalysis(res);
+      // 2. Analisis terstruktur Gemini sesuai bahasa antarmuka
+      const res = await generateUnifiedMediaAnalysis(geminiApiKey, target, usages, language);
+      setCachedUnifiedAnalysis(target.id, language, res);
+      if (currentItemIdRef.current === target.id) setUnifiedAnalysis(res);
     } catch (err) {
       console.error('Unified AI analysis error:', err);
-      setAiError(err instanceof Error ? err.message : 'Gagal menghasilkan analisis AI.');
+      if (currentItemIdRef.current !== target.id) return;
+      setAiError(err instanceof Error ? err.message : (language === 'en' ? 'Failed to generate the AI analysis.' : 'Gagal menghasilkan analisis AI.'));
+      // Pertahankan hasil Gemini sebelumnya bila ada; jika tidak, tampilkan ringkasan lokal
+      setUnifiedAnalysis((prev) =>
+        prev && prev.modelMeta?.source !== 'local' ? prev : buildLocalMediaAnalysis(target, language, usages)
+      );
     } finally {
       setIsAiLoading(false);
     }
   };
+
+  const handleRunAiAnalysis = () => {
+    void runAiAnalysis(false);
+  };
+
+  // Otomatis jalan saat tab Gemini terbuka: hasil cache, ringkasan lokal (tanpa kunci), atau panggilan Gemini
+  const autoRunKeyRef = useRef<string>('');
+  useEffect(() => {
+    if (!item || activeTab !== 'ai') return;
+    const runKey = `${item.id}|${language}|${geminiApiKey ? 1 : 0}`;
+    if (autoRunKeyRef.current === runKey) return;
+    autoRunKeyRef.current = runKey;
+    void runAiAnalysis(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id, activeTab, language, geminiApiKey]);
 
   const handleCopySection = (sectionKey: string, textToCopy: string) => {
     navigator.clipboard.writeText(textToCopy);
@@ -1373,28 +1428,7 @@ return (
             {activeTab === 'ai' && (
               <div className="p-5 space-y-4 flex-1 overflow-y-auto text-xs">
                 {/* Check if user configured their Gemini key */}
-                {!geminiApiKey ? (
-                  <div className="p-6 text-center bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800 rounded-lg space-y-3.5">
-                    <div className="w-12 h-12 rounded-full bg-accent-100 dark:bg-accent-950/60 text-accent-600 dark:text-accent-400 flex items-center justify-center mx-auto shadow-xs">
-                      <Key className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-stone-900 dark:text-white text-sm">
-                        {t.modal.noKeyTitle}
-                      </h4>
-                      <p className="text-stone-500 dark:text-stone-400 text-xs mt-1.5 leading-relaxed max-w-md mx-auto">
-                        {t.modal.noKeyDesc}
-                      </p>
-                    </div>
-                    <button
-                      onClick={onOpenGeminiModal}
-                      className="px-4 py-2.5 bg-accent-600 hover:bg-accent-700 text-white rounded-lg font-medium text-xs transition-colors inline-flex items-center gap-2 shadow-xs"
-                    >
-                      <Key className="w-4 h-4" />
-                      <span>{t.modal.inputKeyBtn}</span>
-                    </button>
-                  </div>
-                ) : isAiLoading ? (
+                {isAiLoading ? (
                   <div className="p-10 text-center space-y-4 bg-stone-50/50 dark:bg-stone-800/30 rounded-lg border border-stone-200/60 dark:border-stone-800">
                     <div className="relative mx-auto w-12 h-12 flex items-center justify-center">
                       <div className="absolute inset-0 rounded-full border-2 border-accent-500/30 border-t-accent-600 animate-spin" />
@@ -1409,7 +1443,7 @@ return (
                       </p>
                     </div>
                   </div>
-                ) : aiError ? (
+                ) : aiError && !unifiedAnalysis ? (
                   <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg text-amber-900 dark:text-amber-200 text-xs space-y-3">
                     <div className="flex items-start gap-2.5">
                       <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -1454,6 +1488,51 @@ return (
                 ) : (
                   /* Unified Analysis Result: 4 Structured Sections with Copy Icons */
                   <div className="space-y-4">
+                    {/* Catatan sumber hasil: ringkasan lokal (tanpa kunci) atau Gemini gagal */}
+                    {unifiedAnalysis.modelMeta?.source === 'local' && !geminiApiKey && (
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-accent-50 dark:bg-accent-950/40 border border-accent-200 dark:border-accent-900 text-xs text-accent-900 dark:text-accent-200">
+                        <span className="leading-relaxed min-w-0">
+                          {language === 'en'
+                            ? 'No Gemini key yet, so this is a summary built from Commons metadata. Add your key for a fuller explanation.'
+                            : 'Belum ada kunci Gemini, jadi ini ringkasan dari metadata Commons. Tambahkan kunci untuk penjelasan yang lebih lengkap.'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={onOpenGeminiModal}
+                          className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 bg-accent-600 hover:bg-accent-700 text-white rounded-lg font-medium transition-colors"
+                        >
+                          <Key className="w-3.5 h-3.5" />
+                          <span>{t.modal.inputKeyBtn}</span>
+                        </button>
+                      </div>
+                    )}
+                    {aiError && (
+                      <div role="alert" className="flex flex-wrap items-start justify-between gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs text-red-900 dark:text-red-200">
+                        <div className="flex items-start gap-2 min-w-0">
+                          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                          <div className="space-y-0.5 min-w-0">
+                            <p className="font-semibold">{t.modal.aiCallErrorTitle}</p>
+                            <p className="leading-relaxed opacity-90 break-words">{aiError}</p>
+                            {unifiedAnalysis.modelMeta?.source === 'local' && (
+                              <p className="leading-relaxed opacity-90">
+                                {language === 'en'
+                                  ? 'Showing a summary from Commons metadata instead.'
+                                  : 'Menampilkan ringkasan dari metadata Commons sebagai gantinya.'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRunAiAnalysis}
+                          className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>{t.modal.retryAiBtn}</span>
+                        </button>
+                      </div>
+                    )}
+
                     {/* Header Controls: Structured Badge, Copy All JSON, and Re-run */}
                     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pb-3 border-b border-stone-200 dark:border-stone-800">
                       <div className="flex flex-wrap items-center gap-2">

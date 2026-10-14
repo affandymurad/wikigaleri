@@ -1,4 +1,5 @@
 import { CommonsMediaItem } from '../types/wikimedia';
+import { getLicenseInfo, generateAttribution } from '../utils/licenseUtils';
 
 // Hanya model Flash-Lite (hemat): 3.1 Flash-Lite sebagai utama, 3.5 Flash-Lite sebagai cadangan jika model utama tidak ditemukan atau sibuk
 const PRIMARY_ENDPOINT =
@@ -138,6 +139,111 @@ function quotaErrorMessage(): string {
   return uiIsEnglish()
     ? 'Gemini API quota is used up or there were too many requests (429). Try again in a few minutes, or check your quota in Google AI Studio.'
     : 'Kuota Gemini API habis atau terlalu banyak permintaan (429). Coba lagi beberapa menit lagi, atau cek kuota di Google AI Studio.';
+}
+
+// Cache hasil analisis file di memori: bertahan sampai halaman dimuat ulang, hemat panggilan Gemini
+const unifiedAnalysisCache = new Map<string, UnifiedMediaAiAnalysis>();
+
+export function getCachedUnifiedAnalysis(itemId: string | number, lang: 'en' | 'id'): UnifiedMediaAiAnalysis | undefined {
+  return unifiedAnalysisCache.get(`${itemId}|${lang}`);
+}
+
+export function setCachedUnifiedAnalysis(itemId: string | number, lang: 'en' | 'id', analysis: UnifiedMediaAiAnalysis): void {
+  unifiedAnalysisCache.set(`${itemId}|${lang}`, analysis);
+}
+
+/** Pesan error kuota bila Gemini baru saja membalas 429 (untuk analisis otomatis), selain itu null */
+export function getGeminiQuotaBlockMessage(): string | null {
+  return Date.now() < geminiQuotaBlockedUntil ? quotaErrorMessage() : null;
+}
+
+/**
+ * Ringkasan lokal tanpa Gemini: dibangun dari metadata Commons dan aturan lisensi.
+ * Dipakai bila kunci API belum ada atau panggilan Gemini gagal.
+ */
+export function buildLocalMediaAnalysis(
+  item: CommonsMediaItem,
+  lang: 'en' | 'id' = 'id',
+  usages: Array<{ title: string; wiki: string }> = []
+): UnifiedMediaAiAnalysis {
+  const isEn = lang === 'en';
+  const info = getLicenseInfo(item);
+  const description = (item.description || '').replace(/\s+/g, ' ').trim();
+  const author = item.author || item.credit || 'Wikimedia Commons';
+  const kindMap: Record<string, [string, string]> = {
+    image: ['image', 'gambar'],
+    audio: ['audio file', 'berkas audio'],
+    video: ['video', 'video'],
+    document: ['document', 'dokumen'],
+  };
+  const kind = (kindMap[item.mediaType] || ['file', 'berkas'])[isEn ? 0 : 1];
+  const licenseName = item.licenseShort || info.label;
+
+  const highlights = [
+    item.cleanTitle,
+    author,
+    licenseName,
+    item.width > 0 ? `${item.width}×${item.height} px` : '',
+    ...(item.categories || []).slice(0, 3),
+  ].filter(Boolean) as string[];
+
+  const commercialUse = info.isFreeForCommercial
+    ? (isEn ? 'Commercial use is allowed under this license.' : 'Pemakaian komersial diperbolehkan oleh lisensi ini.')
+    : (isEn ? 'Commercial use may be restricted. Check the license page.' : 'Pemakaian komersial mungkin dibatasi. Cek halaman lisensinya.');
+
+  const modificationRules = info.allowsRemix
+    ? (info.requiresShareAlike
+        ? (isEn ? 'Remixing is allowed, but share your changes under the same license (ShareAlike).' : 'Boleh diubah, tetapi bagikan hasilnya dengan lisensi yang sama (ShareAlike).')
+        : (isEn ? 'Remixing and adapting are allowed.' : 'Boleh diubah dan diadaptasi.'))
+    : (isEn ? 'Changes may not be allowed. Check the license page.' : 'Perubahan mungkin tidak diperbolehkan. Cek halaman lisensinya.');
+
+  const attributionGuide = info.requiresAttribution
+    ? generateAttribution(item, 'plain', lang)
+    : (isEn ? 'The license does not require credit, but giving credit is good practice.' : 'Lisensi tidak mewajibkan kredit, tetapi sebaiknya tetap mencantumkannya.');
+
+  return {
+    objectDescription: {
+      laymanSummary: description
+        ? description.slice(0, 300) + (description.length > 300 ? '...' : '')
+        : (isEn
+            ? `"${item.cleanTitle}" is a ${kind} on Wikimedia Commons by ${author}.`
+            : `"${item.cleanTitle}" adalah ${kind} di Wikimedia Commons oleh ${author}.`),
+      detailedVisuals: description || (isEn ? 'The Commons metadata has no description for this file.' : 'Metadata Commons tidak memiliki deskripsi untuk berkas ini.'),
+      keyHighlights: highlights,
+    },
+    licenseExplanation: {
+      licenseName,
+      shortSummary: item.licenseFull || licenseName,
+      commercialUse,
+      modificationRules,
+      attributionGuide,
+      watchOut: isEn
+        ? 'This summary follows fixed rules applied to the metadata. It is not legal advice, so check the file page on Commons.'
+        : 'Ringkasan ini mengikuti aturan tetap atas metadata. Bukan nasihat hukum, jadi cek halaman berkas di Commons.',
+    },
+    accessibilityWcag: {
+      shortAltText: item.cleanTitle,
+      extendedDescription: description || item.cleanTitle,
+    },
+    wikiUsage: {
+      summary: usages.length > 0
+        ? (isEn ? `This file is used on ${usages.length} Wikimedia pages.` : `Berkas ini dipakai di ${usages.length} halaman Wikimedia.`)
+        : (isEn ? 'No Wikimedia page usage was loaded for this file.' : 'Pemakaian di halaman Wikimedia belum dimuat untuk berkas ini.'),
+      projectRoles: usages.slice(0, 5).map((u) => ({
+        wikiName: u.wiki,
+        article: u.title,
+        role: isEn ? 'A page that uses this file' : 'Halaman yang memakai berkas ini',
+      })),
+    },
+    modelMeta: {
+      assistantName: 'WikiGaleri',
+      modelName: isEn ? 'Local summary' : 'Ringkasan lokal',
+      modelVersion: 'local',
+      disclaimer: isEn ? AI_LOCAL_DISCLAIMER_TEXT_EN : AI_LOCAL_DISCLAIMER_TEXT_ID,
+      language: lang,
+      source: 'local',
+    },
+  };
 }
 
 /**
@@ -293,6 +399,7 @@ export interface UnifiedMediaAiAnalysis {
     modelVersion: string;
     disclaimer: string;
     language?: 'en' | 'id';
+    source?: 'gemini' | 'local';
   };
 }
 
