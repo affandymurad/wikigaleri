@@ -602,10 +602,10 @@ useEffect(() => {
         </div>
 
         {/* Modal Body: Split Media Viewer & Info Pane */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden lg:grid-rows-1">
+        <div className="flex flex-col lg:grid lg:grid-cols-12 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden lg:grid-rows-1">
           
           {/* Kiri / atas: panggung media (stage) + toolbar */}
-          <div className="lg:col-span-7 relative isolate overflow-hidden bg-stone-950 flex flex-col min-h-max lg:min-h-0 lg:h-full">
+          <div className="lg:col-span-7 relative isolate overflow-hidden bg-stone-950 flex flex-col shrink-0 min-h-[320px] lg:shrink lg:min-h-0 lg:h-full">
             {/* Latar ambient: gambar yang sama diburamkan + gradasi */}
             {(item.mediaType === 'image' || (item.mediaType === 'document' && item.thumbnailUrl)) && (
               <img
@@ -827,7 +827,7 @@ useEffect(() => {
           </div>
 
           {/* Right: Tabbed Details & Actions Pane (5 cols on lg) */}
-          <div className="lg:col-span-5 flex flex-col lg:min-h-0 lg:h-full lg:overflow-y-auto bg-white dark:bg-stone-900 border-t lg:border-t-0 lg:border-l border-stone-200 dark:border-stone-800">
+          <div className="shrink-0 lg:shrink lg:col-span-5 flex flex-col lg:min-h-0 lg:h-full lg:overflow-y-auto bg-white dark:bg-stone-900 border-t lg:border-t-0 lg:border-l border-stone-200 dark:border-stone-800">
             
             {/* Tabs Selector (chip) */}
           <div className="sticky top-0 z-10 flex flex-wrap gap-2 border-b border-stone-200 bg-white px-4 py-3 text-xs font-medium dark:border-stone-800 dark:bg-stone-900">
