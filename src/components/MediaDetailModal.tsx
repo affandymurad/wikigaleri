@@ -562,7 +562,7 @@ useEffect(() => {
   return (
     <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/70 flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
       {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-5xl bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 overflow-hidden flex flex-col max-h-[92vh] lg:h-[88vh]">
+      <div className="relative w-full max-w-5xl bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 overflow-hidden flex flex-col max-h-[92dvh] lg:h-[88dvh]">
         
         {/* Header Bar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/50">
@@ -605,7 +605,7 @@ useEffect(() => {
         <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden lg:grid-rows-1">
           
           {/* Kiri / atas: panggung media (stage) + toolbar */}
-          <div className="lg:col-span-7 relative isolate overflow-hidden bg-stone-950 flex flex-col min-h-[320px] lg:min-h-0 lg:h-full">
+          <div className="lg:col-span-7 relative isolate overflow-hidden bg-stone-950 flex flex-col min-h-max lg:min-h-0 lg:h-full">
             {/* Latar ambient: gambar yang sama diburamkan + gradasi */}
             {(item.mediaType === 'image' || (item.mediaType === 'document' && item.thumbnailUrl)) && (
               <img
@@ -621,7 +621,7 @@ useEffect(() => {
             {/* Panggung */}
             <div className="relative flex flex-1 lg:min-h-0 items-center justify-center px-12 py-4 sm:px-14 sm:py-8 lg:overflow-y-auto">
               {item.mediaType === 'image' ? (
-                <div className="relative max-h-[min(60vh,calc(92vh-10rem))] lg:max-h-full lg:h-full max-w-full flex items-center justify-center">
+                <div className="relative max-h-[min(60dvh,calc(92dvh-10rem))] lg:max-h-full lg:h-full max-w-full flex items-center justify-center">
                   {isMediaLoading && (
                     <div
                       role="status"
@@ -645,7 +645,7 @@ useEffect(() => {
                     className={
                       isMediaLoading
                         ? 'pointer-events-none absolute h-px w-px opacity-0'
-                        : 'max-h-[min(60vh,calc(92vh-10rem))] lg:max-h-full max-w-full object-contain rounded-lg ring-1 ring-white/15 shadow-sm shadow-black/60 animate-in fade-in'
+                        : 'max-h-[min(60dvh,calc(92dvh-10rem))] lg:max-h-full max-w-full object-contain rounded-lg ring-1 ring-white/15 shadow-sm shadow-black/60 animate-in fade-in'
                     }
                   />
                 </div>
@@ -668,13 +668,13 @@ useEffect(() => {
                     type="button"
                     onClick={openReader}
                     title={language === 'en' ? 'Reading mode' : 'Mode Baca'}
-                    className="group relative cursor-pointer rounded-md shadow-sm shadow-black/60 ring-1 ring-white/15 max-h-[min(56vh,calc(92vh-10rem))] max-w-full"
+                    className="group relative cursor-pointer rounded-md shadow-sm shadow-black/60 ring-1 ring-white/15 max-h-[min(56dvh,calc(92dvh-10rem))] max-w-full"
                   >
                     <img
                       src={item.thumbnailUrl}
                       alt={item.cleanTitle}
                       referrerPolicy="no-referrer"
-                      className="max-h-[min(56vh,calc(92vh-10rem))] lg:max-h-[calc(88vh-13rem)] max-w-full rounded-md bg-white object-contain"
+                      className="max-h-[min(56dvh,calc(92dvh-10rem))] lg:max-h-[calc(88dvh-13rem)] max-w-full rounded-md bg-white object-contain"
                     />
                     <span className="absolute inset-0 flex items-center justify-center rounded-md bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-stone-900">
@@ -693,7 +693,7 @@ useEffect(() => {
                   controls
                   poster={item.thumbnailUrl}
                   src={item.fileUrl}
-                  className="block w-full max-h-[min(70vh,calc(92vh-10rem))] lg:max-h-full lg:h-full rounded-lg bg-black object-contain shadow-sm ring-1 ring-white/10"
+                  className="block w-full max-h-[min(70dvh,calc(92dvh-10rem))] lg:max-h-full lg:h-full rounded-lg bg-black object-contain shadow-sm ring-1 ring-white/10"
                 >
                   {language === 'en' ? 'Your browser does not support the HTML5 video player.' : 'Browser Anda tidak mendukung pemutar video HTML5.'}
                 </video>
