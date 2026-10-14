@@ -51,7 +51,7 @@ WikiGaleri is a web app that closes that gap. Live at **https://wikigaleri.web.a
 
 ### How Google AI is used
 
-Gemini 2.5 Flash (through the `@google/genai` SDK and the Gemini API) reads the official Commons metadata (title, description, categories, license, size, location) and writes:
+Gemini 3.8 Flash (through the Gemini API) reads the official Commons metadata (title, description, categories, license, size, location) and writes:
 
 1. **What this file is**: a plain-language explanation, key facts and ideas for using it.
 2. **What you can do with it**: a license summary, notes on commercial use and remixing, things to double-check, and a credit line.
@@ -84,7 +84,7 @@ firebase deploy --only hosting
 - React 19, TypeScript, Vite
 - Tailwind CSS 4
 - MapLibre GL (nearby map, OpenFreeMap tiles)
-- Google Gemini API (`@google/genai`, model `gemini-2.5-flash`)
+- Google Gemini API (REST, model `gemini-3.8-flash`, with `gemini-flash-latest` and `gemini-2.5-flash` as fallbacks)
 - Wikimedia Commons and Wikidata APIs
 - jsPDF and qrcode for the PDF report
 - Firebase Hosting for deployment
@@ -175,7 +175,7 @@ WikiGaleri adalah aplikasi web yang menutup celah itu. Tersedia di **https://wik
 
 ### Cara Google AI dipakai
 
-Gemini 2.5 Flash (lewat SDK `@google/genai` dan Gemini API) membaca metadata resmi dari Commons (judul, deskripsi, kategori, lisensi, ukuran, lokasi), lalu menulis:
+Gemini 3.8 Flash (lewat Gemini API) membaca metadata resmi dari Commons (judul, deskripsi, kategori, lisensi, ukuran, lokasi), lalu menulis:
 
 1. **Apa isi berkas ini**: penjelasan bahasa awam, fakta penting, dan ide pemakaian.
 2. **Boleh dipakai untuk apa**: ringkasan lisensi, catatan soal pemakaian komersial dan remix, hal yang perlu dicek, serta teks kredit.
@@ -208,7 +208,7 @@ firebase deploy --only hosting
 - React 19, TypeScript, Vite
 - Tailwind CSS 4
 - MapLibre GL (peta terdekat, tile OpenFreeMap)
-- Google Gemini API (`@google/genai`, model `gemini-2.5-flash`)
+- Google Gemini API (REST, model `gemini-3.8-flash`, dengan `gemini-flash-latest` dan `gemini-2.5-flash` sebagai cadangan)
 - API Wikimedia Commons dan Wikidata
 - jsPDF dan qrcode untuk laporan PDF
 - Firebase Hosting untuk deployment

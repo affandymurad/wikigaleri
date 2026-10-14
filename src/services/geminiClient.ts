@@ -1,10 +1,13 @@
 import { CommonsMediaItem } from '../types/wikimedia';
 
+// Urutan model: 3.8 Flash (rekomendasi saat ini), alias -latest, lalu 2.5 Flash (hanya tersedia untuk akun lama)
 const PRIMARY_ENDPOINT =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent';
 const MODELS_LIST_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 const FALLBACK_ENDPOINT =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
+const LEGACY_ENDPOINT =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 export interface GeminiAnalysisResult {
   text: string;
@@ -58,7 +61,7 @@ export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean
     // Jaringan lambat atau terblokir: lanjut ke uji generate sebagai cadangan
   }
 
-  const endpoints = [PRIMARY_ENDPOINT, FALLBACK_ENDPOINT];
+  const endpoints = [PRIMARY_ENDPOINT, FALLBACK_ENDPOINT, LEGACY_ENDPOINT];
   // Kunci yang salah ditolak (400/403) sebelum cek kapasitas. Jadi 429/503 berarti kunci diterima Google.
   let keyAccepted = false;
   let timedOut = false;
@@ -134,7 +137,7 @@ let geminiQuotaBlockedUntil = 0;
  */
 async function callGemini(apiKey: string, prompt: string, systemInstruction?: string): Promise<string> {
   const cleanKey = apiKey.trim();
-  const endpoints = [PRIMARY_ENDPOINT, FALLBACK_ENDPOINT];
+  const endpoints = [PRIMARY_ENDPOINT, FALLBACK_ENDPOINT, LEGACY_ENDPOINT];
 
   const payload: Record<string, unknown> = {
     contents: [
@@ -194,6 +197,7 @@ throw fatalErr;
           throw new Error('Tidak ada respon teks dari model Gemini.');
         }
 
+        lastGeminiModel = endpoint.match(/models\/([^:]+):/)?.[1] || lastGeminiModel;
         return text.trim();
       } catch (err) {
 if (err instanceof Error && (err as Error & { fatal?: boolean }).fatal) throw err;
@@ -220,14 +224,25 @@ if (err instanceof Error && (err as Error & { fatal?: boolean }).fatal) throw er
 }
 
 export const GEMINI_ASSISTANT_NAME = 'Gemini';
-export const GEMINI_MODEL_NAME = 'Gemini 2.5 Flash';
-export const GEMINI_MODEL_VERSION = 'gemini-2.5-flash';
+export const GEMINI_MODEL_NAME = 'Gemini 3.8 Flash';
+export const GEMINI_MODEL_VERSION = 'gemini-3.8-flash';
+
+// Model yang benar-benar menjawab pada panggilan terakhir (bisa model cadangan)
+let lastGeminiModel = GEMINI_MODEL_VERSION;
+
+export function getGeminiModelMeta(): { modelName: string; modelVersion: string } {
+  const m = lastGeminiModel.match(/^gemini-(\d+(?:\.\d+)?)-flash(-lite)?$/);
+  return {
+    modelName: m ? `Gemini ${m[1]} Flash${m[2] ? ' Lite' : ''}` : `Gemini (${lastGeminiModel})`,
+    modelVersion: lastGeminiModel,
+  };
+}
 
 export const AI_DISCLAIMER_TEXT_ID =
-  'Catatan: penjelasan ini ditulis otomatis oleh Google Gemini (gemini-2.5-flash) dari metadata Wikimedia Commons. Bisa saja ada yang keliru, jadi cek lagi sebelum dipakai untuk riset, urusan hukum, atau terbitan resmi.';
+  'Catatan: penjelasan ini ditulis otomatis oleh Google Gemini dari metadata Wikimedia Commons. Bisa saja ada yang keliru, jadi cek lagi sebelum dipakai untuk riset, urusan hukum, atau terbitan resmi.';
 
 export const AI_DISCLAIMER_TEXT_EN =
-  'Heads up: Google Gemini (gemini-2.5-flash) wrote this automatically from Wikimedia Commons metadata. It can get things wrong, so double-check before using it for research, legal matters, or publication.';
+  'Heads up: Google Gemini wrote this automatically from Wikimedia Commons metadata. It can get things wrong, so double-check before using it for research, legal matters, or publication.';
 
 export const AI_LOCAL_DISCLAIMER_TEXT_ID =
   'Catatan: ringkasan ini dibuat otomatis oleh WikiGaleri dari judul dan metadata berkas, bukan ditulis oleh Gemini. Isinya terbatas dan bisa kurang tepat, jadi cek lagi sebelum dipakai untuk riset, urusan hukum, atau terbitan resmi.';
@@ -447,8 +462,7 @@ SKEMA JSON
       },
       modelMeta: {
         assistantName: GEMINI_ASSISTANT_NAME,
-        modelName: GEMINI_MODEL_NAME,
-        modelVersion: GEMINI_MODEL_VERSION,
+        ...getGeminiModelMeta(),
         disclaimer: disclaimerText,
         language: lang,
       },
@@ -485,8 +499,7 @@ SKEMA JSON
       },
       modelMeta: {
         assistantName: GEMINI_ASSISTANT_NAME,
-        modelName: GEMINI_MODEL_NAME,
-        modelVersion: GEMINI_MODEL_VERSION,
+        ...getGeminiModelMeta(),
         disclaimer: disclaimerText,
         language: lang,
       },
@@ -745,8 +758,7 @@ Kembalikan JSON dengan skema ini:
       curatorInsight: parsed.curatorInsight || (isEn ? 'No extra note was returned for this area.' : 'Belum ada catatan tambahan untuk area ini.'),
       modelMeta: {
         assistantName: GEMINI_ASSISTANT_NAME,
-        modelName: GEMINI_MODEL_NAME,
-        modelVersion: GEMINI_MODEL_VERSION,
+        ...getGeminiModelMeta(),
         disclaimer: disclaimerText,
         language: lang,
         source: 'gemini',

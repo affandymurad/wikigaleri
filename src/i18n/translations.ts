@@ -612,7 +612,7 @@ export const translations: Record<Language, Translations> = {
       loadingAddress: 'Fetching reverse geocoding address...',
       noKeyAlert: 'Add your Gemini key in the top bar to use the assistant.',
       regenerateBtn: 'Regenerate Analysis with Gemini',
-      unlockGeminiAiKey: 'Tip: add your Gemini key in the top bar to get fuller explanations from Gemini 2.5 Flash.',
+      unlockGeminiAiKey: 'Tip: add your Gemini key in the top bar to get fuller explanations from Gemini.',
       ipLocationFallbackNotice: (city?: string) =>
         `GPS permission restricted by browser/iframe. Switched to network approximate location${city ? ` (${city})` : ''}.`,
       clickMapHint: 'Click the map to set a location',
@@ -1132,7 +1132,7 @@ export const translations: Record<Language, Translations> = {
       loadingAddress: 'Mengambil alamat reversi koordinat...',
       noKeyAlert: 'Tambahkan kunci Gemini di bilah atas untuk memakai asisten.',
       regenerateBtn: 'Perbarui Analisis dengan Gemini',
-      unlockGeminiAiKey: 'Tip: tambahkan kunci Gemini di bilah atas untuk penjelasan yang lebih lengkap dari Gemini 2.5 Flash.',
+      unlockGeminiAiKey: 'Tip: tambahkan kunci Gemini di bilah atas untuk penjelasan yang lebih lengkap dari Gemini.',
       ipLocationFallbackNotice: (city?: string) =>
         `Izin GPS dibatasi peramban/iframe. Beralih otomatis ke perkiraan lokasi jaringan${city ? ` (${city})` : ''}.`,
       clickMapHint: 'Klik peta untuk menentukan lokasi',

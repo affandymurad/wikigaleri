@@ -7,6 +7,7 @@ import {
   generateUnifiedMediaAnalysis,
   GEMINI_ASSISTANT_NAME,
   GEMINI_MODEL_NAME,
+  GEMINI_MODEL_VERSION,
   AI_DISCLAIMER_TEXT_ID,
   AI_DISCLAIMER_TEXT_EN,
 } from '../services/geminiClient';
@@ -1507,7 +1508,7 @@ return (
                             <span>{unifiedAnalysis.modelMeta?.assistantName || GEMINI_ASSISTANT_NAME}</span>
                           </span>
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs font-mono font-medium">
-                            Model: {unifiedAnalysis.modelMeta?.modelName || GEMINI_MODEL_NAME} ({unifiedAnalysis.modelMeta?.modelVersion || 'gemini-2.5-flash'})
+                            Model: {unifiedAnalysis.modelMeta?.modelName || GEMINI_MODEL_NAME} ({unifiedAnalysis.modelMeta?.modelVersion || GEMINI_MODEL_VERSION})
                           </span>
                         </div>
                         <span className="text-xs text-moss-600 dark:text-moss-400 font-medium inline-flex items-center gap-1">

@@ -5,6 +5,7 @@ import {
   UnifiedMediaAiAnalysis,
   GEMINI_ASSISTANT_NAME,
   GEMINI_MODEL_NAME,
+  GEMINI_MODEL_VERSION,
   AI_DISCLAIMER_TEXT_ID,
   AI_DISCLAIMER_TEXT_EN,
 } from '../services/geminiClient';
@@ -390,7 +391,7 @@ export async function exportMediaAnalysisPdf(
   // --- ASSISTANT & LLM MODEL BANNER WITH AI DISCLAIMER ---
   const assistantName = sanitizeForPdf(analysis.modelMeta?.assistantName || GEMINI_ASSISTANT_NAME);
   const modelName = sanitizeForPdf(analysis.modelMeta?.modelName || GEMINI_MODEL_NAME);
-  const modelVersion = sanitizeForPdf(analysis.modelMeta?.modelVersion || 'gemini-2.5-flash');
+  const modelVersion = sanitizeForPdf(analysis.modelMeta?.modelVersion || GEMINI_MODEL_VERSION);
   const disclaimerText = sanitizeForPdf(
     analysis.modelMeta?.disclaimer || (isEn ? AI_DISCLAIMER_TEXT_EN : AI_DISCLAIMER_TEXT_ID)
   );
