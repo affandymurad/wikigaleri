@@ -175,7 +175,7 @@ async function callGemini(apiKey: string, prompt: string, systemInstruction?: st
           const errMsg = errData?.error?.message || `Error ${response.status}: ${response.statusText}`;
 
           // If 503 (high demand) or 404 (model not found), fail over to next model/endpoint
-if (response.status === 429) geminiQuotaBlockedUntil = Date.now() + 10 * 60 * 1000;
+if (response.status === 429) geminiQuotaBlockedUntil = Date.now() + 90 * 1000;
           if (response.status === 503 || response.status === 404 ) {
             lastError = new Error(errMsg);
             // Wait 1s before attempt 2 or next endpoint
@@ -710,9 +710,13 @@ Kembalikan JSON dengan skema ini:
       photosSummary: isEn
         ? `${photos.length} files found near this point.`
         : `Ada ${photos.length} berkas di dekat titik ini.`,
-      curatorInsight: isEn
-        ? 'Local summary built from file titles only, not written by Gemini.'
-        : 'Ringkasan lokal yang dibuat dari judul berkas saja, bukan tulisan Gemini.',
+      curatorInsight: apiKey && apiKey.trim().length > 0
+        ? (isEn
+            ? 'Gemini is on, but its quota was just reached, so this is a local summary built from file titles. Press "Gemini Assistant" to try again in a moment.'
+            : 'Gemini aktif, tetapi kuotanya baru saja tercapai, jadi ini ringkasan lokal dari judul berkas. Tekan "Gemini Assistant" untuk mencoba lagi sebentar lagi.')
+        : (isEn
+            ? 'Local summary built from file titles only, not written by Gemini.'
+            : 'Ringkasan lokal yang dibuat dari judul berkas saja, bukan tulisan Gemini.'),
       modelMeta: {
         assistantName: 'WikiGaleri',
         modelName: isEn ? 'Local summary' : 'Ringkasan lokal',
@@ -749,7 +753,8 @@ Kembalikan JSON dengan skema ini:
       },
     };
   } catch (err) {
-    console.error('Failed to parse Nearby Area AI analysis:', err);
+    console.error('Nearby Area AI analysis failed:', err);
+    const reason = (err instanceof Error ? err.message : String(err)).slice(0, 160);
     const landmarks = Array.from(
       new Set(
         photos
@@ -765,7 +770,9 @@ Kembalikan JSON dengan skema ini:
       areaOverview: address || (isEn ? `Coordinates ${lat.toFixed(4)}, ${lng.toFixed(4)}` : `Koordinat ${lat.toFixed(4)}, ${lng.toFixed(4)}`),
       identifiedLandmarks: landmarks.length > 0 ? landmarks : [address.split(',')[0] || (isEn ? 'Nearby area' : 'Area terdekat')],
       photosSummary: isEn ? `${photos.length} Wikimedia Commons photos found within this radius.` : `Ada ${photos.length} foto Wikimedia Commons dalam radius ini.`,
-      curatorInsight: isEn ? 'Gemini could not be reached, so this is a local summary.' : 'Gemini tidak bisa dihubungi, jadi ini ringkasan lokal.',
+      curatorInsight: isEn
+        ? `Gemini did not return a usable answer (${reason}), so this is a local summary.`
+        : `Gemini tidak memberi jawaban yang bisa dipakai (${reason}), jadi ini ringkasan lokal.`,
       modelMeta: {
         assistantName: 'WikiGaleri',
         modelName: isEn ? 'Local summary' : 'Ringkasan lokal',
