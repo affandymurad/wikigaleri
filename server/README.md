@@ -75,5 +75,5 @@ After deploying, check old container images in Artifact Registry now and then an
 
 ## Not done yet
 
-- Budget alert and kill switch: written in [ops/killswitch](../ops/killswitch/README.md), to be deployed once billing is on.
+- Budget alert and automatic kill switch (budget → Pub/Sub → function that stops the service).
 - Firebase App Check.
