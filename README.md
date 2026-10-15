@@ -56,9 +56,9 @@ Gemini 3.1 Flash-Lite (through the Gemini API) reads the official Commons metada
 1. **What this file is**: a plain-language explanation, key facts and ideas for using it.
 2. **What you can do with it**: a license summary, notes on commercial use and remixing, things to double-check, and a credit line.
 
-For the Nearby map, Gemini also summarizes the area around the chosen point from the titles and descriptions of nearby photos. When no key is set, the app shows a clearly labelled local summary instead, and says it was not written by Gemini. When a key is set but Gemini fails (for example the quota is used up), the app shows the error right away instead of hiding it behind a local summary.
+For the Nearby map, Gemini also summarizes the area around the chosen point from the titles and descriptions of nearby photos.
 
-When a Gemini key is set, the file explanation starts by itself as soon as you open a file. The result is kept in memory until you refresh the page, so opening the same file again does not use more quota (the Re-analyze button always asks Gemini again). Without a key, or when Gemini fails (for example the quota is used up), the app shows a clearly labelled summary built from the Commons metadata and license rules, and when a call failed it also shows the error with a retry button.
+There is nothing to set up as a user: Gemini is called by our own API on Cloud Run, never from the browser, and no key is entered or stored in the browser. The file explanation starts by itself as soon as you open a file. Every answer is cached in Firestore, so the same file is explained once and then served from the cache, and the service has a daily limit on real Gemini calls. When Gemini cannot answer (quota, daily limit, an error), the app shows a clearly labelled summary built from the Commons metadata and license rules, plus the reason and a retry button.
 
 Every AI result carries a notice, with a link to the [Wikimedia AI guidelines](https://meta.wikimedia.org/wiki/Artificial_intelligence/Guidelines). Gemini can be wrong or miss context. The license summary is a guide, not legal advice. Always check the file page on Commons before you reuse anything.
 
@@ -66,19 +66,24 @@ Every AI result carries a notice, with a link to the [Wikimedia AI guidelines](h
 
 ```mermaid
 flowchart LR
-  U[Browser: React app] -->|static files| H[Firebase Hosting on Google Cloud]
+  U[Browser: React app] -->|static files| H[Firebase Hosting]
   U -->|search, metadata| W[Wikimedia Commons and Wikidata APIs]
-  U -->|explain, summarize| G[Gemini API]
   U -->|map tiles| M[OpenFreeMap]
+  U -->|/api/analyze, /api/area| R[Cloud Run: wikigaleri-api]
+  H -.->|rewrite /api/**| R
+  R -->|cache and daily counter| F[(Firestore)]
+  R -->|key from| S[Secret Manager]
+  R -->|explain, summarize| G[Gemini API, Flash-Lite]
 ```
 
-The app is a single-page React build served by **Firebase Hosting** (project `wikigaleri`, on Google Cloud). All Wikimedia, Gemini and map requests go directly from the browser, so there is no server of our own to run or secure. `firebase.json` serves `dist/` and rewrites every route to `index.html`.
+The site is a single-page React build served by **Firebase Hosting** (project `wikigaleri`). Wikimedia and map requests go straight from the browser. Gemini goes through **Cloud Run** (`server/`): Firebase Hosting rewrites `/api/**` to the `wikigaleri-api` service, which keeps the Gemini key in **Secret Manager**, stores answers in **Firestore** so each file is explained once, and enforces rate limits and a daily limit of 300 real Gemini calls. The Gemini key comes from an AI Studio project without billing, so it stays on the free tier. Cloud Run is capped at one instance and scales to zero.
 
-To deploy (needs the [Firebase CLI](https://firebase.google.com/docs/cli) and access to the project):
+Setup, cost guards and the full deploy steps are in [server/README.md](server/README.md). In short:
 
 ```bash
+gcloud run deploy wikigaleri-api --source server --region asia-southeast1 ...
 npm run build
-firebase deploy --only hosting
+firebase deploy --only hosting,firestore:rules
 ```
 
 ### Tech stack
@@ -86,10 +91,11 @@ firebase deploy --only hosting
 - React 19, TypeScript, Vite
 - Tailwind CSS 4
 - MapLibre GL (nearby map, OpenFreeMap tiles)
-- Google Gemini API (REST, model `gemini-3.1-flash-lite`, with `gemini-3.5-flash-lite` as the fallback)
+- Google Gemini API (model `gemini-3.1-flash-lite`, with `gemini-3.5-flash-lite` as the fallback), called from the server
+- Cloud Run (Node.js and Express in `server/`), Firestore (answer cache), Secret Manager
 - Wikimedia Commons and Wikidata APIs
 - jsPDF and qrcode for the PDF report
-- Firebase Hosting for deployment
+- Firebase Hosting for the site
 
 ### Run locally
 
@@ -102,11 +108,17 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. Search, filters, credit lines, the map and bookmarks work right away.
 
-**Gemini API key.** The Gemini features need your own key from [Google AI Studio](https://aistudio.google.com/apikey). Open the Gemini key dialog in the app and paste it there. The key is stored only in your browser (`localStorage`) and sent only to Google. Without a key, search, filters, credit lines, the map and bookmarks all still work. Never commit a key to this repository.
+**Gemini features.** They need the local API running as well, with your own key from [Google AI Studio](https://aistudio.google.com/apikey). In a second terminal:
 
-`.env.example` lists the variables AI Studio injects when the app runs there (`GEMINI_API_KEY`, `APP_URL`).
+```bash
+cd server
+npm install
+GEMINI_API_KEY=your-key npm run dev
+```
+
+Vite forwards `/api` to it (port 8080). Locally the cache lives in memory. Never commit a key to this repository. See [server/README.md](server/README.md) for all settings.
 
 ### Scripts
 
@@ -117,15 +129,18 @@ Open http://localhost:3000.
 | `npm run preview` | Preview the production build |
 | `npm run lint` | Type-check with TypeScript |
 
+The API in `server/` has its own `npm run dev`, `npm run build` and `npm run lint`.
+
 ### Project structure
 
 ```
 src/
   components/   UI: gallery, detail modal, nearby map, bookmarks, guides
-  hooks/        Commons gallery, language, dark mode, API key
-  services/     Wikimedia API client and Gemini client (prompts live here)
+  hooks/        Commons gallery, language, dark mode
+  services/     Wikimedia API client and the client for our Gemini API
   i18n/         Indonesian and English strings
   utils/        License helpers, credit line and PDF export
+server/         Cloud Run API: prompts, Gemini call, Firestore cache, limits
 ```
 
 ### Credits and disclaimer
@@ -182,9 +197,9 @@ Gemini 3.1 Flash-Lite (lewat Gemini API) membaca metadata resmi dari Commons (ju
 1. **Apa isi berkas ini**: penjelasan bahasa awam, fakta penting, dan ide pemakaian.
 2. **Boleh dipakai untuk apa**: ringkasan lisensi, catatan soal pemakaian komersial dan remix, hal yang perlu dicek, serta teks kredit.
 
-Untuk peta terdekat, Gemini juga merangkum area di sekitar titik pilihan dari judul dan deskripsi foto di sekitarnya. Bila kunci belum diisi, aplikasi menampilkan ringkasan lokal yang diberi label jelas dan menyebut bahwa ringkasan itu bukan tulisan Gemini. Bila kunci sudah diisi tetapi Gemini gagal (misalnya kuota habis), aplikasi langsung menampilkan error-nya, tidak menyembunyikannya di balik ringkasan lokal.
+Untuk peta terdekat, Gemini juga merangkum area di sekitar titik pilihan dari judul dan deskripsi foto di sekitarnya.
 
-Bila kunci Gemini sudah diisi, penjelasan berkas berjalan otomatis begitu berkas dibuka. Hasilnya disimpan di memori sampai halaman dimuat ulang, jadi membuka berkas yang sama lagi tidak memakai kuota tambahan (tombol Analisis ulang selalu bertanya ke Gemini lagi). Tanpa kunci, atau bila Gemini gagal (misalnya kuota habis), aplikasi menampilkan ringkasan berlabel jelas yang dibuat dari metadata Commons dan aturan lisensi, dan bila panggilan gagal, error-nya ikut ditampilkan beserta tombol coba lagi.
+Pengguna tidak perlu menyiapkan apa pun: Gemini dipanggil oleh API kami sendiri di Cloud Run, tidak pernah dari browser, dan tidak ada kunci yang dimasukkan atau disimpan di browser. Penjelasan berkas berjalan otomatis begitu berkas dibuka. Setiap jawaban disimpan di cache Firestore, jadi berkas yang sama dijelaskan sekali lalu dilayani dari cache, dan layanan punya batas harian untuk panggilan Gemini yang sebenarnya. Bila Gemini tidak bisa menjawab (kuota, batas harian, error), aplikasi menampilkan ringkasan berlabel jelas yang dibuat dari metadata Commons dan aturan lisensi, beserta alasannya dan tombol coba lagi.
 
 Setiap hasil AI disertai catatan, dengan tautan ke [pedoman AI Wikimedia](https://meta.wikimedia.org/wiki/Artificial_intelligence/Guidelines). Gemini bisa salah atau melewatkan konteks. Ringkasan lisensi hanya penuntun, bukan nasihat hukum. Selalu cek halaman berkas di Commons sebelum memakainya kembali.
 
@@ -192,19 +207,24 @@ Setiap hasil AI disertai catatan, dengan tautan ke [pedoman AI Wikimedia](https:
 
 ```mermaid
 flowchart LR
-  U[Browser: aplikasi React] -->|berkas statis| H[Firebase Hosting di Google Cloud]
+  U[Browser: aplikasi React] -->|berkas statis| H[Firebase Hosting]
   U -->|cari, metadata| W[API Wikimedia Commons dan Wikidata]
-  U -->|jelaskan, ringkas| G[Gemini API]
   U -->|tile peta| M[OpenFreeMap]
+  U -->|/api/analyze, /api/area| R[Cloud Run: wikigaleri-api]
+  H -.->|rewrite /api/**| R
+  R -->|cache dan penghitung harian| F[(Firestore)]
+  R -->|kunci dari| S[Secret Manager]
+  R -->|jelaskan, ringkas| G[Gemini API, Flash-Lite]
 ```
 
-Aplikasi ini berupa build React satu halaman yang disajikan oleh **Firebase Hosting** (proyek `wikigaleri`, di Google Cloud). Semua permintaan ke Wikimedia, Gemini, dan peta langsung dari browser, jadi tidak ada server milik sendiri yang perlu dijalankan atau diamankan. `firebase.json` menyajikan `dist/` dan mengarahkan semua rute ke `index.html`.
+Situsnya berupa build React satu halaman yang disajikan oleh **Firebase Hosting** (proyek `wikigaleri`). Permintaan ke Wikimedia dan peta langsung dari browser. Gemini lewat **Cloud Run** (`server/`): Firebase Hosting mengarahkan `/api/**` ke layanan `wikigaleri-api`, yang menyimpan kunci Gemini di **Secret Manager**, menyimpan jawaban di **Firestore** agar tiap berkas dijelaskan sekali, serta menerapkan batas laju dan batas harian 300 panggilan Gemini yang sebenarnya. Kunci Gemini berasal dari proyek AI Studio tanpa billing, jadi tetap di tier gratis. Cloud Run dibatasi satu instance dan turun ke nol saat tidak dipakai.
 
-Untuk deploy (butuh [Firebase CLI](https://firebase.google.com/docs/cli) dan akses ke proyeknya):
+Pengaturan, pembatas biaya, dan langkah deploy lengkap ada di [server/README.md](server/README.md). Ringkasnya:
 
 ```bash
+gcloud run deploy wikigaleri-api --source server --region asia-southeast1 ...
 npm run build
-firebase deploy --only hosting
+firebase deploy --only hosting,firestore:rules
 ```
 
 ### Teknologi
@@ -212,10 +232,11 @@ firebase deploy --only hosting
 - React 19, TypeScript, Vite
 - Tailwind CSS 4
 - MapLibre GL (peta terdekat, tile OpenFreeMap)
-- Google Gemini API (REST, model `gemini-3.1-flash-lite`, dengan `gemini-3.5-flash-lite` sebagai cadangan)
+- Google Gemini API (model `gemini-3.1-flash-lite`, dengan `gemini-3.5-flash-lite` sebagai cadangan), dipanggil dari server
+- Cloud Run (Node.js dan Express di `server/`), Firestore (cache jawaban), Secret Manager
 - API Wikimedia Commons dan Wikidata
 - jsPDF dan qrcode untuk laporan PDF
-- Firebase Hosting untuk deployment
+- Firebase Hosting untuk situs
 
 ### Menjalankan secara lokal
 
@@ -228,11 +249,17 @@ npm install
 npm run dev
 ```
 
-Buka http://localhost:3000.
+Buka http://localhost:3000. Pencarian, filter, teks kredit, peta, dan markah langsung berfungsi.
 
-**Kunci API Gemini.** Fitur Gemini butuh kunci milikmu sendiri dari [Google AI Studio](https://aistudio.google.com/apikey). Buka dialog kunci Gemini di aplikasi, lalu tempel kuncinya di sana. Kunci disimpan hanya di browsermu (`localStorage`) dan hanya dikirim ke Google. Tanpa kunci, pencarian, filter, teks kredit, peta, dan markah tetap berfungsi. Jangan pernah meng-commit kunci ke repositori ini.
+**Fitur Gemini.** Fitur ini butuh API lokal yang ikut berjalan, dengan kunci milikmu sendiri dari [Google AI Studio](https://aistudio.google.com/apikey). Di terminal kedua:
 
-`.env.example` berisi variabel yang disuntikkan AI Studio saat aplikasi berjalan di sana (`GEMINI_API_KEY`, `APP_URL`).
+```bash
+cd server
+npm install
+GEMINI_API_KEY=kunci-kamu npm run dev
+```
+
+Vite meneruskan `/api` ke sana (port 8080). Secara lokal cache disimpan di memori. Jangan pernah meng-commit kunci ke repositori ini. Semua pengaturan ada di [server/README.md](server/README.md).
 
 ### Perintah
 
@@ -243,15 +270,18 @@ Buka http://localhost:3000.
 | `npm run preview` | Melihat hasil build produksi |
 | `npm run lint` | Memeriksa tipe dengan TypeScript |
 
+API di `server/` punya `npm run dev`, `npm run build`, dan `npm run lint` sendiri.
+
 ### Struktur proyek
 
 ```
 src/
   components/   Antarmuka: galeri, modal detail, peta terdekat, markah, panduan
-  hooks/        Galeri Commons, bahasa, mode gelap, kunci API
-  services/     Klien API Wikimedia dan klien Gemini (prompt ada di sini)
+  hooks/        Galeri Commons, bahasa, mode gelap
+  services/     Klien API Wikimedia dan klien untuk API Gemini kami
   i18n/         Teks bahasa Indonesia dan Inggris
   utils/        Pembantu lisensi, teks kredit, dan ekspor PDF
+server/         API Cloud Run: prompt, panggilan Gemini, cache Firestore, pembatas
 ```
 
 ### Kredit dan penafian

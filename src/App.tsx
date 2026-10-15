@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useLanguage } from './hooks/useLanguage';
-import { useGeminiApiKey } from './hooks/useGeminiApiKey';
 import { useCommonsGallery, useBookmarkLists } from './hooks/useCommonsGallery';
 import { Header } from './components/Header';
 import { SearchBar } from './components/SearchBar';
@@ -10,7 +9,6 @@ import { NearbyPhotosSection } from './components/NearbyPhotosSection';
 import { MediaTypeFilter } from './components/MediaTypeFilter';
 import { MediaGrid, TalkPageView, BookmarksPanel, BookmarkBackupBar } from './components/MediaGrid';
 import { MediaDetailModal } from './components/MediaDetailModal';
-import { GeminiKeyModal } from './components/GeminiKeyModal';
 import { LicenseGuideModal, WikimediaTermsModal, DisclaimerModal } from './components/LicenseGuideModal';
 import { AttributionQuickCopyModal } from './components/AttributionQuickCopyModal';
 import { CategoryListSection } from './components/CategoryListSection';
@@ -21,13 +19,6 @@ import { ExternalLink, Search, MapPin, LayoutGrid, FolderTree, FolderRoot, Radio
 export default function App() {
   const { isDark, toggleDarkMode } = useDarkMode();
   const { language, setLanguage, t } = useLanguage();
-  const {
-    apiKey: geminiApiKey,
-    hasKey: hasGeminiKey,
-    saveKey: saveGeminiKey,
-    removeKey: removeGeminiKey,
-    lastError: geminiLastError,
-  } = useGeminiApiKey();
 
   const {
     filter,
@@ -79,7 +70,6 @@ export default function App() {
   // Modals state
   const [selectedDetailItem, setSelectedDetailItem] = useState<CommonsMediaItem | null>(null);
   const [quickAttributionItem, setQuickAttributionItem] = useState<CommonsMediaItem | null>(null);
-  const [isGeminiModalOpen, setIsGeminiModalOpen] = useState<boolean>(false);
   const [isLicenseGuideOpen, setIsLicenseGuideOpen] = useState<boolean>(false);
   const [isTermsOpen, setIsTermsOpen] = useState<boolean>(false);
   const [isDisclaimerOpen, setIsDisclaimerOpen] = useState<boolean>(false);
@@ -202,8 +192,6 @@ export default function App() {
       <Header
         isDark={isDark}
         onToggleDark={toggleDarkMode}
-        hasGeminiKey={hasGeminiKey}
-        onOpenGeminiModal={() => setIsGeminiModalOpen(true)}
         onOpenLicenseGuide={() => setIsLicenseGuideOpen(true)}
         onOpenTerms={() => setIsTermsOpen(true)}
         onOpenDisclaimer={() => setIsDisclaimerOpen(true)}
@@ -470,8 +458,6 @@ export default function App() {
           <section aria-label="Foto Terdekat" className="space-y-6">
             <NearbyPhotosSection
               onOpenDetail={(item) => setSelectedDetailItem(item)}
-              geminiApiKey={geminiApiKey}
-              onOpenGeminiModal={() => setIsGeminiModalOpen(true)}
               language={language}
               t={t}
             />
@@ -662,11 +648,6 @@ export default function App() {
         <MediaDetailModal
           item={selectedDetailItem}
           onClose={() => setSelectedDetailItem(null)}
-          geminiApiKey={geminiApiKey}
-          onOpenGeminiModal={() => {
-            setSelectedDetailItem(null);
-            setIsGeminiModalOpen(true);
-          }}
           onNext={handleNextDetail}
           onPrev={handlePrevDetail}
           hasNext={hasNextDetail}
@@ -690,18 +671,6 @@ export default function App() {
           onClose={() => setQuickAttributionItem(null)}
           t={t}
           language={language}
-        />
-      )}
-
-      {isGeminiModalOpen && (
-        <GeminiKeyModal
-          isOpen={isGeminiModalOpen}
-          onClose={() => setIsGeminiModalOpen(false)}
-          currentKey={geminiApiKey}
-          onSaveKey={saveGeminiKey}
-          onRemoveKey={removeGeminiKey}
-          t={t}
-          lastError={geminiLastError}
         />
       )}
 

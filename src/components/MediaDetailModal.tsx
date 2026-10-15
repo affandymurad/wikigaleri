@@ -28,7 +28,7 @@ RelatedWikiLink,
   WikiGlobalUsageItem,
 } from '../services/wikimediaApi';
 import { exportMediaAnalysisPdf } from '../utils/pdfGenerator';
-import { X, Download, Copy, Check, ExternalLink, Sparkles, ShieldCheck, BookOpen, Eye, Key, FileText, MapPin, Calendar, User, Info, ChevronLeft, Loader2, ChevronRight, Bookmark, AlertCircle, Globe, RefreshCw, FileCode, Tag, CheckCircle2, Folder, FileDown, Camera, ChevronDown, History, MessageSquare, Volume2, VolumeX } from 'lucide-react';
+import { X, Download, Copy, Check, ExternalLink, Sparkles, ShieldCheck, BookOpen, Eye, FileText, MapPin, Calendar, User, Info, ChevronLeft, Loader2, ChevronRight, Bookmark, AlertCircle, Globe, RefreshCw, FileCode, Tag, CheckCircle2, Folder, FileDown, Camera, ChevronDown, History, MessageSquare, Volume2, VolumeX } from 'lucide-react';
 import { TalkPageView } from './MediaGrid';
 
 import { Translations, Language } from '../i18n/translations';
@@ -36,8 +36,6 @@ import { Translations, Language } from '../i18n/translations';
 interface MediaDetailModalProps {
   item: CommonsMediaItem | null;
   onClose: () => void;
-  geminiApiKey: string;
-  onOpenGeminiModal: () => void;
   onNext?: () => void;
   onPrev?: () => void;
   hasNext?: boolean;
@@ -176,8 +174,6 @@ const FileHistoryPanel: React.FC<{ title: string; onSearchUser?: (u: string) => 
 export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   item,
   onClose,
-  geminiApiKey,
-  onOpenGeminiModal,
   onNext,
   onPrev,
   hasNext,
@@ -472,20 +468,13 @@ useEffect(() => {
   /**
    * Menjalankan analisis berkas.
    * auto = true: dipakai otomatis saat tab Gemini terbuka. Memakai cache memori (sampai halaman dimuat ulang)
-   * dan tidak memanggil Gemini lagi saat kuota baru saja habis.
-   * auto = false: tombol manual (Analisis ulang / Coba lagi), selalu memanggil Gemini.
-   * Tanpa kunci atau bila Gemini gagal, ditampilkan ringkasan lokal dari metadata Commons.
+   * dan tidak memanggil API lagi saat batas laju, kuota, atau batas harian baru saja tercapai.
+   * auto = false: tombol manual (Analisis ulang / Coba lagi). Server membalas dari cache Firestore bila berkas ini sudah pernah dianalisis.
+   * Bila Gemini gagal, ditampilkan ringkasan lokal dari metadata Commons.
    */
   const runAiAnalysis = async (auto: boolean) => {
     if (!item) return;
     const target = item;
-
-    if (!geminiApiKey) {
-      setAiError(null);
-      setUnifiedAnalysis(buildLocalMediaAnalysis(target, language, wikiUsages));
-      if (!auto) onOpenGeminiModal();
-      return;
-    }
 
     if (auto) {
       const cached = getCachedUnifiedAnalysis(target.id, language);
@@ -518,7 +507,7 @@ useEffect(() => {
       }
 
       // 2. Analisis terstruktur Gemini sesuai bahasa antarmuka
-      const res = await generateUnifiedMediaAnalysis(geminiApiKey, target, usages, language);
+      const res = await generateUnifiedMediaAnalysis(target, usages, language);
       setCachedUnifiedAnalysis(target.id, language, res);
       if (currentItemIdRef.current === target.id) setUnifiedAnalysis(res);
     } catch (err) {
@@ -538,16 +527,16 @@ useEffect(() => {
     void runAiAnalysis(false);
   };
 
-  // Otomatis jalan saat tab Gemini terbuka: hasil cache, ringkasan lokal (tanpa kunci), atau panggilan Gemini
+  // Otomatis jalan saat tab Gemini terbuka: hasil cache atau panggilan ke API Gemini
   const autoRunKeyRef = useRef<string>('');
   useEffect(() => {
     if (!item || activeTab !== 'ai') return;
-    const runKey = `${item.id}|${language}|${geminiApiKey ? 1 : 0}`;
+    const runKey = `${item.id}|${language}`;
     if (autoRunKeyRef.current === runKey) return;
     autoRunKeyRef.current = runKey;
     void runAiAnalysis(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item?.id, activeTab, language, geminiApiKey]);
+  }, [item?.id, activeTab, language]);
 
   const handleCopySection = (sectionKey: string, textToCopy: string) => {
     navigator.clipboard.writeText(textToCopy);
@@ -1427,7 +1416,7 @@ return (
           {/* Tab 3: Gemini AI Assistant (Unified Direct View) */}
             {activeTab === 'ai' && (
               <div className="p-5 space-y-4 flex-1 overflow-y-auto text-xs">
-                {/* Check if user configured their Gemini key */}
+                {/* Loading, then the analysis result */}
                 {isAiLoading ? (
                   <div className="p-10 text-center space-y-4 bg-stone-50/50 dark:bg-stone-800/30 rounded-lg border border-stone-200/60 dark:border-stone-800">
                     <div className="relative mx-auto w-12 h-12 flex items-center justify-center">
@@ -1488,24 +1477,6 @@ return (
                 ) : (
                   /* Unified Analysis Result: 4 Structured Sections with Copy Icons */
                   <div className="space-y-4">
-                    {/* Catatan sumber hasil: ringkasan lokal (tanpa kunci) atau Gemini gagal */}
-                    {unifiedAnalysis.modelMeta?.source === 'local' && !geminiApiKey && (
-                      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-accent-50 dark:bg-accent-950/40 border border-accent-200 dark:border-accent-900 text-xs text-accent-900 dark:text-accent-200">
-                        <span className="leading-relaxed min-w-0">
-                          {language === 'en'
-                            ? 'No Gemini key yet, so this is a summary built from Commons metadata. Add your key for a fuller explanation.'
-                            : 'Belum ada kunci Gemini, jadi ini ringkasan dari metadata Commons. Tambahkan kunci untuk penjelasan yang lebih lengkap.'}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={onOpenGeminiModal}
-                          className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 bg-accent-600 hover:bg-accent-700 text-white rounded-lg font-medium transition-colors"
-                        >
-                          <Key className="w-3.5 h-3.5" />
-                          <span>{t.modal.inputKeyBtn}</span>
-                        </button>
-                      </div>
-                    )}
                     {aiError && (
                       <div role="alert" className="flex flex-wrap items-start justify-between gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs text-red-900 dark:text-red-200">
                         <div className="flex items-start gap-2 min-w-0">

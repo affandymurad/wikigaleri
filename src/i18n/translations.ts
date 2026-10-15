@@ -7,7 +7,6 @@ export interface Translations {
     licenseGuide: string;
     wikimediaTerms: string;
     geminiActive: string;
-    inputGemini: string;
     toggleDark: string;
     toggleLight: string;
     language: string;
@@ -22,8 +21,6 @@ export interface Translations {
     searchBtn: string;
     smartAiBtn: string;
     smartAiShort: string;
-    smartAiDisabled: string;
-    inputKeyNow: string;
     smartModalTitle: string;
     smartModalDesc: string;
     smartPromptLabel: string;
@@ -106,9 +103,7 @@ export interface Translations {
     keyLandmarks: string;
     curatorInsight: string;
     loadingAddress: string;
-    noKeyAlert: string;
     regenerateBtn: string;
-    unlockGeminiAiKey: string;
     ipLocationFallbackNotice: (city?: string) => string;
     clickMapHint: string;
     previewTitle: string;
@@ -194,9 +189,6 @@ export interface Translations {
     shareAlikeDesc: string;
     taslTitle: string;
     copyAttributionBtn: string;
-    noKeyTitle: string;
-    noKeyDesc: string;
-    inputKeyBtn: string;
     aiSubTabs: {
       compliance: string;
       context: string;
@@ -248,22 +240,6 @@ export interface Translations {
     prevTooltip: string;
     nextTooltip: string;
   };
-  geminiModal: {
-    title: string;
-    subtitle: string;
-    keyLabel: string;
-    placeholder: string;
-    privacyTitle: string;
-    privacyDesc: string;
-    getKeyLink: string;
-    removeKey: string;
-    cancel: string;
-    saveVerify: string;
-    verifying: string;
-    successMsg: string;
-    errorMsg: string;
-    emptyKeyMsg: string;
-  };
   guideModal: {
     title: string;
     subtitle: string;
@@ -296,7 +272,6 @@ export interface Translations {
   footer: {
     tagline: string;
     attributionGuide: string;
-    apiKeySettings: string;
     commonsLink: string;
   };
 }
@@ -309,7 +284,6 @@ export const translations: Record<Language, Translations> = {
       licenseGuide: 'CC License Guide',
       wikimediaTerms: 'Wikimedia Terms',
       geminiActive: 'Gemini is on',
-      inputGemini: 'Add Gemini key',
       toggleDark: 'Switch to Dark Mode',
       toggleLight: 'Switch to Light Mode',
       language: 'Language',
@@ -325,8 +299,6 @@ export const translations: Record<Language, Translations> = {
       searchBtn: 'Search',
       smartAiBtn: 'Smart search',
       smartAiShort: 'Smart',
-      smartAiDisabled: 'Smart search is off. Add your Gemini key in the top bar to turn it on.',
-      inputKeyNow: 'Add key',
       smartModalTitle: 'Gemini AI Smart Search',
       smartModalDesc:
         'Describe what you need in natural language, Gemini will formulate optimal Wikimedia syntax and categories.',
@@ -609,9 +581,7 @@ export const translations: Record<Language, Translations> = {
       keyLandmarks: 'Identified Landmarks & Topics',
       curatorInsight: 'Notes on this area',
       loadingAddress: 'Fetching reverse geocoding address...',
-      noKeyAlert: 'Add your Gemini key in the top bar to use the assistant.',
       regenerateBtn: 'Regenerate Analysis with Gemini',
-      unlockGeminiAiKey: 'Tip: add your Gemini key in the top bar to get fuller explanations from Gemini.',
       ipLocationFallbackNotice: (city?: string) =>
         `GPS permission restricted by browser/iframe. Switched to network approximate location${city ? ` (${city})` : ''}.`,
       clickMapHint: 'Click the map to set a location',
@@ -701,10 +671,6 @@ export const translations: Record<Language, Translations> = {
       shareAlikeDesc: 'Derivatives must use same license',
       taslTitle: 'Attribution Citation Generator (TASL)',
       copyAttributionBtn: 'Copy Citation',
-      noKeyTitle: 'Gemini API Key Required',
-      noKeyDesc:
-        'AI contextual and compliance analysis requires your own free Gemini API key. Stored only in your local browser.',
-      inputKeyBtn: 'Enter Gemini Key Now',
       aiSubTabs: {
         compliance: 'Reuse Guidance',
         context: 'Historical Context',
@@ -757,23 +723,6 @@ export const translations: Record<Language, Translations> = {
       prevTooltip: 'Previous File (Left Arrow)',
       nextTooltip: 'Next File (Right Arrow)',
     },
-    geminiModal: {
-      title: 'Configure Personal Gemini API',
-      subtitle: 'Use your own Google AI Studio key to turn on the Gemini features',
-      keyLabel: 'Google AI Studio API Key:',
-      placeholder: 'AIzaSy...',
-      privacyTitle: 'Privacy & Security Guarantee',
-      privacyDesc:
-        'Your key is stored strictly inside your browser (localStorage). It is never sent to any third-party servers.',
-      getKeyLink: 'Get Free API Key on Google AI Studio',
-      removeKey: 'Remove Key',
-      cancel: 'Cancel',
-      saveVerify: 'Save & Verify',
-      verifying: 'Testing Key...',
-      successMsg: 'Gemini API key successfully verified and saved!',
-      errorMsg: 'API key is invalid or has no active quota.',
-      emptyKeyMsg: 'API key cannot be empty.',
-    },
     guideModal: {
       title: 'CC License Guide',
       subtitle: 'What each license lets you do with a file',
@@ -816,7 +765,6 @@ export const translations: Record<Language, Translations> = {
     footer: {
       tagline: 'Built on Wikimedia Commons and Creative Commons licenses',
       attributionGuide: 'TASL Attribution Guide',
-      apiKeySettings: 'API Key Settings',
       commonsLink: 'Wikimedia Commons',
     },
   },
@@ -828,7 +776,6 @@ export const translations: Record<Language, Translations> = {
       licenseGuide: 'Panduan Lisensi CC',
       wikimediaTerms: 'Ketentuan Wikimedia',
       geminiActive: 'Gemini aktif',
-      inputGemini: 'Tambah kunci Gemini',
       toggleDark: 'Ganti ke Mode Gelap',
       toggleLight: 'Ganti ke Mode Terang',
       language: 'Bahasa',
@@ -844,8 +791,6 @@ export const translations: Record<Language, Translations> = {
       searchBtn: 'Cari',
       smartAiBtn: 'Pencarian pintar',
       smartAiShort: 'Pintar',
-      smartAiDisabled: 'Pencarian pintar belum aktif. Tambahkan kunci Gemini di bilah atas untuk menyalakannya.',
-      inputKeyNow: 'Tambah kunci',
       smartModalTitle: 'Pencarian Pintar AI Gemini',
       smartModalDesc:
         'Ketik topik atau ide apa pun, Gemini akan merumuskan kueri sintaks & kategori Wikimedia paling akurat.',
@@ -1128,9 +1073,7 @@ export const translations: Record<Language, Translations> = {
       keyLandmarks: 'Landmark & Topik yang Teridentifikasi',
       curatorInsight: 'Catatan tentang area ini',
       loadingAddress: 'Mengambil alamat reversi koordinat...',
-      noKeyAlert: 'Tambahkan kunci Gemini di bilah atas untuk memakai asisten.',
       regenerateBtn: 'Perbarui Analisis dengan Gemini',
-      unlockGeminiAiKey: 'Tip: tambahkan kunci Gemini di bilah atas untuk penjelasan yang lebih lengkap dari Gemini.',
       ipLocationFallbackNotice: (city?: string) =>
         `Izin GPS dibatasi peramban/iframe. Beralih otomatis ke perkiraan lokasi jaringan${city ? ` (${city})` : ''}.`,
       clickMapHint: 'Klik peta untuk menentukan lokasi',
@@ -1220,10 +1163,6 @@ export const translations: Record<Language, Translations> = {
       shareAlikeDesc: 'Karya turunan harus lisensi serupa',
       taslTitle: 'Generator Teks Atribusi (TASL)',
       copyAttributionBtn: 'Salin Atribusi',
-      noKeyTitle: 'Kunci Gemini API Belum Diinput',
-      noKeyDesc:
-        'Fitur analisis cerdas memerlukan kunci API Gemini gratis milik Anda sendiri. Kunci disimpan aman hanya di browser lokal Anda.',
-      inputKeyBtn: 'Input Kunci Gemini Sekarang',
       aiSubTabs: {
         compliance: 'Panduan Pakai',
         context: 'Konteks Sejarah',
@@ -1276,23 +1215,6 @@ export const translations: Record<Language, Translations> = {
       prevTooltip: 'Berkas Sebelumnya (Tombol Panah Kiri)',
       nextTooltip: 'Berkas Berikutnya (Tombol Panah Kanan)',
     },
-    geminiModal: {
-      title: 'Konfigurasi Gemini API Pengguna',
-      subtitle: 'Pakai kunci Google AI Studio Anda sendiri untuk menyalakan fitur Gemini',
-      keyLabel: 'Google AI Studio API Key:',
-      placeholder: 'AIzaSy...',
-      privacyTitle: 'Privasi & Keamanan Kunci',
-      privacyDesc:
-        'Kunci API disimpan hanya di memori lokal peramban (localStorage) perangkat Anda. Kami tidak menyimpan atau mengirimkan kunci Anda ke server eksternal.',
-      getKeyLink: 'Dapatkan Kunci API Gratis di Google AI Studio',
-      removeKey: 'Hapus Kunci',
-      cancel: 'Batal',
-      saveVerify: 'Simpan & Verifikasi',
-      verifying: 'Menguji Kunci...',
-      successMsg: 'Kunci Gemini API berhasil diverifikasi dan disimpan!',
-      errorMsg: 'Kunci API tidak valid atau tidak memiliki kuota aktif.',
-      emptyKeyMsg: 'Kunci API tidak boleh kosong.',
-    },
     guideModal: {
       title: 'Panduan Lisensi CC',
       subtitle: 'Apa yang boleh Anda lakukan dengan berkas, menurut tiap lisensi',
@@ -1335,7 +1257,6 @@ export const translations: Record<Language, Translations> = {
     footer: {
       tagline: 'Dibangun di atas Wikimedia Commons dan lisensi Creative Commons',
       attributionGuide: 'Panduan Atribusi TASL',
-      apiKeySettings: 'Pengaturan Kunci API',
       commonsLink: 'Wikimedia Commons',
     },
   },
