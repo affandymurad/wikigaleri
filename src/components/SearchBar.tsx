@@ -6,6 +6,8 @@ interface SearchBarProps {
   currentQuery: string;
   onSearch: (query: string) => void;
   placeholder?: string;
+  geminiApiKey?: string;
+  onOpenGeminiModal?: () => void;
   t: Translations;
 }
 

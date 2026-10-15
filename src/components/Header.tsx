@@ -1,11 +1,15 @@
 import { Info as InfoIcon } from 'lucide-react';
 import React from 'react';
-import { Sun, Moon, ShieldCheck, Sparkles, HelpCircle, Globe } from 'lucide-react';
+import { Sun, Moon, Key, ShieldCheck, Sparkles, HelpCircle, Globe } from 'lucide-react';
 import { Language, Translations } from '../i18n/translations';
 
 interface HeaderProps {
   isDark: boolean;
   onToggleDark: () => void;
+  hasGeminiKey: boolean;
+  /** True when the API holds the Gemini key, so there is nothing for the user to enter */
+  keyless: boolean;
+  onOpenGeminiModal: () => void;
   onOpenLicenseGuide: () => void;
   onOpenTerms: () => void;
   onOpenDisclaimer: () => void;
@@ -18,6 +22,9 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   isDark,
   onToggleDark,
+  hasGeminiKey,
+  keyless,
+  onOpenGeminiModal,
   onOpenLicenseGuide,
   onOpenTerms,
   onOpenDisclaimer,
@@ -100,15 +107,41 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Gemini status badge: Gemini runs on the WikiGaleri API, so there is no key to enter */}
-          <span
-            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg border whitespace-nowrap shrink-0 bg-accent-50 text-accent-700 border-accent-200 dark:bg-accent-950/60 dark:text-accent-300 dark:border-accent-800"
-            title={t.nav.geminiActive}
+          {/* Gemini status: a plain badge when the API holds the key, a key button otherwise */}
+          {keyless ? (
+            <span
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg border whitespace-nowrap shrink-0 bg-accent-50 text-accent-700 border-accent-200 dark:bg-accent-950/60 dark:text-accent-300 dark:border-accent-800"
+              title={t.nav.geminiActive}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400" />
+              <span className="hidden sm:inline">{t.nav.geminiActive}</span>
+              <span className="sr-only sm:hidden">{t.nav.geminiActive}</span>
+            </span>
+          ) : (
+          <button
+            onClick={onOpenGeminiModal}
+            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg border transition-all whitespace-nowrap shrink-0 ${
+              hasGeminiKey
+                ? 'bg-accent-50 text-accent-700 border-accent-200 hover:bg-accent-100 dark:bg-accent-950/60 dark:text-accent-300 dark:border-accent-800'
+                : 'bg-stone-100 text-stone-700 border-stone-300 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-200 dark:border-stone-700'
+            }`}
+            title="Gemini API Key Settings"
           >
-            <Sparkles className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400" />
-            <span className="hidden sm:inline">{t.nav.geminiActive}</span>
-            <span className="sr-only sm:hidden">{t.nav.geminiActive}</span>
-          </span>
+            {hasGeminiKey ? (
+              <>
+                <Sparkles className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400" />
+                <span className="hidden sm:inline">{t.nav.geminiActive}</span>
+                <span className="sr-only sm:hidden">AI Aktif</span>
+              </>
+            ) : (
+              <>
+                <Key className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />
+                <span className="hidden sm:inline">{t.nav.inputGemini}</span>
+                <span className="sr-only sm:hidden">API Key</span>
+              </>
+            )}
+          </button>
+          )}
 
           {/* Dark Mode slide toggle (Light / Dark) */}
           <div role="group" aria-label="Theme" className="flex items-center p-0.5 bg-stone-100 dark:bg-stone-800 rounded-lg text-xs font-semibold border border-stone-200 dark:border-stone-700">

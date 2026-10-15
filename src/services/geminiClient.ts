@@ -1,9 +1,16 @@
 import { CommonsMediaItem } from '../types/wikimedia';
 import { getLicenseInfo } from '../utils/licenseUtils';
+import { GeminiError, generateJson } from '../../server/src/gemini';
+import { buildAnalyzePrompt, buildAreaPrompt, type Prompt } from '../../server/src/prompts';
 
-// Gemini is reached through the WikiGaleri API on Cloud Run (/api/*). It holds the key,
-// caches answers in Firestore and enforces a daily limit, so the browser never sees a key.
+// Two ways to reach Gemini, picked at build time with VITE_AI_MODE:
+// - "direct" (default while Cloud Run is pending): the browser calls Gemini with a key the user
+//   enters and keeps in their own browser. The prompts and model chain are shared with the server.
+// - "api": the WikiGaleri API on Cloud Run (/api/*) holds the key, caches answers in Firestore
+//   and enforces a daily limit, so the browser never sees a key.
+export const AI_NEEDS_KEY = import.meta.env.VITE_AI_MODE !== 'api';
 const REQUEST_TIMEOUT_MS = 45000;
+const MODELS_LIST_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export interface GeminiAnalysisResult {
   text: string;
@@ -40,6 +47,10 @@ function apiErrorMessage(code?: string): string {
       return en
         ? 'WikiGaleri reached its daily limit for Gemini explanations. Try again tomorrow. A summary built from Commons metadata is shown meanwhile.'
         : 'WikiGaleri sudah mencapai batas harian penjelasan Gemini. Coba lagi besok. Sementara itu ditampilkan ringkasan dari metadata Commons.';
+    case 'invalid_key':
+      return en
+        ? 'Google rejected the Gemini key. Open the key settings in the top bar and check it.'
+        : 'Google menolak kunci Gemini. Buka pengaturan kunci di bilah atas lalu periksa kuncinya.';
     default:
       return en
         ? 'Could not get an answer from Gemini right now. Please try again.'
@@ -84,6 +95,61 @@ async function callApi(path: '/api/analyze' | '/api/area', body: unknown): Promi
   if (!data.text) throw new Error(apiErrorMessage());
   if (data.model) lastGeminiModel = data.model;
   return data.text;
+}
+
+/** Direct mode: asks Gemini from the browser with the user's own key and returns the JSON text */
+async function callDirect(apiKey: string, prompt: Prompt): Promise<string> {
+  try {
+    const result = await generateJson(apiKey.trim(), prompt);
+    lastGeminiModel = result.model;
+    return result.json;
+  } catch (err) {
+    const rejected = err instanceof GeminiError && [400, 401, 403].includes(err.status ?? 0);
+    const code = err instanceof GeminiError && err.kind === 'quota' ? 'quota' : rejected ? 'invalid_key' : undefined;
+    const message = apiErrorMessage(code);
+    if (code === 'quota') {
+      geminiBlockedUntil = Date.now() + BLOCK_MS.quota;
+      geminiBlockMessage = message;
+    }
+    throw new Error(message);
+  }
+}
+
+/** One entry point for both modes. The prompt is only built when the browser asks Gemini itself. */
+function callAi(apiKey: string, path: '/api/analyze' | '/api/area', body: unknown, prompt: () => Prompt): Promise<string> {
+  return AI_NEEDS_KEY ? callDirect(apiKey, prompt()) : callApi(path, body);
+}
+
+/** Direct mode: checks a key with the models list, which does not run a model or use generate quota */
+export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean; message?: string }> {
+  const en = uiIsEnglish();
+  const key = apiKey.trim();
+  if (key.length < 10) {
+    return { valid: false, message: en ? 'The key is empty or its format is not valid.' : 'Kunci API kosong atau format tidak valid.' };
+  }
+
+  try {
+    const res = await fetch(`${MODELS_LIST_ENDPOINT}?pageSize=1`, {
+      headers: { 'x-goog-api-key': key },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.ok) return { valid: true };
+    if (res.status === 429) {
+      return { valid: true, message: en ? 'Key accepted, but the Gemini quota is limited right now.' : 'Kunci diterima, tetapi kuota Gemini sedang terbatas.' };
+    }
+    if ([400, 401, 403].includes(res.status)) {
+      const errData = await res.json().catch(() => ({}));
+      return { valid: false, message: errData?.error?.message || `HTTP ${res.status}` };
+    }
+    return { valid: false, message: en ? 'Gemini could not check the key right now. Try again in a moment.' : 'Gemini belum bisa memeriksa kunci saat ini. Coba lagi sebentar lagi.' };
+  } catch {
+    return {
+      valid: false,
+      message: en
+        ? 'Could not reach Gemini to check the key. Check your connection or turn off ad blockers.'
+        : 'Tidak bisa terhubung ke Gemini untuk memeriksa kunci. Periksa koneksi atau matikan pemblokir iklan.',
+    };
+  }
 }
 
 // Cache hasil analisis file di memori: bertahan sampai halaman dimuat ulang, hemat panggilan Gemini
@@ -229,9 +295,10 @@ export interface UnifiedMediaAiAnalysis {
  * Unified Gemini Media Assistance:
  * Generates an all-in-one comprehensive explanation of the media object for general/layman users,
  * licensing terms, WCAG accessibility alt-text, and Wikimedia projects usage context in clean JSON.
- * The prompt is built and answered by the WikiGaleri API, in the active interface language.
+ * Answered in the active interface language, by the browser (direct mode) or the WikiGaleri API.
  */
 export async function generateUnifiedMediaAnalysis(
+  apiKey: string,
   item: CommonsMediaItem,
   liveWikiUsage?: Array<{ title: string; wiki: string }>,
   lang: 'en' | 'id' = 'id'
@@ -239,32 +306,33 @@ export async function generateUnifiedMediaAnalysis(
   const isEn = lang === 'en';
   const disclaimerText = isEn ? AI_DISCLAIMER_TEXT_EN : AI_DISCLAIMER_TEXT_ID;
 
-  const raw = await callApi('/api/analyze', {
-    item: {
-      id: item.id,
-      title: item.title,
-      cleanTitle: item.cleanTitle,
-      description: item.description,
-      author: item.author,
-      credit: item.credit,
-      date: item.date,
-      mediaType: item.mediaType,
-      mimeType: item.mimeType,
-      fileSize: item.fileSize,
-      width: item.width,
-      height: item.height,
-      latitude: item.latitude,
-      longitude: item.longitude,
-      licenseShort: item.licenseShort,
-      licenseFull: item.licenseFull,
-      licenseUrl: item.licenseUrl,
-      attributionRequired: item.attributionRequired,
-      categories: item.categories,
-      pageUrl: item.pageUrl,
-    },
-    usages: (liveWikiUsage || []).slice(0, 10),
-    lang,
-  });
+  const usages = (liveWikiUsage || []).slice(0, 10);
+  const promptItem = {
+    id: item.id,
+    title: item.title,
+    cleanTitle: item.cleanTitle,
+    description: item.description,
+    author: item.author,
+    credit: item.credit,
+    date: item.date,
+    mediaType: item.mediaType,
+    mimeType: item.mimeType,
+    fileSize: item.fileSize,
+    width: item.width,
+    height: item.height,
+    latitude: item.latitude ?? null,
+    longitude: item.longitude ?? null,
+    licenseShort: item.licenseShort,
+    licenseFull: item.licenseFull,
+    licenseUrl: item.licenseUrl,
+    attributionRequired: item.attributionRequired,
+    categories: item.categories,
+    pageUrl: item.pageUrl,
+  };
+
+  const raw = await callAi(apiKey, '/api/analyze', { item: promptItem, usages, lang }, () =>
+    buildAnalyzePrompt(promptItem, usages, lang)
+  );
 
   try {
     // Clean potential markdown blocks
@@ -362,9 +430,10 @@ export interface NearbyAreaAiAnalysis {
 /**
  * Nearby Area Analysis Assistant:
  * Synthesizes location coordinates, reverse-geocoded address, and geocoded photos list
- * into a strictly factual curatorial summary written by Gemini through the WikiGaleri API.
+ * into a strictly factual curatorial summary written by Gemini.
  */
 export async function generateNearbyAreaAnalysis(
+  apiKey: string,
   lat: number,
   lng: number,
   address: string,
@@ -381,18 +450,17 @@ export async function generateNearbyAreaAnalysis(
   }
 
   try {
-    const raw = await callApi('/api/area', {
-      lat,
-      lng,
-      address,
-      photos: photos.slice(0, 15).map((p) => ({
-        cleanTitle: p.cleanTitle,
-        licenseShort: p.licenseShort,
-        author: p.author,
-      })),
-      photosTotal: photos.length,
-      lang,
-    });
+    const samples = photos.slice(0, 15).map((p) => ({
+      cleanTitle: p.cleanTitle,
+      licenseShort: p.licenseShort,
+      author: p.author,
+    }));
+    const raw = await callAi(
+      apiKey,
+      '/api/area',
+      { lat, lng, address, photos: samples, photosTotal: photos.length, lang },
+      () => buildAreaPrompt(lat, lng, address, samples, photos.length, lang)
+    );
     const match = raw.match(/\{[\s\S]*\}/);
     const jsonStr = match ? match[0] : raw;
     const parsed = JSON.parse(jsonStr) as Partial<NearbyAreaAiAnalysis>;

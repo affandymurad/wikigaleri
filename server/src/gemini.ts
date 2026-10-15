@@ -9,7 +9,7 @@ const MAX_OUTPUT_TOKENS = 2048;
 export type GeminiFailure = 'quota' | 'unavailable' | 'bad_output';
 
 export class GeminiError extends Error {
-  constructor(public readonly kind: GeminiFailure, message: string) {
+  constructor(public readonly kind: GeminiFailure, message: string, public readonly status?: number) {
     super(message);
   }
 }
@@ -51,7 +51,7 @@ export async function generateJson(apiKey: string, prompt: Prompt): Promise<Gemi
         // 429 quota, 503 busy, 404 model missing: try the next model. Anything else will not get better.
         if (res.status === 429) sawQuota = true;
         if ([429, 503, 404, 500].includes(res.status)) continue;
-        throw new GeminiError('unavailable', `Gemini returned HTTP ${res.status}`);
+        throw new GeminiError('unavailable', `Gemini returned HTTP ${res.status}`, res.status);
       }
 
       const data = (await res.json()) as {

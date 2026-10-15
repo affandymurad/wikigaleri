@@ -43,6 +43,8 @@ import {
 
 interface NearbyPhotosSectionProps {
   onOpenDetail: (item: CommonsMediaItem) => void;
+  geminiApiKey: string;
+  onOpenGeminiModal: () => void;
   language: Language;
   t: Translations;
 }
@@ -59,6 +61,8 @@ const PREVIEW_PAGE_SIZE = 18;
 
 export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   onOpenDetail,
+  geminiApiKey,
+  onOpenGeminiModal,
   language = 'id',
   t,
 }) => {
@@ -574,6 +578,7 @@ const reqId = ++analysisRequestIdRef.current;
     // Step B: Call Gemini Area Curatorial Analysis
     try {
       const analysis = await generateNearbyAreaAnalysis(
+        geminiApiKey,
         lat,
         lng,
         resolvedAddress,
@@ -662,6 +667,11 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
     if (!hasSearched || nearbyPhotos.length === 0) {
       setLocationError(t.nearby.geminiNeedsPhotos);
       return;
+    }
+
+    // Validation 2: Suggest Gemini API key if empty, but proceed with smart synthesis
+    if (!geminiApiKey || geminiApiKey.trim().length === 0) {
+      onOpenGeminiModal();
     }
 
     const map = mapInstanceRef.current;
