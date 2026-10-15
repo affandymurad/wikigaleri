@@ -122,7 +122,6 @@ export interface Translations {
     audio: string;
     video: string;
     document: string;
-    allLicenses: string;
     pd: string;
     cc_by: string;
     cc_by_sa: string;
@@ -318,7 +317,7 @@ export const translations: Record<Language, Translations> = {
     hero: {
       title: 'Wikimedia Commons Multimedia Gallery',
       subtitle:
-        'Search the open media on Wikimedia Commons, filter by license (Public Domain, CC BY, CC BY-SA), and download files with the credit line already written for you. Gemini can explain what you find.',
+        'Search the open media on Wikimedia Commons, narrow it down by media type, check the license of each file, and download files with the credit line already written for you. Gemini can explain what you find.',
     },
     search: {
       placeholder: 'Search photos, audio, videos, or old documents...',
@@ -627,7 +626,6 @@ export const translations: Record<Language, Translations> = {
       audio: 'Audio & Music',
       video: 'Archive Video',
       document: 'Documents & Texts',
-      allLicenses: 'All Free Licenses',
       pd: 'Public Domain & CC0 (No Restrictions)',
       cc_by: 'CC BY (Attribution Required)',
       cc_by_sa: 'CC BY-SA (Attribution & ShareAlike)',
@@ -838,7 +836,7 @@ export const translations: Record<Language, Translations> = {
     hero: {
       title: 'Galeri Multimedia Wikimedia Commons',
       subtitle:
-        'Cari media terbuka di Wikimedia Commons, saring berdasarkan lisensi (Domain Publik, CC BY, CC BY-SA), lalu unduh berkas lengkap dengan teks kreditnya. Gemini bisa menjelaskan isi berkas yang Anda temukan.',
+        'Cari media terbuka di Wikimedia Commons, saring menurut jenis media, lihat lisensi tiap berkas, lalu unduh berkas lengkap dengan teks kreditnya. Gemini bisa menjelaskan isi berkas yang Anda temukan.',
     },
     search: {
       placeholder: 'Cari foto, audio, video, atau dokumen lama...',
@@ -1147,7 +1145,6 @@ export const translations: Record<Language, Translations> = {
       audio: 'Audio & Musik',
       video: 'Video Arsip',
       document: 'Dokumen & Naskah',
-      allLicenses: 'Semua Lisensi Terbuka',
       pd: 'Domain Publik & CC0 (Tanpa Syarat)',
       cc_by: 'CC BY (Wajib Atribusi)',
       cc_by_sa: 'CC BY-SA (Atribusi & BerbagiSerupa)',
