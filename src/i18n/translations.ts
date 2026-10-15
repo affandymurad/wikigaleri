@@ -205,7 +205,6 @@ export interface Translations {
     aiHeroSubtitle: string;
     runAiFullBtn: string;
     jsonBadge: string;
-    fourSectionsBadge: string;
     savePdfBtn: string;
     savingPdfBtn: string;
     pdfSavedBtn: string;
@@ -215,12 +214,7 @@ export interface Translations {
     sec1Title: string;
     sec1Subtitle: string;
     sec1HighlightsTitle: string;
-    sec2Title: string;
-    sec2CommTitle: string;
-    sec2ModTitle: string;
-    sec2AttrTitle: string;
     sec1UsageTitle: string;
-    sec2WatchTitle: string;
     sec3Title: string;
     sec3Subtitle: string;
     sec3AltLabel: string;
@@ -687,7 +681,6 @@ export const translations: Record<Language, Translations> = {
       aiHeroSubtitle: 'A plain-language explanation of this file and what its license lets you do, all in one place.',
       runAiFullBtn: 'Explain this file',
       jsonBadge: 'Based on Commons data',
-      fourSectionsBadge: '2 sections',
       savePdfBtn: 'Save to PDF',
       savingPdfBtn: 'Saving PDF...',
       pdfSavedBtn: 'PDF Saved!',
@@ -697,12 +690,7 @@ export const translations: Record<Language, Translations> = {
       sec1Title: 'What this file is',
       sec1Subtitle: 'In plain words, plus a few facts worth knowing',
       sec1HighlightsTitle: 'Key points',
-      sec2Title: 'What you can do with it',
-      sec2CommTitle: 'Commercial use',
-      sec2ModTitle: 'Editing and remixing',
-      sec2AttrTitle: 'Credit line to copy',
       sec1UsageTitle: 'Ideas for using it',
-      sec2WatchTitle: 'Watch out for',
       sec3Title: '3. Accessibility & WCAG Alt-Text',
       sec3Subtitle: 'Screen reader friendly for accessibility compliance',
       sec3AltLabel: 'Concise Alt-Text (Ready for <img alt="..."> tag):',
@@ -1179,7 +1167,6 @@ export const translations: Record<Language, Translations> = {
       aiHeroSubtitle: 'Penjelasan isi berkas dan aturan lisensinya dengan bahasa sehari-hari, dalam satu halaman.',
       runAiFullBtn: 'Jelaskan berkas ini',
       jsonBadge: 'Dari data Commons',
-      fourSectionsBadge: '2 Bagian',
       savePdfBtn: 'Save to PDF',
       savingPdfBtn: 'Menyimpan PDF...',
       pdfSavedBtn: 'PDF Tersimpan!',
@@ -1189,12 +1176,7 @@ export const translations: Record<Language, Translations> = {
       sec1Title: 'Apa isi berkas ini',
       sec1Subtitle: 'Dijelaskan dengan bahasa sehari-hari, plus beberapa fakta penting',
       sec1HighlightsTitle: 'Poin penting',
-      sec2Title: 'Boleh dipakai untuk apa',
-      sec2CommTitle: 'Pemakaian komersial',
-      sec2ModTitle: 'Mengubah dan membuat turunan',
-      sec2AttrTitle: 'Teks kredit siap salin',
       sec1UsageTitle: 'Bisa dipakai untuk',
-      sec2WatchTitle: 'Yang perlu dicek',
       sec3Title: '3. Aksesibilitas & WCAG Alt-Text',
       sec3Subtitle: 'Ramah pembaca layar (Screen Reader)',
       sec3AltLabel: 'Alt-Text Ringkas (Siap Pakai tag <img alt="...">):',

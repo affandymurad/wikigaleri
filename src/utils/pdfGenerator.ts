@@ -528,91 +528,9 @@ export async function exportMediaAnalysisPdf(
     currentY += 3;
   }
 
-  // --- SECTION 2: PENJELASAN SINGKAT LISENSI FOTO ---
+  // --- SECTION 2: AKSESIBILITAS WEB & WCAG ALT-TEXT ---
   drawSectionTitle(
     '2',
-    isEn ? 'CONCISE PHOTO LICENSE EXPLANATION' : 'PENJELASAN SINGKAT LISENSI FOTO',
-    isEn ? 'Legal terms, commercial usage, & practical attribution guide' : 'Ketentuan hukum hak cipta, izin komersial, & panduan atribusi',
-    [16, 185, 129]
-  );
-
-  ensureSpace(14);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(15, 23, 42);
-  doc.text(`${isEn ? 'License' : 'Lisensi'}: ${sanitizeForPdf(analysis.licenseExplanation.licenseName)}`, margin, currentY);
-  currentY += 4.2;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(71, 85, 105);
-  const licenseSummaryLines = doc.splitTextToSize(
-    sanitizeForPdf(analysis.licenseExplanation.shortSummary),
-    contentWidth
-  );
-  doc.text(licenseSummaryLines, margin, currentY);
-  currentY += licenseSummaryLines.length * 3.8 + 3;
-
-  ensureSpace(22);
-  const halfColWidth = (contentWidth - 4) / 2;
-
-  // Left box: Commercial
-  doc.setFillColor(240, 253, 244);
-  doc.setDrawColor(187, 247, 208);
-  doc.roundedRect(margin, currentY, halfColWidth, 18, 1, 1, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(21, 128, 61);
-  doc.text(isEn ? 'Commercial Use:' : 'Penggunaan Komersial:', margin + 3, currentY + 4.8);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(30, 41, 59);
-  const commLines = doc.splitTextToSize(
-    sanitizeForPdf(analysis.licenseExplanation.commercialUse),
-    halfColWidth - 6
-  );
-  doc.text(commLines.slice(0, 3), margin + 3, currentY + 9.2);
-
-  // Right box: Modification
-  doc.setFillColor(240, 253, 244);
-  doc.setDrawColor(187, 247, 208);
-  doc.roundedRect(margin + halfColWidth + 4, currentY, halfColWidth, 18, 1, 1, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(21, 128, 61);
-  doc.text(isEn ? 'Modifications / Derivatives:' : 'Modifikasi / Karya Turunan:', margin + halfColWidth + 7, currentY + 4.8);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(30, 41, 59);
-  const modLines = doc.splitTextToSize(
-    sanitizeForPdf(analysis.licenseExplanation.modificationRules),
-    halfColWidth - 6
-  );
-  doc.text(modLines.slice(0, 3), margin + halfColWidth + 7, currentY + 9.2);
-
-  currentY += 21;
-
-  // Attribution Guide
-  ensureSpace(16);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(51, 65, 85);
-  doc.text(isEn ? 'Practical Attribution / Credit Guide:' : 'Panduan Praktis Atribusi / Kredit:', margin, currentY);
-  currentY += 4.2;
-
-  doc.setFont('courier', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(30, 41, 59);
-  const attrLines = doc.splitTextToSize(
-    sanitizeForPdf(analysis.licenseExplanation.attributionGuide),
-    contentWidth
-  );
-  doc.text(attrLines, margin, currentY);
-  currentY += attrLines.length * 3.8 + 4;
-
-  // --- SECTION 3: AKSESIBILITAS WEB & WCAG ALT-TEXT ---
-  drawSectionTitle(
-    '3',
     isEn ? 'WEB ACCESSIBILITY & WCAG ALT-TEXT' : 'AKSESIBILITAS WEB & WCAG ALT-TEXT',
     isEn ? 'Screen reader alternative text conforming to WCAG 2.1 AA standards' : 'Teks alternatif ramah pembaca layar untuk kepatuhan standar WCAG 2.1 AA',
     [147, 51, 234]
@@ -661,9 +579,9 @@ export async function exportMediaAnalysisPdf(
   }
   currentY += 4;
 
-  // --- SECTION 4: PENGGUNAAN DI PROYEK WIKIMEDIA & KATEGORI ---
+  // --- SECTION 3: PENGGUNAAN DI PROYEK WIKIMEDIA & KATEGORI ---
   drawSectionTitle(
-    '4',
+    '3',
     isEn ? 'WIKIMEDIA PROJECTS USAGE & CATEGORIES' : 'PENGGUNAAN DI PROYEK WIKIMEDIA & KATEGORI',
     isEn ? 'Encyclopedia articles, Commons categories, & file roles' : 'Artikel ensiklopedia, kategori Wikimedia Commons, & peran berkas',
     [217, 119, 6]

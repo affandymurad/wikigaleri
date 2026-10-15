@@ -111,14 +111,6 @@ JSON SCHEMA
     "usageIdeas": [
       "2 to 4 concrete ways someone could use this file, one short sentence each, for example: a slide for a class on local history. Keep them realistic for this license."
     ]
-  },
-  "licenseExplanation": {
-    "licenseName": "${item.licenseShort}",
-    "shortSummary": "Two or three plain sentences: what this license is and what it lets you do, in everyday words",
-    "commercialUse": "Yes or no, then one sentence on any condition",
-    "modificationRules": "Whether the file can be cropped, edited, or remixed, then one sentence on any condition",
-    "watchOut": "One or two sentences on what to check besides the license, for example people shown in the file, logos, artworks or buildings visible in it, or details the metadata does not give. Name the specific thing for this file when you can.",
-    "attributionGuide": "A ready-to-paste credit line using the real values above, in TASL order: Title, Author, Source (the file page URL), License (name and link)"
   }
 }`
     : `Jelaskan berkas Wikimedia Commons ini dan kembalikan JSON sesuai skema di bawah.
@@ -148,14 +140,6 @@ SKEMA JSON
     "usageIdeas": [
       "2 sampai 4 contoh pemakaian yang nyata, satu kalimat pendek tiap contoh, misalnya: slide untuk kelas sejarah lokal. Sesuaikan dengan lisensi berkas ini."
     ]
-  },
-  "licenseExplanation": {
-    "licenseName": "${item.licenseShort}",
-    "shortSummary": "Dua atau tiga kalimat sederhana: lisensi ini apa dan apa yang boleh Anda lakukan, dengan kata sehari-hari",
-    "commercialUse": "Boleh atau tidak, lalu satu kalimat soal syaratnya",
-    "modificationRules": "Boleh atau tidak dipotong, diedit, atau diolah ulang, lalu satu kalimat soal syaratnya",
-    "watchOut": "Satu atau dua kalimat tentang hal yang perlu dicek selain lisensi, misalnya orang yang tampak di berkas, logo, karya seni atau bangunan yang terlihat, atau hal yang tidak dijelaskan metadata. Sebut hal spesifik untuk berkas ini kalau bisa.",
-    "attributionGuide": "Teks kredit siap salin memakai nilai asli di atas, urutan TASL: Judul, Pembuat, Sumber (URL halaman berkas), Lisensi (nama dan tautan)"
   }
 }`;
 

@@ -11,7 +11,6 @@ import {
   getGeminiQuotaBlockMessage,
   GEMINI_ASSISTANT_NAME,
   GEMINI_MODEL_NAME,
-  GEMINI_MODEL_VERSION,
   AI_DISCLAIMER_TEXT_ID,
   AI_DISCLAIMER_TEXT_EN,
 } from '../services/geminiClient';
@@ -1511,7 +1510,6 @@ return (
                           <CheckCircle2 className="w-3 h-3" />
                           {t.modal.jsonBadge}
                         </span>
-                        <span className="text-stone-500 dark:text-stone-400 text-xs whitespace-nowrap">{t.modal.fourSectionsBadge}</span>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
@@ -1557,9 +1555,8 @@ return (
                             <Sparkles className="w-3.5 h-3.5" />
                             <span>{unifiedAnalysis.modelMeta?.assistantName || GEMINI_ASSISTANT_NAME}</span>
                           </span>
-                          <span className="inline-flex flex-wrap items-baseline gap-x-1.5 px-2 py-0.5 rounded-md bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs font-medium">
-                            <span>{unifiedAnalysis.modelMeta?.modelName || GEMINI_MODEL_NAME}</span>
-                            <span className="font-mono font-normal text-stone-500 dark:text-stone-400 break-all">{unifiedAnalysis.modelMeta?.modelVersion || GEMINI_MODEL_VERSION}</span>
+                          <span className="inline-flex px-2 py-0.5 rounded-md bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs font-medium">
+                            {unifiedAnalysis.modelMeta?.modelName || GEMINI_MODEL_NAME}
                           </span>
                         </div>
                         <span className="text-xs text-moss-600 dark:text-moss-400 font-medium inline-flex items-center gap-1">
@@ -1672,93 +1669,6 @@ return (
 
 {/* Link proyek Wikimedia terkait rangkuman */}
 <RelatedWikimediaLinks links={relatedLinks} loading={relatedLoading} language={language} />
-                    </div>
-
-                    {/* SECTION 2: Penjelasan Singkat Lisensi Foto */}
-                    <div className="p-4 rounded-lg bg-moss-50/50 dark:bg-moss-950/20 border border-moss-100 dark:border-moss-900/40 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-moss-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                            <ShieldCheck className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-stone-900 dark:text-white text-xs">
-                              {t.modal.sec2Title}
-                            </h4>
-                            <span className="text-xs text-moss-700 dark:text-moss-400 font-semibold font-mono">
-                              {unifiedAnalysis.licenseExplanation.licenseName}
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() =>
-                            handleCopySection(
-                              'license',
-                              `[${t.modal.sec2Title}: ${unifiedAnalysis.licenseExplanation.licenseName}]\n${unifiedAnalysis.licenseExplanation.shortSummary}\n\n${t.modal.sec2CommTitle} ${unifiedAnalysis.licenseExplanation.commercialUse}\n${t.modal.sec2ModTitle} ${unifiedAnalysis.licenseExplanation.modificationRules}\n\n${t.modal.sec2AttrTitle}\n${unifiedAnalysis.licenseExplanation.attributionGuide}`
-                            )
-                          }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs transition-colors shadow-2xs"
-                          title="Salin penjelasan lisensi ini"
-                        >
-                          {copiedSection === 'license' ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-moss-600" />
-                              <span className="text-moss-600 font-medium">{t.modal.copiedSection}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5 text-stone-500" />
-                              <span>{t.modal.copySection}</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                      {/* Plain-language license description */}
-                      <p className="text-stone-700 dark:text-stone-300 text-xs leading-relaxed">
-                        {unifiedAnalysis.licenseExplanation.shortSummary}
-                      </p>
-
-                      {/* Commercial & Modification rules grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                        <div className="p-2.5 rounded-lg bg-white dark:bg-stone-900 border border-moss-200 dark:border-moss-800/60">
-                          <span className="font-semibold text-moss-700 dark:text-moss-300 block mb-0.5">
-                            {t.modal.sec2CommTitle}
-                          </span>
-                          <span className="text-stone-600 dark:text-stone-300">
-                            {unifiedAnalysis.licenseExplanation.commercialUse}
-                          </span>
-                        </div>
-                        <div className="p-2.5 rounded-lg bg-white dark:bg-stone-900 border border-moss-200 dark:border-moss-800/60">
-                          <span className="font-semibold text-moss-700 dark:text-moss-300 block mb-0.5">
-                            {t.modal.sec2ModTitle}
-                          </span>
-                          <span className="text-stone-600 dark:text-stone-300">
-                            {unifiedAnalysis.licenseExplanation.modificationRules}
-                          </span>
-                        </div>
-                      </div>
-
-                      {unifiedAnalysis.licenseExplanation.watchOut && (
-                        <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 text-xs">
-                          <span className="font-semibold text-amber-800 dark:text-amber-300 block mb-0.5">
-                            {t.modal.sec2WatchTitle}
-                          </span>
-                          <span className="text-stone-700 dark:text-stone-300 leading-relaxed">
-                            {unifiedAnalysis.licenseExplanation.watchOut}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Practical attribution guide */}
-                      <div className="p-2.5 rounded-lg bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-xs space-y-1 min-w-0 overflow-hidden">
-                        <span className="font-semibold text-stone-900 dark:text-white block">
-                          {t.modal.sec2AttrTitle}
-                        </span>
-                        <p className="text-stone-600 dark:text-stone-300 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all min-w-0">
-                          {unifiedAnalysis.licenseExplanation.attributionGuide}
-                        </p>
-                      </div>
                     </div>
 
                     {/* Ethical notice */}

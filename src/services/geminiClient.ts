@@ -1,5 +1,5 @@
 import { CommonsMediaItem } from '../types/wikimedia';
-import { getLicenseInfo, generateAttribution } from '../utils/licenseUtils';
+import { getLicenseInfo } from '../utils/licenseUtils';
 
 // Gemini is reached through the WikiGaleri API on Cloud Run (/api/*). It holds the key,
 // caches answers in Firestore and enforces a daily limit, so the browser never sees a key.
@@ -132,20 +132,6 @@ export function buildLocalMediaAnalysis(
     ...(item.categories || []).slice(0, 3),
   ].filter(Boolean) as string[];
 
-  const commercialUse = info.isFreeForCommercial
-    ? (isEn ? 'Commercial use is allowed under this license.' : 'Pemakaian komersial diperbolehkan oleh lisensi ini.')
-    : (isEn ? 'Commercial use may be restricted. Check the license page.' : 'Pemakaian komersial mungkin dibatasi. Cek halaman lisensinya.');
-
-  const modificationRules = info.allowsRemix
-    ? (info.requiresShareAlike
-        ? (isEn ? 'Remixing is allowed, but share your changes under the same license (ShareAlike).' : 'Boleh diubah, tetapi bagikan hasilnya dengan lisensi yang sama (ShareAlike).')
-        : (isEn ? 'Remixing and adapting are allowed.' : 'Boleh diubah dan diadaptasi.'))
-    : (isEn ? 'Changes may not be allowed. Check the license page.' : 'Perubahan mungkin tidak diperbolehkan. Cek halaman lisensinya.');
-
-  const attributionGuide = info.requiresAttribution
-    ? generateAttribution(item, 'plain', lang)
-    : (isEn ? 'The license does not require credit, but giving credit is good practice.' : 'Lisensi tidak mewajibkan kredit, tetapi sebaiknya tetap mencantumkannya.');
-
   return {
     objectDescription: {
       laymanSummary: description
@@ -155,16 +141,6 @@ export function buildLocalMediaAnalysis(
             : `"${item.cleanTitle}" adalah ${kind} di Wikimedia Commons oleh ${author}.`),
       detailedVisuals: description || (isEn ? 'The Commons metadata has no description for this file.' : 'Metadata Commons tidak memiliki deskripsi untuk berkas ini.'),
       keyHighlights: highlights,
-    },
-    licenseExplanation: {
-      licenseName,
-      shortSummary: item.licenseFull || licenseName,
-      commercialUse,
-      modificationRules,
-      attributionGuide,
-      watchOut: isEn
-        ? 'This summary follows fixed rules applied to the metadata. It is not legal advice, so check the file page on Commons.'
-        : 'Ringkasan ini mengikuti aturan tetap atas metadata. Bukan nasihat hukum, jadi cek halaman berkas di Commons.',
     },
     accessibilityWcag: {
       shortAltText: item.cleanTitle,
@@ -226,14 +202,6 @@ export interface UnifiedMediaAiAnalysis {
     detailedVisuals: string;
     keyHighlights: string[];
     usageIdeas?: string[];
-  };
-  licenseExplanation: {
-    licenseName: string;
-    shortSummary: string;
-    commercialUse: string;
-    modificationRules: string;
-    attributionGuide: string;
-    watchOut?: string;
   };
   accessibilityWcag: {
     shortAltText: string;
@@ -314,14 +282,6 @@ export async function generateUnifiedMediaAnalysis(
           ? parsed.objectDescription.keyHighlights
           : [item.cleanTitle, item.licenseShort, item.author],
       },
-      licenseExplanation: {
-        watchOut: parsed.licenseExplanation?.watchOut || '',
-        licenseName: parsed.licenseExplanation?.licenseName || item.licenseShort,
-        shortSummary: parsed.licenseExplanation?.shortSummary || item.licenseFull,
-        commercialUse: parsed.licenseExplanation?.commercialUse || (isEn ? 'Check the license terms before using it commercially.' : 'Cek ketentuan lisensinya dulu sebelum dipakai untuk keperluan komersial.'),
-        modificationRules: parsed.licenseExplanation?.modificationRules || (isEn ? 'Check the license terms before editing or remixing it.' : 'Cek ketentuan lisensinya dulu sebelum mengedit atau mengolah ulang.'),
-        attributionGuide: parsed.licenseExplanation?.attributionGuide || (isEn ? `Credit: ${item.cleanTitle} by ${item.author} (${item.licenseShort}).` : `Kredit: ${item.cleanTitle} oleh ${item.author} (${item.licenseShort}).`),
-      },
       accessibilityWcag: {
         shortAltText: parsed.accessibilityWcag?.shortAltText || item.cleanTitle,
         extendedDescription: parsed.accessibilityWcag?.extendedDescription || item.description || item.cleanTitle,
@@ -353,13 +313,6 @@ export async function generateUnifiedMediaAnalysis(
         laymanSummary: raw.slice(0, 300) + '...',
         detailedVisuals: raw,
         keyHighlights: [item.cleanTitle, item.author, item.licenseShort],
-      },
-      licenseExplanation: {
-        licenseName: item.licenseShort,
-        shortSummary: item.licenseFull,
-        commercialUse: isEn ? 'See the license page on Commons for the exact terms.' : 'Lihat halaman lisensi di Commons untuk ketentuan lengkapnya.',
-        modificationRules: isEn ? 'See the license page on Commons for what you may change.' : 'Lihat halaman lisensi di Commons untuk batas pengeditan.',
-        attributionGuide: (isEn ? `Credit: ${item.cleanTitle} by ${item.author} (${item.licenseShort}).` : `Kredit: ${item.cleanTitle} oleh ${item.author} (${item.licenseShort}).`),
       },
       accessibilityWcag: {
         shortAltText: item.cleanTitle,

@@ -22,7 +22,7 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
   .map((o) => o.trim())
   .filter(Boolean);
 // Bump when a prompt changes so old cached answers are not reused
-const PROMPT_VERSION = 'v1';
+const PROMPT_VERSION = 'v2';
 
 const store = createStore();
 const perIpLimiter = new RateLimiter(10, 60_000);

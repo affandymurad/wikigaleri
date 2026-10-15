@@ -196,10 +196,10 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 
         {/* Technical dimensions, size & file extension */}
         <div className="flex items-center justify-between text-xs text-stone-400 dark:text-stone-500 font-mono tabular-nums pt-0.5">
-          <div className="flex items-center gap-1.5 min-w-0 truncate">
-            {item.width > 0 && <span>{item.width}×{item.height}</span>}
-            {item.width > 0 && item.fileSize > 0 && <span aria-hidden="true">·</span>}
-            {item.fileSize > 0 && <span>{formatBytes(item.fileSize)}</span>}
+          <div className="flex items-center gap-1.5 min-w-0 pr-2">
+            {item.width > 0 && <span className="truncate min-w-0">{item.width}×{item.height}</span>}
+            {item.width > 0 && item.fileSize > 0 && <span aria-hidden="true" className="shrink-0">·</span>}
+            {item.fileSize > 0 && <span className="shrink-0 whitespace-nowrap">{formatBytes(item.fileSize)}</span>}
           </div>
           <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 font-bold text-xs font-mono tracking-wider uppercase border border-stone-200/80 dark:border-stone-700/80 shrink-0">
             {fileExtension}

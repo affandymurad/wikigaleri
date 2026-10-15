@@ -51,10 +51,7 @@ WikiGaleri is a web app that closes that gap. Live at **https://wikigaleri.web.a
 
 ### How Google AI is used
 
-Gemini 3.1 Flash-Lite (through the Gemini API) reads the official Commons metadata (title, description, categories, license, size, location) and writes:
-
-1. **What this file is**: a plain-language explanation, key facts and ideas for using it.
-2. **What you can do with it**: a license summary, notes on commercial use and remixing, things to double-check, and a credit line.
+Gemini 3.1 Flash-Lite (through the Gemini API) reads the official Commons metadata (title, description, categories, license, size, location) and writes **what this file is**: a plain-language explanation, key facts and ideas for using it. License terms and the ready-to-copy credit line live in the separate CC Attribution tab, built from the Commons license data rather than written by Gemini.
 
 For the Nearby map, Gemini also summarizes the area around the chosen point from the titles and descriptions of nearby photos.
 
@@ -192,10 +189,7 @@ WikiGaleri adalah aplikasi web yang menutup celah itu. Tersedia di **https://wik
 
 ### Cara Google AI dipakai
 
-Gemini 3.1 Flash-Lite (lewat Gemini API) membaca metadata resmi dari Commons (judul, deskripsi, kategori, lisensi, ukuran, lokasi), lalu menulis:
-
-1. **Apa isi berkas ini**: penjelasan bahasa awam, fakta penting, dan ide pemakaian.
-2. **Boleh dipakai untuk apa**: ringkasan lisensi, catatan soal pemakaian komersial dan remix, hal yang perlu dicek, serta teks kredit.
+Gemini 3.1 Flash-Lite (lewat Gemini API) membaca metadata resmi dari Commons (judul, deskripsi, kategori, lisensi, ukuran, lokasi), lalu menulis **apa isi berkas ini**: penjelasan bahasa awam, fakta penting, dan ide pemakaian. Ketentuan lisensi dan teks kredit siap salin ada di tab CC Attribution tersendiri, dibangun dari data lisensi Commons, bukan ditulis oleh Gemini.
 
 Untuk peta terdekat, Gemini juga merangkum area di sekitar titik pilihan dari judul dan deskripsi foto di sekitarnya.
 
