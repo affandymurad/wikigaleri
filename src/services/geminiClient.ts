@@ -1,14 +1,25 @@
 import { CommonsMediaItem } from '../types/wikimedia';
 import { getLicenseInfo } from '../utils/licenseUtils';
-import { GeminiError, generateJson } from '../../server/src/gemini';
+import { GEMINI_MODELS, GeminiError, extractJsonObject, generateJson } from '../../server/src/gemini';
 import { buildAnalyzePrompt, buildAreaPrompt, type Prompt } from '../../server/src/prompts';
+import { FIREBASE_AI_READY } from './firebaseConfig';
 
-// Two ways to reach Gemini, picked at build time with VITE_AI_MODE:
-// - "direct" (default while Cloud Run is pending): the browser calls Gemini with a key the user
-//   enters and keeps in their own browser. The prompts and model chain are shared with the server.
-// - "api": the WikiGaleri API on Cloud Run (/api/*) holds the key, caches answers in Firestore
-//   and enforces a daily limit, so the browser never sees a key.
-export const AI_NEEDS_KEY = import.meta.env.VITE_AI_MODE !== 'api';
+// Three ways to reach Gemini, picked at build time with VITE_AI_MODE:
+// - "firebase": Firebase AI Logic. Firebase holds the Gemini credentials, so nobody enters a key and no
+//   key is in the browser. This is the default once the Firebase web config is filled in.
+// - "direct": the browser calls Gemini with a key the user enters and keeps in their own browser.
+//   The prompts and model chain are shared with the server. Default until Firebase is configured.
+// - "api": the WikiGaleri API on Cloud Run (/api/*) holds the key, caches answers in Firestore and
+//   enforces a daily limit.
+type AiMode = 'firebase' | 'direct' | 'api';
+const requestedMode = import.meta.env.VITE_AI_MODE as string | undefined;
+export const AI_MODE: AiMode =
+  requestedMode === 'api' || requestedMode === 'direct' || requestedMode === 'firebase'
+    ? requestedMode
+    : FIREBASE_AI_READY
+    ? 'firebase'
+    : 'direct';
+export const AI_NEEDS_KEY = AI_MODE === 'direct';
 const REQUEST_TIMEOUT_MS = 45000;
 const MODELS_LIST_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -115,9 +126,44 @@ async function callDirect(apiKey: string, prompt: Prompt): Promise<string> {
   }
 }
 
-/** One entry point for both modes. The prompt is only built when the browser asks Gemini itself. */
+/** Firebase mode: asks Gemini through Firebase AI Logic, trying each model of the chain once */
+async function callFirebase(prompt: Prompt): Promise<string> {
+  const { getFirebaseModel } = await import('./firebase');
+  let sawQuota = false;
+
+  for (const name of GEMINI_MODELS) {
+    try {
+      const model = getFirebaseModel(name, prompt.system);
+      if (!model) break;
+      const result = await Promise.race([
+        model.generateContent(prompt.user),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 25000)),
+      ]);
+      const json = extractJsonObject(result.response.text());
+      if (json) {
+        lastGeminiModel = name;
+        return json;
+      }
+    } catch (err) {
+      console.error(`Firebase AI Logic (${name}):`, err);
+      const status = (err as { customErrorData?: { status?: number } }).customErrorData?.status;
+      if (status === 429) sawQuota = true;
+    }
+  }
+
+  const message = apiErrorMessage(sawQuota ? 'quota' : undefined);
+  if (sawQuota) {
+    geminiBlockedUntil = Date.now() + BLOCK_MS.quota;
+    geminiBlockMessage = message;
+  }
+  throw new Error(message);
+}
+
+/** One entry point for all modes. The prompt is only built when the browser asks Gemini itself. */
 function callAi(apiKey: string, path: '/api/analyze' | '/api/area', body: unknown, prompt: () => Prompt): Promise<string> {
-  return AI_NEEDS_KEY ? callDirect(apiKey, prompt()) : callApi(path, body);
+  if (AI_MODE === 'api') return callApi(path, body);
+  if (AI_MODE === 'firebase') return callFirebase(prompt());
+  return callDirect(apiKey, prompt());
 }
 
 /** Direct mode: checks a key with the models list, which does not run a model or use generate quota */

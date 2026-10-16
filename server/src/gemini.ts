@@ -1,7 +1,7 @@
 import type { Prompt } from './prompts.js';
 
 // Flash-Lite only (cheap): 3.1 is primary, 3.5 is the fallback when the primary is missing, busy or out of quota
-const MODELS = ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite'];
+export const GEMINI_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite'];
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 const ATTEMPT_TIMEOUT_MS = 18000;
 const MAX_OUTPUT_TOKENS = 2048;
@@ -38,7 +38,7 @@ export async function generateJson(apiKey: string, prompt: Prompt): Promise<Gemi
   let sawQuota = false;
   let sawBadOutput = false;
 
-  for (const model of MODELS) {
+  for (const model of GEMINI_MODELS) {
     try {
       const res = await fetch(`${ENDPOINT}/${model}:generateContent`, {
         method: 'POST',
@@ -75,7 +75,8 @@ export async function generateJson(apiKey: string, prompt: Prompt): Promise<Gemi
   throw new GeminiError('unavailable', 'Gemini is unavailable');
 }
 
-function extractJsonObject(raw: string): string | null {
+/** Pulls the first JSON object out of the model's text, or null when there is none */
+export function extractJsonObject(raw: string): string | null {
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) return null;
   try {

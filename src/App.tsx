@@ -29,8 +29,8 @@ export default function App() {
     removeKey: removeGeminiKey,
     lastError: geminiLastError,
   } = useGeminiApiKey();
-  // In "api" mode our Cloud Run API holds the key, so the rest of the UI sees a key as already set.
-  // The placeholder is never sent anywhere.
+  // In "firebase" and "api" modes the key lives on the server side, so the rest of the UI sees a key as
+  // already set. The placeholder is never sent anywhere.
   const geminiApiKey = AI_NEEDS_KEY ? storedGeminiKey : 'managed-by-server';
   const hasGeminiKey = AI_NEEDS_KEY ? hasStoredGeminiKey : true;
 
