@@ -1,26 +1,23 @@
 import { CommonsMediaItem } from '../types/wikimedia';
 import { getLicenseInfo } from '../utils/licenseUtils';
-import { GEMINI_MODELS, GeminiError, extractJsonObject, generateJson } from '../../server/src/gemini';
-import { buildAnalyzePrompt, buildAreaPrompt, type Prompt } from '../../server/src/prompts';
+import { GEMINI_MODELS, GeminiError, extractJsonObject, generateJson } from './geminiCore';
+import { buildAnalyzePrompt, buildAreaPrompt, type Prompt } from './prompts';
 import { FIREBASE_AI_READY } from './firebaseConfig';
 
-// Three ways to reach Gemini, picked at build time with VITE_AI_MODE:
+// Two ways to reach Gemini, picked at build time with VITE_AI_MODE:
 // - "firebase": Firebase AI Logic. Firebase holds the Gemini credentials, so nobody enters a key and no
 //   key is in the browser. This is the default once the Firebase web config is filled in.
 // - "direct": the browser calls Gemini with a key the user enters and keeps in their own browser.
-//   The prompts and model chain are shared with the server. Default until Firebase is configured.
-// - "api": the WikiGaleri API on Cloud Run (/api/*) holds the key, caches answers in Firestore and
-//   enforces a daily limit.
-type AiMode = 'firebase' | 'direct' | 'api';
+//   Default until Firebase is configured.
+type AiMode = 'firebase' | 'direct';
 const requestedMode = import.meta.env.VITE_AI_MODE as string | undefined;
 export const AI_MODE: AiMode =
-  requestedMode === 'api' || requestedMode === 'direct' || requestedMode === 'firebase'
+  requestedMode === 'direct' || requestedMode === 'firebase'
     ? requestedMode
     : FIREBASE_AI_READY
     ? 'firebase'
     : 'direct';
 export const AI_NEEDS_KEY = AI_MODE === 'direct';
-const REQUEST_TIMEOUT_MS = 45000;
 const MODELS_LIST_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export interface GeminiAnalysisResult {
@@ -34,9 +31,7 @@ let geminiBlockedUntil = 0;
 let geminiBlockMessage = '';
 
 const BLOCK_MS: Record<string, number> = {
-  rate_limited: 60 * 1000,
   quota: 90 * 1000,
-  daily_limit: 30 * 60 * 1000,
 };
 
 function uiIsEnglish(): boolean {
@@ -46,18 +41,10 @@ function uiIsEnglish(): boolean {
 function apiErrorMessage(code?: string): string {
   const en = uiIsEnglish();
   switch (code) {
-    case 'rate_limited':
-      return en
-        ? 'Too many requests in a short time. Wait a minute and try again.'
-        : 'Terlalu banyak permintaan dalam waktu singkat. Tunggu semenit lalu coba lagi.';
     case 'quota':
       return en
         ? 'The Gemini quota is used up for now (429). Try again in a few minutes.'
         : 'Kuota Gemini sedang habis (429). Coba lagi beberapa menit lagi.';
-    case 'daily_limit':
-      return en
-        ? 'WikiGaleri reached its daily limit for Gemini explanations. Try again tomorrow. A summary built from Commons metadata is shown meanwhile.'
-        : 'WikiGaleri sudah mencapai batas harian penjelasan Gemini. Coba lagi besok. Sementara itu ditampilkan ringkasan dari metadata Commons.';
     case 'invalid_key':
       return en
         ? 'Google rejected the Gemini key. Open the key settings in the top bar and check it.'
@@ -67,45 +54,6 @@ function apiErrorMessage(code?: string): string {
         ? 'Could not get an answer from Gemini right now. Please try again.'
         : 'Belum bisa mendapat jawaban dari Gemini saat ini. Silakan coba lagi.';
   }
-}
-
-/** Posts to the WikiGaleri API and returns the JSON text Gemini wrote */
-async function callApi(path: '/api/analyze' | '/api/area', body: unknown): Promise<string> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  let res: Response;
-  try {
-    res = await fetch(path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-  } catch (err) {
-    const en = uiIsEnglish();
-    throw new Error(
-      err instanceof Error && err.name === 'AbortError'
-        ? (en ? 'The request took too long. Please try again.' : 'Permintaan terlalu lama. Silakan coba lagi.')
-        : (en ? 'Could not reach the WikiGaleri server. Check your connection and try again.' : 'Tidak bisa terhubung ke server WikiGaleri. Periksa koneksi lalu coba lagi.')
-    );
-  } finally {
-    clearTimeout(timeoutId);
-  }
-
-  if (!res.ok) {
-    const code = ((await res.json().catch(() => ({}))) as { error?: string }).error;
-    const message = apiErrorMessage(code);
-    if (res.status === 429 && code && BLOCK_MS[code]) {
-      geminiBlockedUntil = Date.now() + BLOCK_MS[code];
-      geminiBlockMessage = message;
-    }
-    throw new Error(message);
-  }
-
-  const data = (await res.json()) as { text?: string; model?: string };
-  if (!data.text) throw new Error(apiErrorMessage());
-  if (data.model) lastGeminiModel = data.model;
-  return data.text;
 }
 
 /** Direct mode: asks Gemini from the browser with the user's own key and returns the JSON text */
@@ -159,11 +107,9 @@ async function callFirebase(prompt: Prompt): Promise<string> {
   throw new Error(message);
 }
 
-/** One entry point for all modes. The prompt is only built when the browser asks Gemini itself. */
-function callAi(apiKey: string, path: '/api/analyze' | '/api/area', body: unknown, prompt: () => Prompt): Promise<string> {
-  if (AI_MODE === 'api') return callApi(path, body);
-  if (AI_MODE === 'firebase') return callFirebase(prompt());
-  return callDirect(apiKey, prompt());
+/** One entry point for both modes */
+function callAi(apiKey: string, prompt: Prompt): Promise<string> {
+  return AI_MODE === 'firebase' ? callFirebase(prompt) : callDirect(apiKey, prompt);
 }
 
 /** Direct mode: checks a key with the models list, which does not run a model or use generate quota */
@@ -376,9 +322,7 @@ export async function generateUnifiedMediaAnalysis(
     pageUrl: item.pageUrl,
   };
 
-  const raw = await callAi(apiKey, '/api/analyze', { item: promptItem, usages, lang }, () =>
-    buildAnalyzePrompt(promptItem, usages, lang)
-  );
+  const raw = await callAi(apiKey, buildAnalyzePrompt(promptItem, usages, lang));
 
   try {
     // Clean potential markdown blocks
@@ -501,12 +445,7 @@ export async function generateNearbyAreaAnalysis(
       licenseShort: p.licenseShort,
       author: p.author,
     }));
-    const raw = await callAi(
-      apiKey,
-      '/api/area',
-      { lat, lng, address, photos: samples, photosTotal: photos.length, lang },
-      () => buildAreaPrompt(lat, lng, address, samples, photos.length, lang)
-    );
+    const raw = await callAi(apiKey, buildAreaPrompt(lat, lng, address, samples, photos.length, lang));
     const match = raw.match(/\{[\s\S]*\}/);
     const jsonStr = match ? match[0] : raw;
     const parsed = JSON.parse(jsonStr) as Partial<NearbyAreaAiAnalysis>;

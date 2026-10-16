@@ -13,10 +13,6 @@ export default defineConfig(() => {
     },
     server: {
       allowedHosts: true as const,
-      // Local API (cd server && npm run dev); in production Firebase Hosting rewrites /api/** to Cloud Run
-      proxy: {
-        '/api': 'http://localhost:8080',
-      },
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',

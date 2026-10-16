@@ -1,6 +1,7 @@
-import type { Prompt } from './prompts.js';
+import type { Prompt } from './prompts';
 
-// Flash-Lite only (cheap): 3.1 is primary, 3.5 is the fallback when the primary is missing, busy or out of quota
+// Flash-Lite only (cheap): 3.1 is primary, 3.5 is the fallback when the primary is missing, busy or out of quota.
+// Shared by the direct mode (browser calls Gemini with the user's key) and the Firebase AI Logic mode (model chain only).
 export const GEMINI_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite'];
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 const ATTEMPT_TIMEOUT_MS = 18000;
