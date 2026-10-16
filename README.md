@@ -59,8 +59,8 @@ The app can reach Gemini in three ways, chosen at build time with `VITE_AI_MODE`
 
 | Mode | How it works | Status |
 |---|---|---|
-| `firebase` (default once Firebase is configured) | **Firebase AI Logic** calls Gemini for you. There is no key in the code or the browser, nobody enters a key, and App Check limits who can call it. Works on the free Spark plan. | Switched on after the Firebase web config is filled in |
-| `direct` (default until then) | You paste your own free Gemini key from [Google AI Studio](https://aistudio.google.com/apikey). It stays in your browser (`localStorage`) and goes only to Google. | Fallback |
+| `firebase` (default) | **Firebase AI Logic** calls Gemini for you. There is no key in the code or the browser, nobody enters a key, and App Check (reCAPTCHA Enterprise) limits who can call it. Works on the free Spark plan. | **Live** at [wikigaleri.web.app](https://wikigaleri.web.app) |
+| `direct` | You paste your own free Gemini key from [Google AI Studio](https://aistudio.google.com/apikey). It stays in your browser (`localStorage`) and goes only to Google. | Fallback, used when the Firebase web config is empty or `VITE_AI_MODE=direct` |
 | `api` | Our own API on Cloud Run calls Gemini. No key is entered in the browser, answers are cached in Firestore, and a daily limit applies to real Gemini calls. | Code complete in `server/`, needs a Google Cloud billing account |
 
 In every mode the file explanation starts by itself as soon as you open a file, and the result is kept in memory until you refresh. When Gemini cannot answer (no key, quota, an error), the app shows a clearly labelled summary built from the Commons metadata and license rules, plus the reason and a retry button.
@@ -74,32 +74,32 @@ flowchart LR
   U[Browser: React app] -->|static files| H[Firebase Hosting]
   U -->|search, metadata| W[Wikimedia Commons and Wikidata APIs]
   U -->|map tiles| M[OpenFreeMap]
-  U -->|/api/analyze, /api/area| R[Cloud Run: wikigaleri-api]
-  H -.->|rewrite /api/**| R
-  R -->|cache and daily counter| F[(Firestore)]
-  R -->|key from| S[Secret Manager]
-  R -->|explain, summarize| G[Gemini API, Flash-Lite]
+  U -->|App Check token| C[Firebase App Check: reCAPTCHA Enterprise]
+  U -->|explain, summarize| L[Firebase AI Logic]
+  L -->|Google-managed credentials| G[Gemini API, Flash-Lite]
 ```
 
-The diagram shows the `api` mode. In `firebase` mode the browser calls Gemini through Firebase AI Logic (a Google-managed proxy that keeps the credentials and checks App Check), and in `direct` mode it calls the Gemini API itself with the user's key. Cloud Run, Firestore and Secret Manager are only used in `api` mode.
+The site is a single-page React build served by **Firebase Hosting** (project `wikigaleri`, free Spark plan). Wikimedia and map requests go straight from the browser. Gemini calls go through **Firebase AI Logic**, a Google-managed proxy: the Gemini credentials stay on Google's side, so there is no key in the code or the browser. **Firebase App Check** with reCAPTCHA Enterprise (Google Cloud Fraud Defense) is enforced on it, so only this app can use the quota.
 
-The site is a single-page React build served by **Firebase Hosting** (project `wikigaleri`). Wikimedia and map requests go straight from the browser. In `api` mode Gemini goes through **Cloud Run** (`server/`): Firebase Hosting rewrites `/api/**` to the `wikigaleri-api` service, which keeps the Gemini key in **Secret Manager**, stores answers in **Firestore** so each file is explained once, and enforces rate limits and a daily limit of 300 real Gemini calls. The Gemini key comes from an AI Studio project without billing, so it stays on the free tier. Cloud Run is capped at one instance and scales to zero.
-
-Setup, cost guards and the full deploy steps are in [server/README.md](server/README.md). In short:
+To deploy (needs the Firebase CLI and access to the project):
 
 ```bash
-gcloud run deploy wikigaleri-api --source server --region asia-southeast1 ...
 npm run build
-firebase deploy --only hosting,firestore:rules
+firebase deploy --only hosting
 ```
+
+**Setup done once in the Firebase console:** enable AI Logic with the Gemini Developer API (no billing), register the web app, create a reCAPTCHA key and register it under App Check, then enforce App Check for Firebase AI Logic. The public web config and the reCAPTCHA site key are in `src/services/firebaseConfig.ts`.
+
+**Optional Cloud Run backend (not deployed).** `server/` holds an Express proxy for Cloud Run that keeps the Gemini key in Secret Manager, caches answers in Firestore and enforces rate limits and a daily limit of 300 real Gemini calls (`VITE_AI_MODE=api`). It is complete and tested locally, but it needs a Google Cloud billing account to deploy, which this project does not have. Steps are in [server/README.md](server/README.md).
 
 ### Tech stack
 
 - React 19, TypeScript, Vite
 - Tailwind CSS 4
 - MapLibre GL (nearby map, OpenFreeMap tiles)
-- Google Gemini API (model `gemini-3.1-flash-lite`, with `gemini-3.5-flash-lite` as the fallback), called from the server
-- Cloud Run (Node.js and Express in `server/`), Firestore (answer cache), Secret Manager
+- Google Gemini (model `gemini-3.1-flash-lite`, with `gemini-3.5-flash-lite` as the fallback) through Firebase AI Logic
+- Firebase App Check with reCAPTCHA Enterprise (Google Cloud Fraud Defense)
+- Optional, not deployed: Cloud Run (Node.js and Express in `server/`), Firestore (answer cache), Secret Manager
 - Wikimedia Commons and Wikidata APIs
 - jsPDF and qrcode for the PDF report
 - Firebase Hosting for the site
@@ -117,7 +117,7 @@ npm run dev
 
 Open http://localhost:3000. Search, filters, credit lines, the map and bookmarks work right away.
 
-**Gemini features.** Until the Firebase web config is filled in, the app runs in `direct` mode: click "Add Gemini key" in the top bar and paste your own key from [Google AI Studio](https://aistudio.google.com/apikey). Never commit a key to this repository. To use Firebase AI Logic instead, fill in `src/services/firebaseConfig.ts` (see below) or build with `VITE_AI_MODE=firebase`.
+**Gemini features.** The app runs in `firebase` mode, and App Check does not trust `localhost` by default. On the first AI call the browser console prints an App Check debug token. Register it with `firebase appcheck:debugtokens:create <token> --project wikigaleri --app <appId>` (or in the console under App Check, Apps, Manage debug tokens), and delete it when you are done. Or skip all that and use your own free key from [Google AI Studio](https://aistudio.google.com/apikey) with `VITE_AI_MODE=direct npm run dev`, then click "Add Gemini key" in the top bar. Never commit a key or a debug token to this repository.
 
 To try the `api` mode locally, run the API in a second terminal and start the app with the mode switched on:
 
@@ -213,8 +213,8 @@ Aplikasi bisa memakai Gemini dengan tiga cara, dipilih saat build lewat `VITE_AI
 
 | Mode | Cara kerja | Status |
 |---|---|---|
-| `firebase` (bawaan setelah Firebase dikonfigurasi) | **Firebase AI Logic** yang memanggil Gemini. Tidak ada kunci di kode atau browser, tidak ada yang memasukkan kunci, dan App Check membatasi siapa yang boleh memanggil. Jalan di paket Spark gratis. | Aktif setelah konfigurasi web Firebase diisi |
-| `direct` (bawaan sebelum itu) | Kamu menempelkan kunci Gemini gratis milikmu dari [Google AI Studio](https://aistudio.google.com/apikey). Kunci tetap di browsermu (`localStorage`) dan hanya dikirim ke Google. | Cadangan |
+| `firebase` (bawaan) | **Firebase AI Logic** yang memanggil Gemini. Tidak ada kunci di kode atau browser, tidak ada yang memasukkan kunci, dan App Check (reCAPTCHA Enterprise) membatasi siapa yang boleh memanggil. Jalan di paket Spark gratis. | **Live** di [wikigaleri.web.app](https://wikigaleri.web.app) |
+| `direct` | Kamu menempelkan kunci Gemini gratis milikmu dari [Google AI Studio](https://aistudio.google.com/apikey). Kunci tetap di browsermu (`localStorage`) dan hanya dikirim ke Google. | Cadangan, dipakai bila konfigurasi web Firebase kosong atau `VITE_AI_MODE=direct` |
 | `api` | API kami sendiri di Cloud Run yang memanggil Gemini. Tidak ada kunci yang dimasukkan di browser, jawaban disimpan di cache Firestore, dan ada batas harian untuk panggilan Gemini yang sebenarnya. | Kode lengkap di `server/`, butuh akun billing Google Cloud |
 
 Di semua mode, penjelasan berkas berjalan otomatis begitu berkas dibuka, dan hasilnya disimpan di memori sampai halaman dimuat ulang. Bila Gemini tidak bisa menjawab (belum ada kunci, kuota, error), aplikasi menampilkan ringkasan berlabel jelas yang dibuat dari metadata Commons dan aturan lisensi, beserta alasannya dan tombol coba lagi.
@@ -228,32 +228,32 @@ flowchart LR
   U[Browser: aplikasi React] -->|berkas statis| H[Firebase Hosting]
   U -->|cari, metadata| W[API Wikimedia Commons dan Wikidata]
   U -->|tile peta| M[OpenFreeMap]
-  U -->|/api/analyze, /api/area| R[Cloud Run: wikigaleri-api]
-  H -.->|rewrite /api/**| R
-  R -->|cache dan penghitung harian| F[(Firestore)]
-  R -->|kunci dari| S[Secret Manager]
-  R -->|jelaskan, ringkas| G[Gemini API, Flash-Lite]
+  U -->|token App Check| C[Firebase App Check: reCAPTCHA Enterprise]
+  U -->|jelaskan, ringkas| L[Firebase AI Logic]
+  L -->|kredensial dikelola Google| G[Gemini API, Flash-Lite]
 ```
 
-Diagram menunjukkan mode `api`. Di mode `firebase`, browser memanggil Gemini lewat Firebase AI Logic (proxy yang dikelola Google, menyimpan kredensial dan memeriksa App Check), dan di mode `direct` ia memanggil Gemini API sendiri dengan kunci pengguna. Cloud Run, Firestore, dan Secret Manager hanya dipakai di mode `api`.
+Situsnya berupa build React satu halaman yang disajikan oleh **Firebase Hosting** (proyek `wikigaleri`, paket Spark gratis). Permintaan ke Wikimedia dan peta langsung dari browser. Panggilan Gemini lewat **Firebase AI Logic**, proxy yang dikelola Google: kredensial Gemini tetap di sisi Google, jadi tidak ada kunci di kode atau browser. **Firebase App Check** dengan reCAPTCHA Enterprise (Google Cloud Fraud Defense) diberlakukan di atasnya, sehingga hanya aplikasi ini yang bisa memakai kuotanya.
 
-Situsnya berupa build React satu halaman yang disajikan oleh **Firebase Hosting** (proyek `wikigaleri`). Permintaan ke Wikimedia dan peta langsung dari browser. Di mode `api`, Gemini lewat **Cloud Run** (`server/`): Firebase Hosting mengarahkan `/api/**` ke layanan `wikigaleri-api`, yang menyimpan kunci Gemini di **Secret Manager**, menyimpan jawaban di **Firestore** agar tiap berkas dijelaskan sekali, serta menerapkan batas laju dan batas harian 300 panggilan Gemini yang sebenarnya. Kunci Gemini berasal dari proyek AI Studio tanpa billing, jadi tetap di tier gratis. Cloud Run dibatasi satu instance dan turun ke nol saat tidak dipakai.
-
-Pengaturan, pembatas biaya, dan langkah deploy lengkap ada di [server/README.md](server/README.md). Ringkasnya:
+Untuk deploy (butuh Firebase CLI dan akses ke proyeknya):
 
 ```bash
-gcloud run deploy wikigaleri-api --source server --region asia-southeast1 ...
 npm run build
-firebase deploy --only hosting,firestore:rules
+firebase deploy --only hosting
 ```
+
+**Pengaturan sekali jalan di konsol Firebase:** aktifkan AI Logic dengan Gemini Developer API (tanpa billing), daftarkan aplikasi web, buat kunci reCAPTCHA dan daftarkan di App Check, lalu berlakukan App Check untuk Firebase AI Logic. Konfigurasi web publik dan site key reCAPTCHA ada di `src/services/firebaseConfig.ts`.
+
+**Backend Cloud Run opsional (belum di-deploy).** `server/` berisi proxy Express untuk Cloud Run yang menyimpan kunci Gemini di Secret Manager, menyimpan jawaban di Firestore, serta menerapkan batas laju dan batas harian 300 panggilan Gemini yang sebenarnya (`VITE_AI_MODE=api`). Kodenya lengkap dan sudah diuji lokal, tetapi untuk men-deploy-nya perlu akun billing Google Cloud yang tidak dimiliki proyek ini. Langkahnya ada di [server/README.md](server/README.md).
 
 ### Teknologi
 
 - React 19, TypeScript, Vite
 - Tailwind CSS 4
 - MapLibre GL (peta terdekat, tile OpenFreeMap)
-- Google Gemini API (model `gemini-3.1-flash-lite`, dengan `gemini-3.5-flash-lite` sebagai cadangan), dipanggil dari server
-- Cloud Run (Node.js dan Express di `server/`), Firestore (cache jawaban), Secret Manager
+- Google Gemini (model `gemini-3.1-flash-lite`, dengan `gemini-3.5-flash-lite` sebagai cadangan) lewat Firebase AI Logic
+- Firebase App Check dengan reCAPTCHA Enterprise (Google Cloud Fraud Defense)
+- Opsional, belum di-deploy: Cloud Run (Node.js dan Express di `server/`), Firestore (cache jawaban), Secret Manager
 - API Wikimedia Commons dan Wikidata
 - jsPDF dan qrcode untuk laporan PDF
 - Firebase Hosting untuk situs
@@ -271,7 +271,7 @@ npm run dev
 
 Buka http://localhost:3000. Pencarian, filter, teks kredit, peta, dan markah langsung berfungsi.
 
-**Fitur Gemini.** Sebelum konfigurasi web Firebase diisi, aplikasi berjalan di mode `direct`: klik "Tambah kunci Gemini" di bilah atas lalu tempel kunci milikmu dari [Google AI Studio](https://aistudio.google.com/apikey). Jangan pernah meng-commit kunci ke repositori ini. Untuk memakai Firebase AI Logic, isi `src/services/firebaseConfig.ts` atau build dengan `VITE_AI_MODE=firebase`.
+**Fitur Gemini.** Aplikasi berjalan di mode `firebase`, dan App Check tidak mempercayai `localhost` secara bawaan. Pada panggilan AI pertama, console browser mencetak token debug App Check. Daftarkan dengan `firebase appcheck:debugtokens:create <token> --project wikigaleri --app <appId>` (atau di konsol: App Check, Apps, Manage debug tokens), lalu hapus setelah selesai. Atau lewati semuanya dan pakai kunci gratismu sendiri dari [Google AI Studio](https://aistudio.google.com/apikey) dengan `VITE_AI_MODE=direct npm run dev`, lalu klik "Tambah kunci Gemini" di bilah atas. Jangan pernah meng-commit kunci atau token debug ke repositori ini.
 
 Untuk mencoba mode `api` secara lokal, jalankan API di terminal kedua lalu mulai aplikasi dengan mode itu:
 
