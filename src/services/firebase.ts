@@ -1,5 +1,5 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { getAI, getGenerativeModel, GoogleAIBackend, type GenerativeModel } from 'firebase/ai';
 import { firebaseConfig, FIREBASE_AI_READY, RECAPTCHA_SITE_KEY } from './firebaseConfig';
 
@@ -12,7 +12,7 @@ function setUpAppCheck(firebaseApp: FirebaseApp): void {
     (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN: boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
   }
   initializeAppCheck(firebaseApp, {
-    provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+    provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY),
     isTokenAutoRefreshEnabled: true,
   });
 }
