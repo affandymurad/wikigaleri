@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Box, Download, Loader2, Pause, Play, RotateCcw } from 'lucide-react';
+import { Box, Download, Loader2, Maximize2, Minimize2, Pause, Play, RotateCcw } from 'lucide-react';
 import { Language } from '../i18n/translations';
+import { useFullscreen } from '../hooks/useFullscreen';
 
 interface StlViewerProps {
   url: string;
@@ -34,6 +35,7 @@ interface ViewerApi {
 export const StlViewer: React.FC<StlViewerProps> = ({ url, thumbnailUrl, fileSize, title, language, className = '' }) => {
   const en = language === 'en';
   const hostRef = useRef<HTMLDivElement>(null);
+  const { ref: rootRef, native: isFullscreen, pseudo: pseudoFs, toggle: toggleFullscreen } = useFullscreen<HTMLDivElement>();
   const apiRef = useRef<ViewerApi | null>(null);
 
   const tooLarge = fileSize > MAX_LOAD_LIMIT;
@@ -238,7 +240,16 @@ export const StlViewer: React.FC<StlViewerProps> = ({ url, thumbnailUrl, fileSiz
     'inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-white/15 bg-black/50 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-black/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60';
 
   return (
-    <div className={`relative w-full min-h-[240px] overflow-hidden rounded-lg bg-stone-900/70 ring-1 ring-white/10 ${className}`}>
+    <div
+      ref={rootRef}
+      className={`min-h-[240px] overflow-hidden ring-1 ring-white/10 ${
+        pseudoFs
+          ? 'fixed inset-0 z-[300] h-dvh w-screen bg-stone-900'
+          : isFullscreen
+            ? 'relative h-full w-full bg-stone-900'
+            : `relative w-full rounded-lg bg-stone-900/70 ${className}`
+      }`}
+    >
       {/* Kanvas three.js dipasang di sini */}
       <div ref={hostRef} className="absolute inset-0" />
 
@@ -312,7 +323,7 @@ export const StlViewer: React.FC<StlViewerProps> = ({ url, thumbnailUrl, fileSiz
 
       {phase === 'ready' && (
         <>
-          <div className="absolute bottom-2 left-2 flex flex-wrap items-center gap-1.5">
+          <div className="absolute bottom-2 left-2 right-2 flex flex-wrap items-center gap-1.5">
             <button type="button" onClick={resetView} className={btn} title={en ? 'Reset view' : 'Atur ulang tampilan'}>
               <RotateCcw className="h-3.5 w-3.5" />
               <span>{en ? 'Reset' : 'Atur ulang'}</span>
@@ -324,6 +335,15 @@ export const StlViewer: React.FC<StlViewerProps> = ({ url, thumbnailUrl, fileSiz
             <button type="button" onClick={toggleWireframe} aria-pressed={wireframe} className={btn}>
               <Box className="h-3.5 w-3.5" />
               <span>{en ? 'Wireframe' : 'Kerangka'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => void toggleFullscreen()}
+              className={`${btn} ml-auto`}
+              title={isFullscreen || pseudoFs ? (en ? 'Exit fullscreen' : 'Keluar layar penuh') : (en ? 'Fullscreen' : 'Layar penuh')}
+            >
+              {isFullscreen || pseudoFs ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              <span className="sr-only sm:not-sr-only">{isFullscreen || pseudoFs ? (en ? 'Exit' : 'Keluar') : (en ? 'Fullscreen' : 'Layar penuh')}</span>
             </button>
           </div>
           <p className="pointer-events-none absolute right-2 top-2 hidden rounded bg-black/40 px-2 py-1 text-xs text-stone-300 sm:block">

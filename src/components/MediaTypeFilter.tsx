@@ -1,6 +1,6 @@
 import React from 'react';
 import { MediaType } from '../types/wikimedia';
-import { Grid, Image, Music, Video, FileText, Box, User, FolderTree } from 'lucide-react';
+import { Grid, Image, Music, Video, FileText, Box, Rotate3d, User, FolderTree } from 'lucide-react';
 import { Translations } from '../i18n/translations';
 
 interface MediaTypeFilterProps {
@@ -56,6 +56,11 @@ export const MediaTypeFilter: React.FC<MediaTypeFilterProps> = ({
       id: '3d',
       label: t.filters.model3d,
       icon: <Box className="w-3.5 h-3.5" />,
+    },
+    {
+      id: 'panorama',
+      label: t.filters.panorama360,
+      icon: <Rotate3d className="w-3.5 h-3.5" />,
     },
   ];
 

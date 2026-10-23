@@ -8,6 +8,8 @@ import {
   Video,
   FileText,
   Box,
+  Rotate3d,
+  RectangleHorizontal,
   Bookmark,
   ExternalLink,
 } from 'lucide-react';
@@ -81,7 +83,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
                 }`}
               />
             )}
-                      </>
+            {item.panorama && (
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 text-xs font-semibold text-white bg-stone-900/85 px-2.5 py-1 rounded-md pointer-events-none">
+                {item.panorama === 'sphere' ? <Rotate3d className="w-3 h-3" /> : <RectangleHorizontal className="w-3 h-3" />}
+                <span>{item.panorama === 'sphere' ? t.card.panorama360 : t.card.panoramaWide}</span>
+              </div>
+            )}
+          </>
         ) : item.mediaType === 'audio' ? (
           <div className="w-full py-10 px-6 flex flex-col items-center justify-center bg-stone-100 dark:bg-stone-900 text-center">
             <div className="w-16 h-16 rounded-lg bg-moss-100 dark:bg-moss-950/80 border border-moss-200 dark:border-moss-800 flex items-center justify-center mb-3 text-moss-600 dark:text-moss-400 shadow-sm transition-transform">

@@ -40,10 +40,12 @@ WikiGaleri is a web app that closes that gap. Live at **https://wikigaleri.web.a
 |---|---|
 | Gallery and search | Browse images, audio, video, documents and more, with curated topics, a Live Feed of new uploads and a random tab |
 | Search by user or category | Open a contributor's uploads and talk page, or walk a category tree through subcategories and parent categories |
-| Media-type filter | Narrow results to images, video, audio, documents or 3D models |
+| Media-type filter | Narrow results to images, video, audio, documents, 3D models or 360° panoramas |
+| 360° panoramas | A "360° Panoramas" filter and a badge on panoramas. Open one and look around by dragging (mouse or touch), scroll or pinch to zoom, with a full-resolution option on desktop. Very wide photos get a "Panorama" badge |
 | 3D models (STL) | Find STL files on Commons and rotate, zoom and pan them in the preview (loaded on demand with three.js; models over 12 MB wait for your click) |
 | File details | Download sizes, source info, categories and usage, version history and discussion, with a reading mode for documents |
 | Gemini assistant | Two short sections per file: what the file is, and what you can do with it |
+| Fullscreen | Photos, 3D models and 360° panoramas open fullscreen: the browser's own fullscreen where it allows it, otherwise a built-in fullscreen view (Esc closes it) |
 | Credit line | A TASL credit line in plain text, Markdown, HTML or wikitext, plus a quick-copy modal |
 | Nearby map | Find Commons photos around a point, with an area summary from Gemini (or a local summary when no key is set) |
 | Bookmarks | Save files, usernames and categories in your browser, and export or import them as JSON |
@@ -98,7 +100,7 @@ firebase deploy --only hosting
 - Google Gemini (model `gemini-3.1-flash-lite`, with `gemini-3.5-flash-lite` as the fallback) through Firebase AI Logic
 - Firebase App Check with reCAPTCHA Enterprise (Google Cloud Fraud Defense)
 - Wikimedia Commons and Wikidata APIs
-- three.js (loaded on demand) for the interactive STL viewer
+- three.js (loaded on demand) for the interactive STL and 360° panorama viewers
 - jsPDF and qrcode for the PDF report
 - Firebase Hosting for the site
 
@@ -175,10 +177,12 @@ WikiGaleri adalah aplikasi web yang menutup celah itu. Tersedia di **https://wik
 |---|---|
 | Galeri dan pencarian | Jelajahi gambar, audio, video, dokumen, dan lainnya, lengkap dengan topik pilihan, Live Feed unggahan terbaru, dan tab acak |
 | Cari lewat pengguna atau kategori | Buka unggahan dan halaman pembicaraan seorang kontributor, atau telusuri pohon kategori lewat subkategori dan kategori induk |
-| Filter jenis media | Saring hasil menjadi gambar, video, audio, dokumen, atau model 3D |
+| Filter jenis media | Saring hasil menjadi gambar, video, audio, dokumen, model 3D, atau panorama 360° |
+| Panorama 360° | Filter "Panorama 360°" dan badge pada panorama. Buka satu panorama lalu lihat sekeliling dengan menyeret (mouse atau sentuh), gulir atau cubit untuk zoom, dengan opsi resolusi penuh di desktop. Foto yang sangat lebar mendapat badge "Panorama" |
 | Model 3D (STL) | Temukan berkas STL di Commons, lalu putar, perbesar, dan geser di preview (dimuat saat dibutuhkan dengan three.js; model di atas 12 MB menunggu klik Anda) |
 | Detail berkas | Ukuran unduhan, info sumber, kategori dan penggunaan, riwayat versi, serta diskusi, dengan mode baca untuk dokumen |
 | Asisten Gemini | Dua bagian singkat per berkas: apa isi berkas ini, dan boleh dipakai untuk apa |
+| Layar penuh | Foto, model 3D, dan panorama 360° bisa dibuka layar penuh: layar penuh bawaan browser bila diizinkan, kalau tidak, tampilan layar penuh buatan sendiri (Esc menutupnya) |
 | Teks kredit | Teks kredit TASL dalam teks biasa, Markdown, HTML, atau wikitext, plus jendela salin cepat |
 | Peta terdekat | Temukan foto Commons di sekitar satu titik, dengan ringkasan area dari Gemini (atau ringkasan lokal bila kunci belum diisi) |
 | Markah | Simpan berkas, nama pengguna, dan kategori di browsermu, lalu ekspor atau impor sebagai JSON |
@@ -233,7 +237,7 @@ firebase deploy --only hosting
 - Google Gemini (model `gemini-3.1-flash-lite`, dengan `gemini-3.5-flash-lite` sebagai cadangan) lewat Firebase AI Logic
 - Firebase App Check dengan reCAPTCHA Enterprise (Google Cloud Fraud Defense)
 - API Wikimedia Commons dan Wikidata
-- three.js (dimuat saat dibutuhkan) untuk penampil STL interaktif
+- three.js (dimuat saat dibutuhkan) untuk penampil STL dan panorama 360° interaktif
 - jsPDF dan qrcode untuk laporan PDF
 - Firebase Hosting untuk situs
 

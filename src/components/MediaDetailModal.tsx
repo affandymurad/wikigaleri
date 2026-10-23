@@ -30,6 +30,9 @@ import { exportMediaAnalysisPdf } from '../utils/pdfGenerator';
 import { X, Download, Copy, Check, ExternalLink, Sparkles, ShieldCheck, BookOpen, Eye, Key, FileText, MapPin, Calendar, User, Info, ChevronLeft, Loader2, ChevronRight, Bookmark, AlertCircle, Globe, RefreshCw, FileCode, Tag, CheckCircle2, Folder, FileDown, Camera, ChevronDown, History, MessageSquare, Volume2, VolumeX } from 'lucide-react';
 import { TalkPageView } from './MediaGrid';
 import { StlViewer } from './StlViewer';
+import { useFullscreen } from '../hooks/useFullscreen';
+import { Maximize2, Minimize2 } from 'lucide-react';
+import { PanoramaViewer } from './PanoramaViewer';
 
 import { Translations, Language } from '../i18n/translations';
 
@@ -196,6 +199,9 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     if (!item) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // Esc yang dipakai browser untuk keluar layar penuh tidak boleh menutup modal
+        const d = document as Document & { webkitFullscreenElement?: Element | null };
+        if (d.fullscreenElement || d.webkitFullscreenElement) return;
         onClose();
       } else if (e.key === 'ArrowRight' && hasNext && onNext) {
         onNext();
@@ -226,6 +232,8 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   // Detail tambahan (EXIF kamera, Depicts) untuk tab Unduh & Info
   const [extraDetail, setExtraDetail] = useState<MediaExtraDetail | null>(null);
+  // Layar penuh untuk foto biasa
+  const photoFs = useFullscreen<HTMLDivElement>();
   const [isExtraLoading, setIsExtraLoading] = useState<boolean>(false);
   const [catsOpen, setCatsOpen] = useState<boolean>(true);
 
@@ -559,6 +567,10 @@ useEffect(() => {
 
   if (!item || !licenseInfo) return null;
 
+  // Panorama 360°: dari kategori, atau dari proyeksi equirectangular di metadata XMP (menunggu detail tambahan agar bentuk bolanya pasti)
+  const panoInfo = extraDetail?.panorama;
+  const showPanoViewer = item.mediaType === 'image' && (item.panorama === 'sphere' || !!panoInfo) && !isExtraLoading;
+
   return (
     <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/70 flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
       {/* Modal Dialog Card */}
@@ -620,8 +632,30 @@ useEffect(() => {
 
             {/* Panggung */}
             <div className="relative flex flex-1 lg:min-h-0 items-center justify-center px-12 py-4 sm:px-14 sm:py-8 lg:overflow-y-auto">
-              {item.mediaType === 'image' ? (
-                <div className="relative max-h-[min(60dvh,calc(92dvh-10rem))] lg:max-h-full lg:h-full max-w-full flex items-center justify-center">
+              {showPanoViewer ? (
+                <PanoramaViewer
+                  key={item.id}
+                  fileUrl={item.fileUrl}
+                  thumbnailUrl={item.thumbnailUrl}
+                  width={item.width}
+                  fileSize={item.fileSize}
+                  mimeType={item.mimeType}
+                  title={item.cleanTitle}
+                  language={language === 'en' ? 'en' : 'id'}
+                  pano={panoInfo}
+                  className="aspect-[4/3] max-h-[min(60dvh,calc(92dvh-10rem))] lg:aspect-auto lg:h-full lg:max-h-full"
+                />
+              ) : item.mediaType === 'image' ? (
+                <div
+                  ref={photoFs.ref}
+                  className={
+                    photoFs.pseudo
+                      ? 'fixed inset-0 z-[300] flex h-dvh w-screen items-center justify-center bg-black'
+                      : photoFs.native
+                        ? 'relative flex h-full w-full items-center justify-center bg-black'
+                        : 'relative max-h-[min(60dvh,calc(92dvh-10rem))] lg:max-h-full lg:h-full max-w-full flex items-center justify-center'
+                  }
+                >
                   {isMediaLoading && (
                     <div
                       role="status"
@@ -645,9 +679,24 @@ useEffect(() => {
                     className={
                       isMediaLoading
                         ? 'pointer-events-none absolute h-px w-px opacity-0'
-                        : 'max-h-[min(60dvh,calc(92dvh-10rem))] lg:max-h-full max-w-full object-contain rounded-lg ring-1 ring-white/15 shadow-sm shadow-black/60 animate-in fade-in'
+                        : photoFs.active
+                          ? 'max-h-full max-w-full object-contain animate-in fade-in'
+                          : 'max-h-[min(60dvh,calc(92dvh-10rem))] lg:max-h-full max-w-full object-contain rounded-lg ring-1 ring-white/15 shadow-sm shadow-black/60 animate-in fade-in'
                     }
                   />
+                  {!isMediaLoading && (
+                    <button
+                      type="button"
+                      onClick={() => void photoFs.toggle()}
+                      title={photoFs.active ? (language === 'en' ? 'Exit fullscreen' : 'Keluar layar penuh') : (language === 'en' ? 'Fullscreen' : 'Layar penuh')}
+                      className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-white/15 bg-black/50 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-black/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                    >
+                      {photoFs.active ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                      <span className="sr-only sm:not-sr-only">
+                        {photoFs.active ? (language === 'en' ? 'Exit' : 'Keluar') : (language === 'en' ? 'Fullscreen' : 'Layar penuh')}
+                      </span>
+                    </button>
+                  )}
                 </div>
               ) : item.mediaType === '3d' ? (
                 <StlViewer
@@ -742,6 +791,9 @@ useEffect(() => {
                 <span className="rounded-md bg-white/10 px-2 py-1 uppercase">{item.mediaType === '3d' ? 'stl' : (item.mimeType.split('/')[1] || item.mediaType).replace(/^x-/, '')}</span>
                 {item.width > 0 && item.mediaType !== '3d' && <span className="rounded-md bg-white/10 px-2 py-1">{item.width} × {item.height} px</span>}
                 {item.fileSize > 0 && <span className="rounded-md bg-white/10 px-2 py-1">{formatBytes(item.fileSize)}</span>}
+                {item.mediaType === 'image' && (item.panorama || panoInfo) && (
+                  <span className="rounded-md bg-white/10 px-2 py-1">{item.panorama === 'sphere' || panoInfo ? '360°' : 'Panorama'}</span>
+                )}
                 {item.mediaType === 'document' && readerInfo && readerInfo.pages > 1 && (
                   <span className="rounded-md bg-white/10 px-2 py-1">{readerInfo.pages} {language === 'en' ? 'pages' : 'halaman'}</span>
                 )}

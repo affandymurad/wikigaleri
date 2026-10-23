@@ -455,6 +455,24 @@ function resolveMediaType(mime: string, title: string): 'image' | 'audio' | 'vid
 }
 
 /**
+ * Deteksi panorama dari data yang sudah ada saat pencarian (tanpa permintaan tambahan):
+ * 'sphere' bila berkas masuk kategori panorama 360° atau photosphere, 'wide' bila sangat lebar.
+ * Kepastian proyeksi equirectangular dicek lagi dari metadata XMP saat modal dibuka.
+ */
+function detectPanorama(
+  mediaType: string,
+  categories: string[],
+  width: number,
+  height: number,
+  mime: string
+): 'sphere' | 'wide' | undefined {
+  if (mediaType !== 'image') return undefined;
+  if (categories.some((c) => /360°\s*panorama|photospheres?/i.test(c))) return 'sphere';
+  if (height > 0 && width >= 2000 && width / height >= 2.5 && /^image\/(jpeg|png|tiff)$/i.test(mime)) return 'wide';
+  return undefined;
+}
+
+/**
  * Parse raw Commons Page data into typed CommonsMediaItem
  */
 function parseCommonsPage(page: CommonsPage): CommonsMediaItem | null {
@@ -507,6 +525,7 @@ function parseCommonsPage(page: CommonsPage): CommonsMediaItem | null {
     thumbnailUrl,
     mimeType: info.mime || 'application/octet-stream',
     mediaType,
+    panorama: detectPanorama(mediaType, categories, info.width || 0, info.height || 0, info.mime || ''),
     fileSize: info.size || 0,
     width: info.width || 0,
     height: info.height || 0,
@@ -534,7 +553,7 @@ function buildSearchQuery(query: string, mediaType: MediaType): string {
   let q = query.trim();
   // Strip redundant Category: or Kategori: prefix so file search finds matching media
   q = q.replace(/^(Category|Kategori)\s*:\s*/i, '').trim();
-  if (!q && mediaType !== '3d') {
+  if (!q && mediaType !== '3d' && mediaType !== 'panorama') {
     q = 'Featured pictures';
   }
 
@@ -549,6 +568,8 @@ function buildSearchQuery(query: string, mediaType: MediaType): string {
     q = `filetype:bitmap|drawing ${q}`;
   } else if (mediaType === '3d' && !q.includes('filetype:')) {
     q = `filetype:3d ${q}`.trim();
+  } else if (mediaType === 'panorama' && !q.includes('incategory:')) {
+    q = `incategory:"360° panoramas" ${q}`.trim();
   }
 
   return q;
@@ -634,7 +655,9 @@ export async function searchCommonsMedia(
       }
 
       // Filter by mediaType if specified
-      if (filter.mediaType !== 'all') {
+      if (filter.mediaType === 'panorama') {
+        items = items.filter((item) => item.panorama === 'sphere');
+      } else if (filter.mediaType !== 'all') {
         items = items.filter((item) => item.mediaType === filter.mediaType);
       }
 
@@ -1073,6 +1096,16 @@ export async function searchCategories(
 export interface MediaExtraDetail {
   exif: { key: string; value: string }[];
   depicts: string[];
+  /** Ada bila berkas memakai proyeksi equirectangular (panorama 360°), dari metadata XMP GPano */
+  panorama?: {
+    projection: string;
+    fullW: number;
+    fullH: number;
+    croppedW: number;
+    croppedH: number;
+    left: number;
+    top: number;
+  };
 }
 
 const exifScalar = (raw: unknown): string => {
@@ -1121,6 +1154,19 @@ export async function fetchMediaExtraDetail(pageId: number, title: string): Prom
       const dt = get('DateTimeOriginal') || get('DateTime');
       const focal = exifNumber(get('FocalLength'));
       const lens = get('LensModel');
+
+      if (get('ProjectionType').toLowerCase() === 'equirectangular') {
+        const num = (n: string) => Number(get(n)) || 0;
+        result.panorama = {
+          projection: 'equirectangular',
+          fullW: num('FullPanoWidthPixels'),
+          fullH: num('FullPanoHeightPixels'),
+          croppedW: num('CroppedAreaImageWidthPixels'),
+          croppedH: num('CroppedAreaImageHeightPixels'),
+          left: num('CroppedAreaLeftPixels'),
+          top: num('CroppedAreaTopPixels'),
+        };
+      }
 
       if (make) result.exif.push({ key: 'make', value: make });
       if (model) result.exif.push({ key: 'model', value: model });

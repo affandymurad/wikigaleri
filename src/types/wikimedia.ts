@@ -1,4 +1,4 @@
-export type MediaType = 'all' | 'image' | 'audio' | 'video' | 'document' | '3d';
+export type MediaType = 'all' | 'image' | 'audio' | 'video' | 'document' | '3d' | 'panorama';
 
 export type LicenseCategory =
   | 'all'
@@ -61,6 +61,8 @@ export interface CommonsMediaItem {
   thumbnailUrl: string;
   mimeType: string;
   mediaType: 'image' | 'audio' | 'video' | 'document' | '3d';
+  /** 'sphere': panorama 360° (equirectangular); 'wide': panorama lebar biasa */
+  panorama?: 'sphere' | 'wide';
   fileSize: number;
   width: number;
   height: number;

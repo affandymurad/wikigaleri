@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useLanguage } from './hooks/useLanguage';
 import { useGeminiApiKey } from './hooks/useGeminiApiKey';
-import { useCommonsGallery, useBookmarkLists } from './hooks/useCommonsGallery';
+import { useCommonsGallery, useBookmarkLists, DEFAULT_QUERY, isBrowseOnlyType } from './hooks/useCommonsGallery';
 import { Header } from './components/Header';
 import { SearchBar } from './components/SearchBar';
 import { CuratedTopics } from './components/CuratedTopics';
@@ -314,6 +314,10 @@ export default function App() {
               mediaType={filter.mediaType}
               onSelectMediaType={(type) => {
                 if (activeMode === 'categories') handleSwitchMode('keywords');
+                // Kata kunci bawaan beranda ('Wikilokal') tidak cocok dengan model 3D / panorama: kosongkan kolomnya
+                // (kolom kosong = tidak ada data). Pulihkan saat kembali ke filter lain dengan kolom masih kosong.
+                if (isBrowseOnlyType(type) && filter.query === DEFAULT_QUERY) setQuery('');
+                else if (!isBrowseOnlyType(type) && isBrowseOnlyType(filter.mediaType) && !filter.query.trim()) setQuery(DEFAULT_QUERY);
                 setMediaType(type);
               }}
               t={t}

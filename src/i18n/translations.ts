@@ -123,6 +123,7 @@ export interface Translations {
     video: string;
     document: string;
     model3d: string;
+    panorama360: string;
     pd: string;
     cc_by: string;
     cc_by_sa: string;
@@ -167,6 +168,8 @@ export interface Translations {
     documentCard: string;
     videoCard: string;
     model3dCard: string;
+    panorama360: string;
+    panoramaWide: string;
     openDetails: string;
   };
   modal: {
@@ -623,6 +626,7 @@ export const translations: Record<Language, Translations> = {
       video: 'Archive Video',
       document: 'Documents & Texts',
       model3d: '3D Models',
+      panorama360: '360° Panoramas',
       pd: 'Public Domain & CC0 (No Restrictions)',
       cc_by: 'CC BY (Attribution Required)',
       cc_by_sa: 'CC BY-SA (Attribution & ShareAlike)',
@@ -670,6 +674,8 @@ export const translations: Record<Language, Translations> = {
       documentCard: 'PDF Document',
       videoCard: 'Video Archive',
       model3dCard: '3D Model',
+      panorama360: '360° Panorama',
+      panoramaWide: 'Panorama',
       openDetails: 'Open Details & Attribution',
     },
     modal: {
@@ -1138,6 +1144,7 @@ export const translations: Record<Language, Translations> = {
       video: 'Video Arsip',
       document: 'Dokumen & Naskah',
       model3d: 'Model 3D',
+      panorama360: 'Panorama 360°',
       pd: 'Domain Publik & CC0 (Tanpa Syarat)',
       cc_by: 'CC BY (Wajib Atribusi)',
       cc_by_sa: 'CC BY-SA (Atribusi & BerbagiSerupa)',
@@ -1185,6 +1192,8 @@ export const translations: Record<Language, Translations> = {
       documentCard: 'Dokumen PDF',
       videoCard: 'Video Arsip',
       model3dCard: 'Model 3D',
+      panorama360: 'Panorama 360°',
+      panoramaWide: 'Panorama',
       openDetails: 'Buka Detail & Atribusi',
     },
     modal: {
