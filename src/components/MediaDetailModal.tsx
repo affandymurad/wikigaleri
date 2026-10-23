@@ -29,6 +29,7 @@ RelatedWikiLink,
 import { exportMediaAnalysisPdf } from '../utils/pdfGenerator';
 import { X, Download, Copy, Check, ExternalLink, Sparkles, ShieldCheck, BookOpen, Eye, Key, FileText, MapPin, Calendar, User, Info, ChevronLeft, Loader2, ChevronRight, Bookmark, AlertCircle, Globe, RefreshCw, FileCode, Tag, CheckCircle2, Folder, FileDown, Camera, ChevronDown, History, MessageSquare, Volume2, VolumeX } from 'lucide-react';
 import { TalkPageView } from './MediaGrid';
+import { StlViewer } from './StlViewer';
 
 import { Translations, Language } from '../i18n/translations';
 
@@ -606,7 +607,7 @@ useEffect(() => {
           {/* Kiri / atas: panggung media (stage) + toolbar */}
           <div className="lg:col-span-7 relative isolate overflow-hidden bg-stone-950 flex flex-col shrink-0 min-h-[320px] lg:shrink lg:min-h-0 lg:h-full">
             {/* Latar ambient: gambar yang sama diburamkan + gradasi */}
-            {(item.mediaType === 'image' || (item.mediaType === 'document' && item.thumbnailUrl)) && (
+            {(item.mediaType === 'image' || ((item.mediaType === 'document' || item.mediaType === '3d') && item.thumbnailUrl)) && (
               <img
                 src={item.mediaType === 'image' ? previewSrc : item.thumbnailUrl}
                 alt=""
@@ -648,6 +649,16 @@ useEffect(() => {
                     }
                   />
                 </div>
+              ) : item.mediaType === '3d' ? (
+                <StlViewer
+                  key={item.id}
+                  url={item.fileUrl}
+                  thumbnailUrl={item.thumbnailUrl}
+                  fileSize={item.fileSize}
+                  title={item.cleanTitle}
+                  language={language === 'en' ? 'en' : 'id'}
+                  className="aspect-[4/3] max-h-[min(60dvh,calc(92dvh-10rem))] lg:aspect-auto lg:h-full lg:max-h-full"
+                />
               ) : item.mediaType === 'audio' ? (
                 <div className="w-full max-w-md space-y-4 rounded-lg border border-white/10 bg-white/5 p-5 text-center ">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent-500/20 text-accent-300">
@@ -728,8 +739,8 @@ useEffect(() => {
             {/* Toolbar bawah: info berkas + aksi */}
             <div className="relative flex flex-wrap items-center justify-between gap-2 border-t border-white/10 bg-black/35 px-3 py-2.5 sm:px-5">
               <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs text-stone-200">
-                <span className="rounded-md bg-white/10 px-2 py-1 uppercase">{(item.mimeType.split('/')[1] || item.mediaType).replace(/^x-/, '')}</span>
-                {item.width > 0 && <span className="rounded-md bg-white/10 px-2 py-1">{item.width} × {item.height} px</span>}
+                <span className="rounded-md bg-white/10 px-2 py-1 uppercase">{item.mediaType === '3d' ? 'stl' : (item.mimeType.split('/')[1] || item.mediaType).replace(/^x-/, '')}</span>
+                {item.width > 0 && item.mediaType !== '3d' && <span className="rounded-md bg-white/10 px-2 py-1">{item.width} × {item.height} px</span>}
                 {item.fileSize > 0 && <span className="rounded-md bg-white/10 px-2 py-1">{formatBytes(item.fileSize)}</span>}
                 {item.mediaType === 'document' && readerInfo && readerInfo.pages > 1 && (
                   <span className="rounded-md bg-white/10 px-2 py-1">{readerInfo.pages} {language === 'en' ? 'pages' : 'halaman'}</span>
@@ -931,7 +942,7 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                         <span>{t.modal.downloadOriginal}</span>
                       </div>
                       <span className="font-mono text-xs opacity-90">
-                        {item.width ? `${item.width}×${item.height} · ` : ''}{formatBytes(item.fileSize)}
+                        {item.width && item.mediaType !== '3d' ? `${item.width}×${item.height} · ` : ''}{formatBytes(item.fileSize)}
                       </span>
                     </a>
 
@@ -1147,7 +1158,7 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                         </div>
                       );
                     })}
-                    {item.width > 0 && (
+                    {item.width > 0 && item.mediaType !== '3d' && (
                       <div className="flex items-start justify-between gap-3 py-2.5">
                         <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
                           <Info className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />

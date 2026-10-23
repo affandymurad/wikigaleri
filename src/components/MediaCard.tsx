@@ -7,6 +7,7 @@ import {
   Music,
   Video,
   FileText,
+  Box,
   Bookmark,
   ExternalLink,
 } from 'lucide-react';
@@ -120,6 +121,25 @@ export const MediaCard: React.FC<MediaCardProps> = ({
               <span className="px-1 rounded bg-black/30 text-xs font-mono uppercase">{fileExtension}</span>
             </div>
           </div>
+        ) : item.mediaType === '3d' ? (
+          <div className="relative w-full aspect-4/3 flex items-center justify-center bg-stone-900">
+            {item.thumbnailUrl ? (
+              <img
+                src={item.thumbnailUrl}
+                alt={item.cleanTitle}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <Box className="w-10 h-10 text-stone-500" />
+            )}
+            <div className="absolute top-3 left-3 flex items-center gap-1.5 text-xs font-semibold text-white bg-stone-900/85 px-2.5 py-1 rounded-md">
+              <Box className="w-3 h-3" />
+              <span>{t.card.model3dCard}</span>
+              <span className="px-1 rounded bg-white/20 text-xs font-mono uppercase">{fileExtension}</span>
+            </div>
+          </div>
         ) : (
           <div className="relative w-full aspect-video flex items-center justify-center bg-stone-950">
             {item.thumbnailUrl ? (
@@ -197,8 +217,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({
         {/* Technical dimensions, size & file extension */}
         <div className="flex items-center justify-between text-xs text-stone-400 dark:text-stone-500 font-mono tabular-nums pt-0.5">
           <div className="flex items-center gap-1.5 min-w-0 pr-2">
-            {item.width > 0 && <span className="truncate min-w-0">{item.width}×{item.height}</span>}
-            {item.width > 0 && item.fileSize > 0 && <span aria-hidden="true" className="shrink-0">·</span>}
+            {item.width > 0 && item.mediaType !== '3d' && <span className="truncate min-w-0">{item.width}×{item.height}</span>}
+            {item.width > 0 && item.mediaType !== '3d' && item.fileSize > 0 && <span aria-hidden="true" className="shrink-0">·</span>}
             {item.fileSize > 0 && <span className="shrink-0 whitespace-nowrap">{formatBytes(item.fileSize)}</span>}
           </div>
           <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 font-bold text-xs font-mono tracking-wider uppercase border border-stone-200/80 dark:border-stone-700/80 shrink-0">

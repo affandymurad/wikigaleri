@@ -40,7 +40,8 @@ WikiGaleri is a web app that closes that gap. Live at **https://wikigaleri.web.a
 |---|---|
 | Gallery and search | Browse images, audio, video, documents and more, with curated topics, a Live Feed of new uploads and a random tab |
 | Search by user or category | Open a contributor's uploads and talk page, or walk a category tree through subcategories and parent categories |
-| Media-type filter | Narrow results to images, video, audio or documents |
+| Media-type filter | Narrow results to images, video, audio, documents or 3D models |
+| 3D models (STL) | Find STL files on Commons and rotate, zoom and pan them in the preview (loaded on demand with three.js; models over 12 MB wait for your click) |
 | File details | Download sizes, source info, categories and usage, version history and discussion, with a reading mode for documents |
 | Gemini assistant | Two short sections per file: what the file is, and what you can do with it |
 | Credit line | A TASL credit line in plain text, Markdown, HTML or wikitext, plus a quick-copy modal |
@@ -97,6 +98,7 @@ firebase deploy --only hosting
 - Google Gemini (model `gemini-3.1-flash-lite`, with `gemini-3.5-flash-lite` as the fallback) through Firebase AI Logic
 - Firebase App Check with reCAPTCHA Enterprise (Google Cloud Fraud Defense)
 - Wikimedia Commons and Wikidata APIs
+- three.js (loaded on demand) for the interactive STL viewer
 - jsPDF and qrcode for the PDF report
 - Firebase Hosting for the site
 
@@ -173,7 +175,8 @@ WikiGaleri adalah aplikasi web yang menutup celah itu. Tersedia di **https://wik
 |---|---|
 | Galeri dan pencarian | Jelajahi gambar, audio, video, dokumen, dan lainnya, lengkap dengan topik pilihan, Live Feed unggahan terbaru, dan tab acak |
 | Cari lewat pengguna atau kategori | Buka unggahan dan halaman pembicaraan seorang kontributor, atau telusuri pohon kategori lewat subkategori dan kategori induk |
-| Filter jenis media | Saring hasil menjadi gambar, video, audio, atau dokumen |
+| Filter jenis media | Saring hasil menjadi gambar, video, audio, dokumen, atau model 3D |
+| Model 3D (STL) | Temukan berkas STL di Commons, lalu putar, perbesar, dan geser di preview (dimuat saat dibutuhkan dengan three.js; model di atas 12 MB menunggu klik Anda) |
 | Detail berkas | Ukuran unduhan, info sumber, kategori dan penggunaan, riwayat versi, serta diskusi, dengan mode baca untuk dokumen |
 | Asisten Gemini | Dua bagian singkat per berkas: apa isi berkas ini, dan boleh dipakai untuk apa |
 | Teks kredit | Teks kredit TASL dalam teks biasa, Markdown, HTML, atau wikitext, plus jendela salin cepat |
@@ -230,6 +233,7 @@ firebase deploy --only hosting
 - Google Gemini (model `gemini-3.1-flash-lite`, dengan `gemini-3.5-flash-lite` sebagai cadangan) lewat Firebase AI Logic
 - Firebase App Check dengan reCAPTCHA Enterprise (Google Cloud Fraud Defense)
 - API Wikimedia Commons dan Wikidata
+- three.js (dimuat saat dibutuhkan) untuk penampil STL interaktif
 - jsPDF dan qrcode untuk laporan PDF
 - Firebase Hosting untuk situs
 

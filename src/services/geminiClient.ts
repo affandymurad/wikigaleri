@@ -178,6 +178,7 @@ export function buildLocalMediaAnalysis(
     audio: ['audio file', 'berkas audio'],
     video: ['video', 'video'],
     document: ['document', 'dokumen'],
+    '3d': ['3D model', 'model 3D'],
   };
   const kind = (kindMap[item.mediaType] || ['file', 'berkas'])[isEn ? 0 : 1];
   const licenseName = item.licenseShort || info.label;

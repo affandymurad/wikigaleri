@@ -424,9 +424,14 @@ export const CURATED_TOPICS: CuratedTopic[] = [
 /**
  * Determine media type from mime string and title
  */
-function resolveMediaType(mime: string, title: string): 'image' | 'audio' | 'video' | 'document' {
+function resolveMediaType(mime: string, title: string): 'image' | 'audio' | 'video' | 'document' | '3d' {
   const m = (mime || '').toLowerCase();
   const t = (title || '').toLowerCase();
+
+  // Model 3D (STL): Commons memberi tipe application/sla
+  if (m === 'application/sla' || m.startsWith('model/') || t.endsWith('.stl')) {
+    return '3d';
+  }
 
   // Document check (PDF, DjVu, etc.)
   if (
@@ -529,7 +534,7 @@ function buildSearchQuery(query: string, mediaType: MediaType): string {
   let q = query.trim();
   // Strip redundant Category: or Kategori: prefix so file search finds matching media
   q = q.replace(/^(Category|Kategori)\s*:\s*/i, '').trim();
-  if (!q) {
+  if (!q && mediaType !== '3d') {
     q = 'Featured pictures';
   }
 
@@ -542,6 +547,8 @@ function buildSearchQuery(query: string, mediaType: MediaType): string {
     q = `filetype:pdf|djvu ${q}`;
   } else if (mediaType === 'image' && !q.includes('filetype:')) {
     q = `filetype:bitmap|drawing ${q}`;
+  } else if (mediaType === '3d' && !q.includes('filetype:')) {
+    q = `filetype:3d ${q}`.trim();
   }
 
   return q;

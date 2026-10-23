@@ -328,7 +328,7 @@ export async function exportMediaAnalysisPdf(
   metaItemY += lineHeight;
 
   doc.text(
-    `${isEn ? 'Dimensions' : 'Dimensi & Resolusi'}: ${item.width ? `${item.width} x ${item.height} px` : 'N/A'}`,
+    `${isEn ? 'Dimensions' : 'Dimensi & Resolusi'}: ${item.width && item.mediaType !== '3d' ? `${item.width} x ${item.height} px` : 'N/A'}`,
     metaX,
     metaItemY
   );

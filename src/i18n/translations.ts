@@ -122,6 +122,7 @@ export interface Translations {
     audio: string;
     video: string;
     document: string;
+    model3d: string;
     pd: string;
     cc_by: string;
     cc_by_sa: string;
@@ -165,6 +166,7 @@ export interface Translations {
     audioCard: string;
     documentCard: string;
     videoCard: string;
+    model3dCard: string;
     openDetails: string;
   };
   modal: {
@@ -620,6 +622,7 @@ export const translations: Record<Language, Translations> = {
       audio: 'Audio & Music',
       video: 'Archive Video',
       document: 'Documents & Texts',
+      model3d: '3D Models',
       pd: 'Public Domain & CC0 (No Restrictions)',
       cc_by: 'CC BY (Attribution Required)',
       cc_by_sa: 'CC BY-SA (Attribution & ShareAlike)',
@@ -666,6 +669,7 @@ export const translations: Record<Language, Translations> = {
       audioCard: 'Open Audio Recording',
       documentCard: 'PDF Document',
       videoCard: 'Video Archive',
+      model3dCard: '3D Model',
       openDetails: 'Open Details & Attribution',
     },
     modal: {
@@ -1133,6 +1137,7 @@ export const translations: Record<Language, Translations> = {
       audio: 'Audio & Musik',
       video: 'Video Arsip',
       document: 'Dokumen & Naskah',
+      model3d: 'Model 3D',
       pd: 'Domain Publik & CC0 (Tanpa Syarat)',
       cc_by: 'CC BY (Wajib Atribusi)',
       cc_by_sa: 'CC BY-SA (Atribusi & BerbagiSerupa)',
@@ -1179,6 +1184,7 @@ export const translations: Record<Language, Translations> = {
       audioCard: 'Koleksi Audio Terbuka',
       documentCard: 'Dokumen PDF',
       videoCard: 'Video Arsip',
+      model3dCard: 'Model 3D',
       openDetails: 'Buka Detail & Atribusi',
     },
     modal: {

@@ -1,4 +1,4 @@
-export type MediaType = 'all' | 'image' | 'audio' | 'video' | 'document';
+export type MediaType = 'all' | 'image' | 'audio' | 'video' | 'document' | '3d';
 
 export type LicenseCategory =
   | 'all'
@@ -60,7 +60,7 @@ export interface CommonsMediaItem {
   fileUrl: string;
   thumbnailUrl: string;
   mimeType: string;
-  mediaType: 'image' | 'audio' | 'video' | 'document';
+  mediaType: 'image' | 'audio' | 'video' | 'document' | '3d';
   fileSize: number;
   width: number;
   height: number;
