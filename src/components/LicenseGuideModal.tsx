@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, Lightbulb, Sparkles, X, ShieldCheck, CheckCircle2, AlertTriangle, ExternalLink, HelpCircle, FileText, Scale, Ban } from 'lucide-react';
+import { Info, Lightbulb, Sparkles, X, ShieldCheck, CheckCircle2, AlertTriangle, ExternalLink, HelpCircle, FileText, Scale, Ban, User } from 'lucide-react';
 import { Translations } from '../i18n/translations';
 
 interface LicenseGuideModalProps {
@@ -261,16 +261,16 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ isOpen, onClos
     ? [
       { icon: 'help', title: 'Masalah yang kami jawab', body: 'Wikimedia Commons punya jutaan berkas gratis, tapi sulit dicari dan sulit dipahami orang awam. Aturan lisensi dan cara mencantumkan kredit juga sering membingungkan, jadi berkas dipakai tanpa kredit yang benar.' },
       { icon: 'bulb', title: 'Kenapa ini penting', body: 'Media terbuka dipakai untuk belajar, mengajar, dan jurnalisme. Mencantumkan kredit dengan benar menghargai pembuatnya dan menjaga kepercayaan pada pengetahuan terbuka.' },
-      { icon: 'check', title: 'Cara WikiGaleri membantu', body: 'Cari lewat kata kunci, nama pengguna, kategori, Live Feed, tab Acak, atau peta Terdekat. Pahami isinya lewat penjelasan Gemini. Pakai dengan benar lewat teks kredit TASL, panduan lisensi CC, dan ringkasan Ketentuan Wikimedia.' },
-      { icon: 'spark', title: 'Peran Gemini', body: 'Gemini membaca metadata resmi dari Commons (judul, deskripsi, kategori, lisensi, lokasi), lalu menulis penjelasan berkas, ringkasan lisensi, dan ringkasan area sekitar. Penjelasan ini tidak menggantikan halaman aslinya di Commons.' },
+      { icon: 'check', title: 'Cara WikiGaleri membantu', body: 'Cari lewat kata kunci, nama pengguna, kategori, Live Feed, tab Acak, atau peta Terdekat, termasuk model 3D (STL) yang bisa diputar langsung di preview. Pahami isinya lewat penjelasan Gemini yang berjalan otomatis saat berkas dibuka. Pakai dengan benar lewat teks kredit TASL, panduan lisensi CC, dan ringkasan Ketentuan Wikimedia.' },
+      { icon: 'spark', title: 'Peran Gemini', body: 'Gemini membaca metadata resmi dari Commons (judul, deskripsi, kategori, lisensi, lokasi), lalu menulis penjelasan berkas, ringkasan lisensi, dan ringkasan area sekitar. Anda tidak perlu memasukkan kunci sendiri. Bila Gemini tidak bisa menjawab, WikiGaleri menampilkan ringkasan berlabel jelas yang dibuat dari metadata, bukan oleh Gemini. Penjelasan ini tidak menggantikan halaman aslinya di Commons.' },
       { icon: 'warn', title: 'Batasan', body: 'Gemini bisa salah atau melewatkan konteks. Kalau metadatanya kosong, penjelasannya ikut terbatas. Ringkasan lisensi hanya penuntun, bukan nasihat hukum. Cek halaman berkas di Commons sebelum memakainya.' },
       { icon: 'scale', title: 'Penafian', body: 'WikiGaleri adalah proyek independen. Aplikasi ini tidak dibuat, didukung, atau dikelola oleh Wikimedia Foundation. Setiap berkas tetap tunduk pada lisensinya masing-masing.' },
       ]
     : [
       { icon: 'help', title: 'Problem we solve', body: 'Wikimedia Commons holds millions of free files, but they are hard to find and hard for most people to understand. License rules and credit lines are confusing too, so files end up reused without proper credit.' },
       { icon: 'bulb', title: 'Why it matters', body: 'Open media is used for learning, teaching, and journalism. Crediting it properly respects the people who made it and keeps open knowledge trustworthy.' },
-      { icon: 'check', title: 'How WikiGaleri helps', body: 'Search by keyword, username, category, Live Feed, the Random tab, or the Nearby map. Understand a file through Gemini explanations. Reuse it correctly with TASL credit text, the CC license guide, and the Wikimedia Terms summary.' },
-      { icon: 'spark', title: 'Role of Gemini', body: 'Gemini reads the official Commons metadata (title, description, categories, license, location) and writes a file explanation, a license summary, and a nearby-area summary. It does not replace the original Commons page.' },
+      { icon: 'check', title: 'How WikiGaleri helps', body: 'Search by keyword, username, category, Live Feed, the Random tab, or the Nearby map, including 3D models (STL) you can rotate right in the preview. Understand a file through the Gemini explanation that starts automatically when you open it. Reuse it correctly with TASL credit text, the CC license guide, and the Wikimedia Terms summary.' },
+      { icon: 'spark', title: 'Role of Gemini', body: 'Gemini reads the official Commons metadata (title, description, categories, license, location) and writes a file explanation, a license summary, and a nearby-area summary. You do not need to enter a key of your own. When Gemini cannot answer, WikiGaleri shows a clearly labelled summary built from the metadata, not written by Gemini. It does not replace the original Commons page.' },
       { icon: 'warn', title: 'Limitations', body: 'Gemini can be wrong or miss context. When the metadata is empty, the explanation is limited too. The license summary is a guide, not legal advice. Check the file page on Commons before you reuse anything.' },
       { icon: 'scale', title: 'Disclaimer', body: 'WikiGaleri is an independent project. It is not made, endorsed, or run by the Wikimedia Foundation. Every file stays under its own license.' },
       ];
@@ -280,6 +280,7 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ isOpen, onClos
     : k === 'scale' ? <Scale className="w-4 h-4" />
     : k === 'help' ? <HelpCircle className="w-4 h-4" />
     : k === 'bulb' ? <Lightbulb className="w-4 h-4" />
+    : k === 'user' ? <User className="w-4 h-4" />
     : k === 'spark' ? <Sparkles className="w-4 h-4" />
     : k === 'ai' ? <ShieldCheck className="w-4 h-4" />
     : <AlertTriangle className="w-4 h-4" />;
@@ -287,7 +288,10 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ isOpen, onClos
   return (
     <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
       <div
-        className="w-full max-w-2xl bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 p-6 space-y-6 max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-2xl bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 p-6 space-y-6 max-h-[90dvh] overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-label={id ? 'Apa itu WikiGaleri' : 'What is WikiGaleri'}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between pb-3 border-b border-stone-100 dark:border-stone-800">
@@ -300,12 +304,13 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ isOpen, onClos
                 {id ? 'Apa itu WikiGaleri' : 'What is WikiGaleri'}
               </h3>
               <p className="text-xs text-stone-500 dark:text-stone-400">
-                {id ? 'Masalah yang dijawab, peran Gemini, dan batasannya' : 'The problem it solves, what Gemini does, and its limits'}
+                {id ? 'Masalah yang dijawab, peran Gemini, batasannya, dan pembuatnya' : 'The problem it solves, what Gemini does, its limits, and who made it'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
+            aria-label={id ? 'Tutup' : 'Close'}
             className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -322,6 +327,35 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ isOpen, onClos
               <p>{s.body}</p>
             </div>
           ))}
+
+          {/* Pembuat */}
+          <div className="p-3 rounded-lg bg-accent-50 dark:bg-accent-950/30 border border-accent-200 dark:border-accent-900/60">
+            <div className="flex items-center gap-2 font-semibold text-stone-900 dark:text-white mb-1">
+              <span className="text-accent-600 dark:text-accent-400">{iconFor('user')}</span>
+              <span>{id ? 'Dibuat oleh' : 'Created by'}</span>
+            </div>
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <strong className="font-semibold text-stone-900 dark:text-white">Affandy Murad</strong>
+              <a
+                href="https://affandymurad.github.io/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-accent-700 dark:text-accent-300 underline decoration-accent-300 hover:text-accent-900 dark:hover:text-accent-100"
+              >
+                {id ? 'Situs web' : 'Website'}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+              <a
+                href="https://meta.wikimedia.org/wiki/User:Affandy_Murad"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-accent-700 dark:text-accent-300 underline decoration-accent-300 hover:text-accent-900 dark:hover:text-accent-100"
+              >
+                {id ? 'Profil Wikimedia' : 'Wikimedia profile'}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </p>
+          </div>
         </div>
 
         <div className="flex justify-end pt-3 border-t border-stone-100 dark:border-stone-800">
