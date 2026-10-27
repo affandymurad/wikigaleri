@@ -59,6 +59,19 @@ interface PhotoCluster {
 
 const PREVIEW_PAGE_SIZE = 18;
 
+type LatLng = { lat: number; lng: number };
+
+/** Jarak dua titik dalam meter (haversine) */
+const distanceMeters = (a: LatLng, b: LatLng): number => {
+  const R = 6371000;
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+};
+const fmtCoord = (c: LatLng) => `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;
+
 export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   onOpenDetail,
   geminiApiKey,
@@ -75,6 +88,11 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
 
   // States
   const [mapCenter, setMapCenter] = useState<[number, number]>([-6.1753924, 106.8271528]); // [lat, lng] Default: Monumen Nasional (Monas), Jakarta
+  // Titik tengah tampilan peta saat ini (hanya berubah setelah peta berhenti digeser)
+  const [viewCenter, setViewCenter] = useState<LatLng>({ lat: -6.1753924, lng: 106.8271528 });
+  // Lebar peta dalam meter (dasar ambang "peta bergeser") dan titik pusat pencarian terakhir
+  const [mapSpanM, setMapSpanM] = useState<number>(0);
+  const [searchOrigin, setSearchOrigin] = useState<LatLng | null>(null);
   const [nearbyPhotos, setNearbyPhotos] = useState<CommonsMediaItem[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<CommonsMediaItem | null>(null);
   const [selectedCluster, setSelectedCluster] = useState<PhotoCluster | null>(null);
@@ -238,6 +256,9 @@ return () => ro.disconnect();
     map.on('moveend', () => {
       const c = map.getCenter();
       setMapCenter([c.lat, c.lng]);
+      setViewCenter({ lat: c.lat, lng: c.lng });
+      const b = map.getBounds();
+      setMapSpanM(distanceMeters({ lat: c.lat, lng: b.getWest() }, { lat: c.lat, lng: b.getEast() }));
     });
 
     // Click anywhere on map to set search center geotag
@@ -616,6 +637,28 @@ if (reqId === analysisRequestIdRef.current) setIsAnalyzingArea(false);
     }
   };
 
+  // Peta dianggap bergeser bila pusat tampilan menjauh dari titik pencarian lebih dari 20% lebar peta (minimal 250 m)
+  const shiftMeters = searchOrigin ? distanceMeters(viewCenter, searchOrigin) : 0;
+  const isShifted = hasSearched && !!searchOrigin && shiftMeters > Math.max(250, mapSpanM * 0.2);
+  const fmtDistance = (m: number) =>
+    m < 1000
+      ? `${Math.round(m / 10) * 10} m`
+      : `${(m / 1000).toLocaleString(language === 'en' ? 'en-GB' : 'id-ID', { maximumFractionDigits: 1 })} km`;
+
+  const handleSearchThisArea = () => {
+    // titik baru = pusat peta, jadi pin klik yang lama dilepas
+    if (centerPinRef.current) {
+      centerPinRef.current.remove();
+      centerPinRef.current = null;
+    }
+    void handleFindNearbyCommons();
+  };
+
+  const handleBackToSearchPoint = () => {
+    const map = mapInstanceRef.current;
+    if (map && searchOrigin) map.flyTo({ center: [searchOrigin.lng, searchOrigin.lat], duration: 900 });
+  };
+
   // 2. Find Nearby Commons Button Click Handler (Tidak otomatis memilih foto atau menjalankan Gemini)
   const handleFindNearbyCommons = async () => {
     setIsLoadingNearby(true);
@@ -631,7 +674,9 @@ setIsAnalyzingArea(false);
     setAreaAnalysisError(null);
 
     const map = mapInstanceRef.current;
-    const currentCenter = map ? map.getCenter() : { lng: mapCenter[1], lat: mapCenter[0] };
+    const pin = centerPinRef.current?.getLngLat();
+    const currentCenter = pin ?? (map ? map.getCenter() : { lng: mapCenter[1], lat: mapCenter[0] });
+    setSearchOrigin({ lat: currentCenter.lat, lng: currentCenter.lng });
 
     try {
       const results = await fetchNearbyCommonsMedia(currentCenter.lat, currentCenter.lng, 10000, 50);
@@ -675,7 +720,10 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
     }
 
     const map = mapInstanceRef.current;
-    const currentCenter = map ? map.getCenter() : { lng: mapCenter[1], lat: mapCenter[0] };
+    // Analisis harus mengikuti titik asal hasil pencarian, bukan posisi peta yang mungkin sudah bergeser
+    const currentCenter = searchOrigin
+      ? { lat: searchOrigin.lat, lng: searchOrigin.lng }
+      : centerPinRef.current?.getLngLat() ?? (map ? map.getCenter() : { lng: mapCenter[1], lat: mapCenter[0] });
     await executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, nearbyPhotos, true);
   };
 
@@ -935,6 +983,41 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
           </button>
         </div>
 
+        {/* Peta bergeser dari titik pencarian terakhir */}
+        {isShifted && searchOrigin && (
+          <div role="status" className="relative z-20 max-w-full pointer-events-auto bg-amber-50/95 dark:bg-amber-950/90 text-amber-900 dark:text-amber-100 border border-amber-300 dark:border-amber-800 px-3 py-2 rounded-lg text-xs shadow-sm flex flex-col gap-1.5 animate-fadeIn">
+            <span className="font-semibold">
+              {language === 'en'
+                ? `Map moved ${fmtDistance(shiftMeters)} from the search point`
+                : `Peta bergeser ${fmtDistance(shiftMeters)} dari titik pencarian`}
+            </span>
+            <span className="font-mono text-[11px] leading-snug opacity-90">
+              {language === 'en' ? 'Results are for' : 'Hasil untuk'} {fmtCoord(searchOrigin)}
+              <br />
+              {language === 'en' ? 'Map center' : 'Tengah peta'} {fmtCoord(viewCenter)}
+            </span>
+            <span className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={handleSearchThisArea}
+                disabled={isLoadingNearby}
+                className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-2.5 py-1 font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-60 cursor-pointer"
+              >
+                <Search className="h-3.5 w-3.5" />
+                {language === 'en' ? 'Search this area' : 'Cari di area ini'}
+              </button>
+              <button
+                type="button"
+                onClick={handleBackToSearchPoint}
+                className="inline-flex items-center gap-1.5 rounded-md border border-amber-400 px-2.5 py-1 font-medium transition-colors hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-900/60 cursor-pointer"
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                {language === 'en' ? 'Back to search point' : 'Kembali ke titik pencarian'}
+              </button>
+            </span>
+          </div>
+        )}
+
         {/* 3D Mode Active Status Badge Overlay */}
         {is3DMode && (
           <div className="relative z-20 max-w-full pointer-events-auto bg-accent-950/85 text-white border border-accent-500/30 px-3 py-1.5 rounded-lg text-xs font-mono shadow-sm flex items-center gap-2 animate-fadeIn pointer-events-none">
@@ -951,6 +1034,14 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
         {/* Floating Search Status & Interactive Click Hint (Bottom Left) */}
         <div className="absolute bottom-3 left-3 z-20 max-w-[calc(100%-4.75rem)] bg-white/90 dark:bg-stone-900/90 px-2.5 py-1 rounded-lg text-xs leading-snug text-stone-500 dark:text-stone-400 font-mono border border-stone-200/50 dark:border-stone-800/50 pointer-events-none">
           {t.nearby.radiusHint} • {t.nearby.clickMapHint}
+          <br />
+          {language === 'en' ? 'Map center' : 'Tengah peta'}: {fmtCoord(viewCenter)}
+          {searchOrigin && (
+            <>
+              {' • '}
+              {language === 'en' ? 'Search point' : 'Titik pencarian'}: {fmtCoord(searchOrigin)}
+            </>
+          )}
         </div>
 
         {/* Dismissable Detail Popup Overlay (Top Right inside map, offset to left of overlay buttons) */}
