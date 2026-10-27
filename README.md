@@ -106,7 +106,7 @@ firebase deploy --only hosting
 
 ### Run locally
 
-**Prerequisites:** Node.js 22 or newer.
+**Prerequisites:** Node.js 24 or newer (see `.nvmrc`).
 
 ```bash
 git clone https://github.com/affandymurad/wikigaleri.git
@@ -243,7 +243,7 @@ firebase deploy --only hosting
 
 ### Menjalankan secara lokal
 
-**Prasyarat:** Node.js 22 atau lebih baru.
+**Prasyarat:** Node.js 24 atau lebih baru (lihat `.nvmrc`).
 
 ```bash
 git clone https://github.com/affandymurad/wikigaleri.git

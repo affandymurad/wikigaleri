@@ -1168,19 +1168,30 @@ export async function fetchMediaExtraDetail(pageId: number, title: string): Prom
         };
       }
 
-      if (make) result.exif.push({ key: 'make', value: make });
-      if (model) result.exif.push({ key: 'model', value: model });
-      if (lens) result.exif.push({ key: 'lens', value: lens });
-      if (exposure) {
-        result.exif.push({
-          key: 'exposure',
-          value: exposure >= 1 ? `${Math.round(exposure * 10) / 10} sec` : `1/${Math.round(1 / exposure)} sec`,
-        });
-      }
-      if (fnum) result.exif.push({ key: 'fnumber', value: `f/${Math.round(fnum * 10) / 10}` });
-      if (iso) result.exif.push({ key: 'iso', value: iso });
-      if (dt) result.exif.push({ key: 'datetime', value: dt });
-      if (focal) result.exif.push({ key: 'focal', value: `${Math.round(focal * 10) / 10} mm` });
+      const round1 = (n: number) => Math.round(n * 10) / 10;
+      const push = (key: string, value: string) => { if (value) result.exif.push({ key, value }); };
+      const intOf = (name: string) => { const n = exifNumber(get(name)); return n === null ? '' : String(Math.round(n)); };
+
+      push('make', make);
+      push('model', model);
+      push('lens', lens);
+      push('software', get('Software'));
+      // Tanggal EXIF "2020:05:16 14:30:00" -> "2020-05-16 14:30:00"; dirapikan saat ditampilkan
+      push('datetime', dt.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3'));
+      push('program', intOf('ExposureProgram'));
+      if (exposure) push('exposure', exposure >= 1 ? `${round1(exposure)} s` : `1/${Math.round(1 / exposure)} s`);
+      if (fnum) push('fnumber', `f/${round1(fnum)}`);
+      push('iso', iso);
+      const focal35 = exifNumber(get('FocalLengthIn35mmFilm'));
+      if (focal) push('focal', `${round1(focal)} mm` + (focal35 ? ` (${Math.round(focal35)} mm eq. 35mm)` : ''));
+      const bias = exifNumber(get('ExposureBiasValue'));
+      if (bias !== null && !isNaN(bias)) push('bias', `${bias > 0 ? '+' : ''}${Math.round(bias * 100) / 100} EV`);
+      push('metering', intOf('MeteringMode'));
+      push('flash', intOf('Flash'));
+      push('whitebalance', intOf('WhiteBalance'));
+      push('colorspace', intOf('ColorSpace'));
+      push('artist', get('Artist'));
+      push('copyright', get('Copyright'));
     } catch (err) {
       console.warn('EXIF fetch failed', err);
     }

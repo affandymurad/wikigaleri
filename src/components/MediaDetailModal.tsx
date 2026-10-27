@@ -31,7 +31,8 @@ import { X, Download, Copy, Check, ExternalLink, Sparkles, ShieldCheck, BookOpen
 import { TalkPageView } from './MediaGrid';
 import { StlViewer } from './StlViewer';
 import { useFullscreen } from '../hooks/useFullscreen';
-import { Maximize2, Minimize2 } from 'lucide-react';
+import { useImageZoom } from '../hooks/useImageZoom';
+import { Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { PanoramaViewer } from './PanoramaViewer';
 
 import { Translations, Language } from '../i18n/translations';
@@ -65,6 +66,59 @@ const fmtDateTime = (iso: string) => {
   return isNaN(d.getTime())
     ? iso
     : d.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+const EXIF_LABELS: Record<string, [string, string]> = {
+  make: ['Produsen Kamera', 'Camera make'],
+  model: ['Model Kamera', 'Camera model'],
+  lens: ['Lensa', 'Lens'],
+  software: ['Perangkat Lunak', 'Software'],
+  datetime: ['Waktu Pengambilan', 'Date taken'],
+  program: ['Mode Eksposur', 'Exposure program'],
+  exposure: ['Kecepatan Rana', 'Shutter speed'],
+  fnumber: ['Bukaan (F-number)', 'Aperture (f-number)'],
+  iso: ['ISO', 'ISO'],
+  focal: ['Panjang Fokus', 'Focal length'],
+  bias: ['Kompensasi Eksposur', 'Exposure compensation'],
+  metering: ['Mode Pengukuran', 'Metering mode'],
+  flash: ['Lampu Kilat', 'Flash'],
+  whitebalance: ['Keseimbangan Putih', 'White balance'],
+  colorspace: ['Ruang Warna', 'Color space'],
+  artist: ['Fotografer (EXIF)', 'Photographer (EXIF)'],
+  copyright: ['Hak Cipta (EXIF)', 'Copyright (EXIF)'],
+};
+const EXIF_ENUMS: Record<string, Record<string, [string, string]>> = {
+  program: {
+    '1': ['Manual', 'Manual'], '2': ['Normal (program)', 'Normal program'], '3': ['Prioritas bukaan', 'Aperture priority'],
+    '4': ['Prioritas rana', 'Shutter priority'], '5': ['Kreatif', 'Creative'], '6': ['Aksi', 'Action'],
+    '7': ['Potret', 'Portrait'], '8': ['Lanskap', 'Landscape'],
+  },
+  metering: {
+    '1': ['Rata-rata', 'Average'], '2': ['Berpusat tengah', 'Center-weighted'], '3': ['Titik', 'Spot'],
+    '4': ['Multi-titik', 'Multi-spot'], '5': ['Matriks / pola', 'Matrix / pattern'], '6': ['Parsial', 'Partial'],
+  },
+  whitebalance: { '0': ['Otomatis', 'Auto'], '1': ['Manual', 'Manual'] },
+  colorspace: { '1': ['sRGB', 'sRGB'], '65535': ['Tidak dikalibrasi', 'Uncalibrated'] },
+};
+
+/** Merapikan nilai EXIF mentah (kode angka, tanggal) menjadi teks yang mudah dibaca sesuai bahasa. */
+const formatExifValue = (key: string, value: string, en: boolean): string => {
+  if (key === 'flash') {
+    const n = parseInt(value, 10);
+    if (isNaN(n)) return value;
+    return n & 1 ? (en ? 'Fired' : 'Menyala') : (en ? 'Did not fire' : 'Tidak menyala');
+  }
+  const map = EXIF_ENUMS[key];
+  if (map) return map[value]?.[en ? 1 : 0] ?? value;
+  if (key === 'datetime') {
+    const m = value.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+    if (!m) return value;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]));
+    return isNaN(d.getTime())
+      ? value
+      : d.toLocaleString(en ? 'en-GB' : 'id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+  return value;
 };
 
 /** Riwayat versi berkas (unggahan ulang) + riwayat suntingan halaman deskripsi. */
@@ -234,6 +288,8 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   const [extraDetail, setExtraDetail] = useState<MediaExtraDetail | null>(null);
   // Layar penuh untuk foto biasa
   const photoFs = useFullscreen<HTMLDivElement>();
+  // Zoom foto: cubit, roda mouse, ketuk dua kali, seret, tombol +/-
+  const photoZoom = useImageZoom<HTMLImageElement>(item?.id ?? '', photoFs.active);
   const [isExtraLoading, setIsExtraLoading] = useState<boolean>(false);
   const [catsOpen, setCatsOpen] = useState<boolean>(true);
 
@@ -668,7 +724,11 @@ useEffect(() => {
                   )}
                   <img
                     key={item.id}
+                    {...photoZoom.handlers}
+                    style={photoZoom.style}
+                    draggable={false}
                     ref={(el) => {
+                      photoZoom.ref.current = el;
                       if (el && el.complete && el.naturalWidth > 0) setLoadedMediaId(String(item.id));
                     }}
                     src={previewSrc}
@@ -684,6 +744,42 @@ useEffect(() => {
                           : 'max-h-[min(60dvh,calc(92dvh-10rem))] lg:max-h-full max-w-full object-contain rounded-lg ring-1 ring-white/15 shadow-sm shadow-black/60 animate-in fade-in'
                     }
                   />
+                  {!isMediaLoading && (
+                    <div className="absolute bottom-2 left-2 z-10 inline-flex items-center overflow-hidden rounded-md border border-white/15 bg-black/50 text-white" onPointerDown={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={photoZoom.zoomOut}
+                        disabled={!photoZoom.zoomed}
+                        title={language === 'en' ? 'Zoom out' : 'Perkecil'}
+                        aria-label={language === 'en' ? 'Zoom out' : 'Perkecil'}
+                        className="p-1.5 transition-colors hover:bg-black/70 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                      >
+                        <ZoomOut className="h-4 w-4" />
+                      </button>
+                      <span className="min-w-[2.75rem] text-center text-xs font-medium tabular-nums" aria-live="polite">{Math.round(photoZoom.scale * 100)}%</span>
+                      <button
+                        type="button"
+                        onClick={photoZoom.zoomIn}
+                        disabled={!photoZoom.canZoomIn}
+                        title={language === 'en' ? 'Zoom in' : 'Perbesar'}
+                        aria-label={language === 'en' ? 'Zoom in' : 'Perbesar'}
+                        className="p-1.5 transition-colors hover:bg-black/70 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                      </button>
+                      {photoZoom.zoomed && (
+                        <button
+                          type="button"
+                          onClick={photoZoom.reset}
+                          title={language === 'en' ? 'Reset zoom' : 'Setel ulang zoom'}
+                          aria-label={language === 'en' ? 'Reset zoom' : 'Setel ulang zoom'}
+                          className="border-l border-white/15 p-1.5 transition-colors hover:bg-black/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {!isMediaLoading && (
                     <button
                       type="button"
@@ -1180,33 +1276,25 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                 <div className="space-y-2">
                   <h4 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-stone-900 dark:text-white">
                     <Camera className="h-3.5 w-3.5 text-stone-500" />
-                    Kamera &amp; Data EXIF
+                    {language === 'en' ? 'Camera & EXIF data' : 'Kamera & Data EXIF'}
                     {isExtraLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-stone-400" />}
                   </h4>
                   <div className="divide-y divide-stone-200 rounded-lg border border-stone-200 bg-stone-50 px-3.5 dark:divide-stone-700 dark:border-stone-800 dark:bg-stone-800/50">
-                    {([
-                      ['make', 'Produsen Kamera'],
-                      ['model', 'Model Kamera'],
-                      ['lens', 'Lensa'],
-                      ['exposure', 'Waktu Pencahayaan'],
-                      ['fnumber', 'Bukaan (F-number)'],
-                      ['iso', 'ISO'],
-                      ['datetime', 'Waktu Data Dibuat'],
-                      ['focal', 'Panjang Fokus Lensa'],
-                    ] as [string, string][]).map(([key, label]) => {
+                    {Object.keys(EXIF_LABELS).map((key) => {
                       const found = extraDetail?.exif.find((x) => x.key === key);
                       if (!found) return null;
+                      const isEn = language === 'en';
                       return (
                         <div key={key} className="flex items-start justify-between gap-3 py-2.5">
-                          <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
+                          <span className="flex shrink-0 items-center gap-2 text-stone-500 dark:text-stone-400">
                             {key === 'make' || key === 'model' ? (
                               <Camera className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />
                             ) : (
                               <Info className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />
                             )}
-                            {label}
+                            {EXIF_LABELS[key][isEn ? 1 : 0]}
                           </span>
-                          <span className="text-right font-medium text-stone-800 dark:text-stone-100">{found.value}</span>
+                          <span className="min-w-0 break-words text-right font-medium text-stone-800 dark:text-stone-100">{formatExifValue(key, found.value, isEn)}</span>
                         </div>
                       );
                     })}
@@ -1214,7 +1302,7 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                       <div className="flex items-start justify-between gap-3 py-2.5">
                         <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
                           <Info className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />
-                          Resolusi
+                          {language === 'en' ? 'Resolution' : 'Resolusi'}
                         </span>
                         <span className="text-right font-medium text-stone-800 dark:text-stone-100">
                           {item.width} × {item.height} px
@@ -1225,16 +1313,16 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                       <div className="flex items-start justify-between gap-3 py-2.5">
                         <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
                           <Info className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />
-                          Ukuran Berkas
+                          {language === 'en' ? 'File size' : 'Ukuran Berkas'}
                         </span>
                         <span className="text-right font-medium text-stone-800 dark:text-stone-100">{formatBytes(item.fileSize)}</span>
                       </div>
                     )}
-                    {item.date && (
+                    {item.date && !extraDetail?.exif.some((x) => x.key === 'datetime') && (
                       <div className="flex items-start justify-between gap-3 py-2.5">
                         <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
                           <Info className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />
-                          Tanggal Pengambilan
+                          {language === 'en' ? 'Date taken' : 'Tanggal Pengambilan'}
                         </span>
                         <span className="text-right font-medium text-stone-800 dark:text-stone-100">{item.date}</span>
                       </div>
@@ -1243,7 +1331,7 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                       <div className="flex items-start justify-between gap-3 py-2.5">
                         <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
                           <Info className="h-3.5 w-3.5 text-accent-600 dark:text-accent-400" />
-                          Tipe MIME
+                          {language === 'en' ? 'MIME type' : 'Tipe MIME'}
                         </span>
                         <span className="text-right font-medium text-stone-800 dark:text-stone-100">{item.mimeType}</span>
                       </div>
@@ -1253,7 +1341,7 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                         <span className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
                           <MapPin className="h-4 w-4 text-red-500" />
                           <span>
-                            <span className="block text-xs">Geotag / Koordinat GPS</span>
+                            <span className="block text-xs">{language === 'en' ? 'Geotag / GPS coordinates' : 'Geotag / Koordinat GPS'}</span>
                             <span className="font-mono font-medium text-stone-800 dark:text-stone-100">
                               {item.latitude.toFixed(6)}, {item.longitude.toFixed(6)}
                             </span>
@@ -1265,7 +1353,7 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                           rel="noopener noreferrer"
                           className="shrink-0 rounded-full border border-stone-300 px-4 py-1.5 text-xs font-semibold text-accent-700 hover:bg-white dark:border-stone-600 dark:text-accent-300 dark:hover:bg-stone-700"
                         >
-                          Peta
+                          {language === 'en' ? 'Map' : 'Peta'}
                         </a>
                       </div>
                     )}
