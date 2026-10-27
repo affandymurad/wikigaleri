@@ -132,7 +132,7 @@ Open http://localhost:3000. Search, filters, credit lines, the map and bookmarks
 
 ```
 src/
-  components/   UI: gallery, detail modal, nearby map, bookmarks, guides
+  components/   UI: gallery, file detail page (/file/<id>), nearby map, bookmarks, guides
   hooks/        Commons gallery, language, dark mode
   services/     Wikimedia API client, Gemini client and Firebase setup
   i18n/         Indonesian and English strings
@@ -269,7 +269,7 @@ Buka http://localhost:3000. Pencarian, filter, teks kredit, peta, dan markah lan
 
 ```
 src/
-  components/   Antarmuka: galeri, modal detail, peta terdekat, markah, panduan
+  components/   Antarmuka: galeri, halaman detail berkas (/file/<id>), peta terdekat, markah, panduan
   hooks/        Galeri Commons, bahasa, mode gelap
   services/     Klien API Wikimedia, klien Gemini, dan pengaturan Firebase
   i18n/         Teks bahasa Indonesia dan Inggris

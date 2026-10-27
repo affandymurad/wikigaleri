@@ -768,6 +768,31 @@ export async function searchCommonsMedia(
   }
 }
 
+/** Ambil satu berkas lewat pageid Commons (dipakai tautan langsung /file/<id>) */
+export async function fetchMediaDetailByPageId(pageId: number): Promise<CommonsMediaItem | null> {
+  const params = new URLSearchParams({
+    action: 'query',
+    format: 'json',
+    origin: '*',
+    pageids: String(pageId),
+    prop: 'imageinfo|info|categories',
+    cllimit: '50',
+    iiprop: 'url|size|mime|extmetadata|dimensions',
+    iiurlwidth: '1280',
+  });
+  try {
+    const response = await commonsFetch(`${COMMONS_API_BASE}?${params.toString()}`);
+    if (!response.ok) throw new Error('Network error');
+    const data = await response.json();
+    const pages: CommonsPage[] = Object.values(data.query?.pages || {});
+    if (pages.length === 0 || !pages[0].imageinfo || pages[0].ns !== 6) return null;
+    return parseCommonsPage(pages[0]);
+  } catch (err) {
+    console.error('Error fetching file by page id:', err);
+    return null;
+  }
+}
+
 /**
  * Fetch single media details by file title
  */

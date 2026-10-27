@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2, Maximize2, Minimize2, Pause, Play, RotateCcw, Sparkles } from 'lucide-react';
+import { Compass, Loader2, Maximize2, Minimize2, Pause, Play, RotateCcw, Sparkles } from 'lucide-react';
 import { Language } from '../i18n/translations';
 import { useFullscreen } from '../hooks/useFullscreen';
 
@@ -37,6 +37,8 @@ interface ViewerApi {
   reset: () => void;
   setAutoRotate: (on: boolean) => void;
   loadHd: () => Promise<void>;
+  /** Nyalakan/matikan kendali giroskop; hasilnya status akhir */
+  setGyro: (on: boolean) => Promise<'on' | 'off' | 'denied' | 'unsupported'>;
 }
 
 /** Pilih URL gambar untuk tekstur: asli bila cukup kecil, kalau tidak thumbnail baku Commons */
@@ -76,9 +78,12 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [autoRotate, setAutoRotateState] = useState<boolean>(true);
   const [attempt, setAttempt] = useState<number>(0);
+  const [gyroState, setGyroState] = useState<'off' | 'on' | 'denied' | 'unsupported'>('off');
   const [hdState, setHdState] = useState<'none' | 'available' | 'loading' | 'done'>('none');
 
   const coarse = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+  // Tombol giroskop hanya untuk perangkat sentuh yang punya API sensor orientasi
+  const gyroAvailable = coarse && typeof window !== 'undefined' && 'DeviceOrientationEvent' in window;
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -89,6 +94,7 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
     setPhase('loading');
     setErrorMsg('');
     setHdState('none');
+    setGyroState('off');
 
     (async () => {
       try {
@@ -134,6 +140,51 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
         let vLon = 0;
         let vLat = 0;
         let auto = true;
+
+        // Giroskop: kamera = qOff * qDev. qOff dikalibrasi saat sensor pertama terbaca agar tampilan tidak melompat,
+        // dan seretan satu jari hanya memutar qOff (yaw) selama giroskop menyala.
+        let gyroOn = false;
+        let haveDev = false;
+        const qDev = new THREE.Quaternion();
+        const qOff = new THREE.Quaternion();
+        const qTarget = new THREE.Quaternion();
+        const qTmp = new THREE.Quaternion();
+        const qScreen = new THREE.Quaternion();
+        const qBack = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // kamera menghadap keluar dari belakang perangkat
+        const euler = new THREE.Euler();
+        const yAxis = new THREE.Vector3(0, 1, 0);
+        const zAxis = new THREE.Vector3(0, 0, 1);
+        const dir = new THREE.Vector3();
+        const screenAngle = () =>
+          (window.screen.orientation && typeof window.screen.orientation.angle === 'number'
+            ? window.screen.orientation.angle
+            : Number((window as unknown as { orientation?: number }).orientation) || 0);
+        const onOrient = (e: DeviceOrientationEvent) => {
+          if (e.alpha == null || e.beta == null || e.gamma == null) return;
+          const d2r = THREE.MathUtils.degToRad;
+          euler.set(d2r(e.beta), d2r(e.alpha), -d2r(e.gamma), 'YXZ');
+          qDev.setFromEuler(euler);
+          qDev.multiply(qBack);
+          qDev.multiply(qScreen.setFromAxisAngle(zAxis, -d2r(screenAngle())));
+          if (!haveDev) {
+            haveDev = true;
+            qOff.copy(camera.quaternion).multiply(qTmp.copy(qDev).invert());
+          }
+        };
+        let gyroTimer = 0;
+        const stopGyro = () => {
+          window.removeEventListener('deviceorientation', onOrient);
+          clearTimeout(gyroTimer);
+          if (gyroOn && haveDev) {
+            // lanjutkan dari arah pandang terakhir untuk mode seret biasa
+            camera.getWorldDirection(dir);
+            lat = THREE.MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, dir.y))));
+            lon = THREE.MathUtils.radToDeg(Math.atan2(dir.z, dir.x));
+            clampLat();
+          }
+          gyroOn = false;
+          haveDev = false;
+        };
 
         const loader = new THREE.TextureLoader();
         loader.setCrossOrigin('anonymous');
@@ -205,7 +256,10 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
           if (!prev) return;
           const cur = { x: e.clientX, y: e.clientY };
           pointers.set(e.pointerId, cur);
-          if (pointers.size === 1) {
+          if (pointers.size === 1 && gyroOn) {
+            const degPerPx = fov / Math.max(1, host.clientHeight);
+            qOff.premultiply(qTmp.setFromAxisAngle(yAxis, THREE.MathUtils.degToRad((cur.x - prev.x) * degPerPx)));
+          } else if (pointers.size === 1) {
             const degPerPx = fov / Math.max(1, host.clientHeight);
             const dLon = -(cur.x - prev.x) * degPerPx;
             const dLat = (cur.y - prev.y) * degPerPx;
@@ -266,7 +320,9 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
           raf = requestAnimationFrame(loop);
           const dt = Math.min(64, now - last);
           last = now;
-          if (auto) {
+          if (gyroOn) {
+            // diam sampai sensor pertama terbaca
+          } else if (auto) {
             lon += dt * 0.012;
           } else if (pointers.size === 0 && (Math.abs(vLon) > 0.01 || Math.abs(vLat) > 0.01)) {
             // inersia setelah dilepas
@@ -278,9 +334,14 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
           }
           camera.fov = fov;
           camera.updateProjectionMatrix();
-          const phi = THREE.MathUtils.degToRad(90 - lat);
-          const theta = THREE.MathUtils.degToRad(lon);
-          camera.lookAt(500 * Math.sin(phi) * Math.cos(theta), 500 * Math.cos(phi), 500 * Math.sin(phi) * Math.sin(theta));
+          if (gyroOn && haveDev) {
+            qTarget.copy(qOff).multiply(qDev);
+            camera.quaternion.slerp(qTarget, 0.4);
+          } else if (!gyroOn) {
+            const phi = THREE.MathUtils.degToRad(90 - lat);
+            const theta = THREE.MathUtils.degToRad(lon);
+            camera.lookAt(500 * Math.sin(phi) * Math.cos(theta), 500 * Math.cos(phi), 500 * Math.sin(phi) * Math.sin(theta));
+          }
           renderer.render(scene, camera);
         };
         raf = requestAnimationFrame(loop);
@@ -290,6 +351,13 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
 
         apiRef.current = {
           reset: () => {
+            if (gyroOn) {
+              // arahkan ulang: kalibrasi ulang ke tengah gambar
+              camera.quaternion.setFromEuler(euler.set(0, 0, 0));
+              camera.lookAt(500 * Math.cos(THREE.MathUtils.degToRad(lon0)), 0, 500 * Math.sin(THREE.MathUtils.degToRad(lon0)));
+              haveDev = false;
+              return;
+            }
             lon = lon0;
             lat = lat0;
             fov = fov0;
@@ -298,6 +366,47 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
           },
           setAutoRotate: (on) => {
             auto = on;
+          },
+          setGyro: async (on) => {
+            if (!on) {
+              stopGyro();
+              return 'off';
+            }
+            const DOE = (window as unknown as { DeviceOrientationEvent?: { requestPermission?: () => Promise<string> } }).DeviceOrientationEvent;
+            if (!window.isSecureContext || !DOE) return 'unsupported';
+            // iOS 13+: izin harus diminta dari ketukan pengguna
+            if (typeof DOE.requestPermission === 'function') {
+              try {
+                if ((await DOE.requestPermission()) !== 'granted') return 'denied';
+              } catch {
+                return 'denied';
+              }
+            }
+            auto = false;
+            setAutoRotateState(false);
+            vLon = 0;
+            vLat = 0;
+            gyroOn = true;
+            haveDev = false;
+            window.addEventListener('deviceorientation', onOrient);
+            // tidak ada data sensor (mis. desktop): batalkan
+            return new Promise((resolve) => {
+              gyroTimer = window.setTimeout(() => {
+                if (!haveDev) {
+                  stopGyro();
+                  resolve('unsupported');
+                }
+              }, 1500);
+              const poll = window.setInterval(() => {
+                if (haveDev) {
+                  clearInterval(poll);
+                  clearTimeout(gyroTimer);
+                  resolve('on');
+                } else if (!gyroOn) {
+                  clearInterval(poll);
+                }
+              }, 100);
+            });
           },
           loadHd: async () => {
             setHdState('loading');
@@ -316,6 +425,7 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
         };
 
         teardown = () => {
+          stopGyro();
           cancelAnimationFrame(raf);
           ro.disconnect();
           canvas.removeEventListener('pointerdown', onDown);
@@ -356,7 +466,18 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
   }, [fileUrl, attempt]);
 
 
+  const toggleGyro = async () => {
+    if (!apiRef.current) return;
+    const next = await apiRef.current.setGyro(gyroState !== 'on');
+    setGyroState(next);
+    if (next === 'on') setAutoRotateState(false);
+  };
+
   const toggleAutoRotate = () => {
+    if (gyroState === 'on') {
+      void apiRef.current?.setGyro(false);
+      setGyroState('off');
+    }
     const next = !autoRotate;
     setAutoRotateState(next);
     apiRef.current?.setAutoRotate(next);
@@ -420,6 +541,18 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
               {autoRotate ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
               <span>{en ? 'Auto-rotate' : 'Putar otomatis'}</span>
             </button>
+            {gyroAvailable && (
+              <button
+                type="button"
+                onClick={() => void toggleGyro()}
+                aria-pressed={gyroState === 'on'}
+                className={`${btn} ${gyroState === 'on' ? 'border-accent-300/60 bg-accent-600/70' : ''}`}
+                title={en ? 'Look around by moving your phone' : 'Lihat sekeliling dengan menggerakkan ponsel'}
+              >
+                <Compass className="h-3.5 w-3.5" />
+                <span>{en ? 'Motion sensor' : 'Giroskop'}</span>
+              </button>
+            )}
             {hdState !== 'none' && hdState !== 'done' && (
               <button type="button" onClick={() => void apiRef.current?.loadHd()} disabled={hdState === 'loading'} className={`${btn} disabled:opacity-60`}>
                 {hdState === 'loading' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
@@ -433,6 +566,13 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
               </button>
             )}
           </div>
+          {(gyroState === 'denied' || gyroState === 'unsupported') && (
+            <p role="status" className="absolute left-2 right-2 top-2 rounded bg-black/70 px-2.5 py-1.5 text-xs text-stone-100">
+              {gyroState === 'denied'
+                ? en ? 'Motion sensor permission was denied. Allow it in the browser settings to look around by moving your phone.' : 'Izin sensor gerak ditolak. Izinkan di pengaturan browser untuk melihat sekeliling dengan menggerakkan ponsel.'
+                : en ? 'This device or connection does not provide motion sensor data (HTTPS is required).' : 'Perangkat atau koneksi ini tidak menyediakan data sensor gerak (perlu HTTPS).'}
+            </p>
+          )}
           <p className="pointer-events-none absolute left-2 top-2 hidden rounded bg-black/40 px-2 py-1 text-xs text-stone-200 sm:block">
             {coarse
               ? en ? 'Drag to look around · pinch to zoom' : 'Seret untuk melihat sekeliling · cubit untuk zoom'

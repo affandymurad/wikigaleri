@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useLanguage } from './hooks/useLanguage';
 import { useGeminiApiKey } from './hooks/useGeminiApiKey';
@@ -16,7 +16,7 @@ import { LicenseGuideModal, WikimediaTermsModal, DisclaimerModal } from './compo
 import { AttributionQuickCopyModal } from './components/AttributionQuickCopyModal';
 import { CategoryListSection } from './components/CategoryListSection';
 import { CommonsMediaItem, CategorySearchMode } from './types/wikimedia';
-import { CURATED_TOPICS, normalizeCategoryName } from './services/wikimediaApi';
+import { CURATED_TOPICS, normalizeCategoryName, fetchMediaDetailByPageId } from './services/wikimediaApi';
 import { ExternalLink, Search, MapPin, LayoutGrid, FolderTree, FolderRoot, Radio, Bookmark, Shuffle } from 'lucide-react';
 
 export default function App() {
@@ -89,7 +89,44 @@ export default function App() {
   const [isTermsOpen, setIsTermsOpen] = useState<boolean>(false);
   const [isDisclaimerOpen, setIsDisclaimerOpen] = useState<boolean>(false);
 
+  // ----- Halaman detail berkas: /file/<pageid>, tetap satu SPA (state pencarian dan posisi gulir terjaga) -----
+  const itemsRef = useRef<CommonsMediaItem[]>([]);
+  const savedScroll = useRef(0);
+  const restoreScroll = useRef(false);
+  const parseDetailId = (): number | null => {
+    const m = window.location.pathname.match(/^\/file\/(\d+)\/?$/);
+    return m ? Number(m[1]) : null;
+  };
+  const openDetail = (item: CommonsMediaItem) => {
+    savedScroll.current = window.scrollY;
+    window.history.pushState({ detail: item.id }, '', `/file/${item.id}`);
+    setSelectedDetailItem(item);
+    window.scrollTo({ top: 0 });
+  };
+  // Pindah antar berkas: ganti entri riwayat agar tombol kembali langsung ke daftar
+  const switchDetail = (item: CommonsMediaItem) => {
+    window.history.replaceState({ detail: item.id }, '', `/file/${item.id}`);
+    setSelectedDetailItem(item);
+    window.scrollTo({ top: 0 });
+  };
+  const closeDetail = () => {
+    if (window.history.state?.detail) {
+      restoreScroll.current = true;
+      window.history.back();
+    } else {
+      // dibuka lewat tautan langsung: tidak ada halaman sebelumnya di aplikasi ini
+      window.history.replaceState(null, '', '/');
+      setSelectedDetailItem(null);
+    }
+  };
+  // Keluar dari halaman detail untuk berpindah ke hasil pencarian (tanpa memulihkan posisi gulir)
+  const clearDetail = () => {
+    if (parseDetailId() !== null) window.history.replaceState(null, '', '/');
+    setSelectedDetailItem(null);
+  };
+
   const handleResetToHome = () => {
+    clearDetail();
     setLiveFeed(false);
     setRandomMode(false);
     setUserMode(false);
@@ -154,7 +191,7 @@ export default function App() {
   const openUserSearch = (username: string) => {
     const clean = username.replace(/^(User|Pengguna):/i, '').trim();
     if (!clean) return;
-    setSelectedDetailItem(null);
+    clearDetail();
     setShowSavedOnly(false);
     setLiveFeed(false);
     setActiveMode('keywords');
@@ -168,7 +205,7 @@ export default function App() {
   const openCategorySearch = (catName: string) => {
     const clean = normalizeCategoryName(catName);
     if (!clean) return;
-    setSelectedDetailItem(null);
+    clearDetail();
     setShowSavedOnly(false);
     setLiveFeed(false);
     setUserMode(false);
@@ -191,15 +228,59 @@ export default function App() {
 
   const handleNextDetail = () => {
     if (hasNextDetail) {
-      setSelectedDetailItem(items[currentDetailIndex + 1]);
+      switchDetail(items[currentDetailIndex + 1]);
     }
   };
 
   const handlePrevDetail = () => {
     if (hasPrevDetail) {
-      setSelectedDetailItem(items[currentDetailIndex - 1]);
+      switchDetail(items[currentDetailIndex - 1]);
     }
   };
+
+  itemsRef.current = items;
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadById = async (id: number) => {
+      const found = itemsRef.current.find((i) => i.id === id);
+      const item = found ?? (await fetchMediaDetailByPageId(id));
+      if (cancelled) return;
+      if (item) {
+        setSelectedDetailItem(item);
+      } else {
+        window.history.replaceState(null, '', '/');
+        setSelectedDetailItem(null);
+      }
+    };
+    const initial = parseDetailId();
+    if (initial !== null) void loadById(initial);
+    const onPop = () => {
+      const id = parseDetailId();
+      if (id === null) setSelectedDetailItem(null);
+      else void loadById(id);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('popstate', onPop);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Judul tab browser mengikuti berkas yang dibuka; posisi gulir daftar dipulihkan saat kembali
+  useEffect(() => {
+    const base = document.title.replace(/^.* \u2013 (?=WikiGaleri)/, '');
+    if (selectedDetailItem) {
+      document.title = `${selectedDetailItem.cleanTitle} \u2013 ${base}`;
+      return () => { document.title = base; };
+    }
+    if (restoreScroll.current) {
+      restoreScroll.current = false;
+      const y = savedScroll.current;
+      requestAnimationFrame(() => window.scrollTo({ top: y }));
+    }
+  }, [selectedDetailItem]);
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 flex flex-col font-sans transition-colors duration-200">
@@ -219,8 +300,36 @@ export default function App() {
         t={t}
       />
 
+      {selectedDetailItem && (
+        <div className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <MediaDetailModal
+            item={selectedDetailItem}
+            onClose={closeDetail}
+            geminiApiKey={geminiApiKey}
+            onOpenGeminiModal={() => {
+              clearDetail();
+              setIsGeminiModalOpen(true);
+            }}
+            onNext={currentDetailIndex >= 0 ? handleNextDetail : undefined}
+            onPrev={currentDetailIndex >= 0 ? handlePrevDetail : undefined}
+            hasNext={hasNextDetail}
+            hasPrev={hasPrevDetail}
+            isSaved={isItemSaved(selectedDetailItem.id)}
+            onToggleSave={toggleSaveItem}
+            onSearchUser={openUserSearch}
+            onSearchCategory={openCategorySearch}
+            isUserSaved={isUserSaved}
+            isCategorySaved={(c) => isCategorySaved(normalizeCategoryName(c))}
+            onToggleUserSave={toggleUser}
+            onToggleCategorySave={(c) => toggleCategory(normalizeCategoryName(c))}
+            t={t}
+            language={language}
+          />
+        </div>
+      )}
+
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 ${selectedDetailItem ? 'hidden' : ''}`}>
         
         {/* Hero Section & Search Header */}
         <section className="space-y-6 pt-2">
@@ -479,7 +588,7 @@ export default function App() {
         {activeMode === 'nearby' && (
           <section aria-label="Foto Terdekat" className="space-y-6">
             <NearbyPhotosSection
-              onOpenDetail={(item) => setSelectedDetailItem(item)}
+              onOpenDetail={openDetail}
               geminiApiKey={geminiApiKey}
               onOpenGeminiModal={() => setIsGeminiModalOpen(true)}
               language={language}
@@ -537,7 +646,7 @@ export default function App() {
             onNextPage={nextPage}
             onPrevPage={prevPage}
             onRetry={refresh}
-            onOpenDetail={(item) => setSelectedDetailItem(item)}
+            onOpenDetail={openDetail}
             onQuickCopyAttribution={(item) => setQuickAttributionItem(item)}
             isItemSaved={isItemSaved}
             onToggleSaveItem={toggleSaveItem}
@@ -575,7 +684,7 @@ export default function App() {
               onNextPage={nextPage}
               onPrevPage={prevPage}
               onRetry={refresh}
-              onOpenDetail={(item) => setSelectedDetailItem(item)}
+              onOpenDetail={openDetail}
               onQuickCopyAttribution={(item) => setQuickAttributionItem(item)}
               isItemSaved={isItemSaved}
               onToggleSaveItem={toggleSaveItem}
@@ -614,7 +723,7 @@ export default function App() {
                 onNextPage={nextPage}
                 onPrevPage={prevPage}
                 onRetry={refresh}
-                onOpenDetail={(item) => setSelectedDetailItem(item)}
+                onOpenDetail={openDetail}
                 onQuickCopyAttribution={(item) => setQuickAttributionItem(item)}
                 isItemSaved={isItemSaved}
                 onToggleSaveItem={toggleSaveItem}
@@ -668,31 +777,6 @@ export default function App() {
       </footer>
 
       {/* Modals */}
-      {selectedDetailItem && (
-        <MediaDetailModal
-          item={selectedDetailItem}
-          onClose={() => setSelectedDetailItem(null)}
-          geminiApiKey={geminiApiKey}
-          onOpenGeminiModal={() => {
-            setSelectedDetailItem(null);
-            setIsGeminiModalOpen(true);
-          }}
-          onNext={handleNextDetail}
-          onPrev={handlePrevDetail}
-          hasNext={hasNextDetail}
-          hasPrev={hasPrevDetail}
-          isSaved={isItemSaved(selectedDetailItem.id)}
-          onToggleSave={toggleSaveItem}
-          onSearchUser={openUserSearch}
-          onSearchCategory={openCategorySearch}
-          isUserSaved={isUserSaved}
-          isCategorySaved={(c) => isCategorySaved(normalizeCategoryName(c))}
-          onToggleUserSave={toggleUser}
-          onToggleCategorySave={(c) => toggleCategory(normalizeCategoryName(c))}
-          t={t}
-          language={language}
-        />
-      )}
 
       {quickAttributionItem && (
         <AttributionQuickCopyModal

@@ -628,13 +628,23 @@ useEffect(() => {
   const showPanoViewer = item.mediaType === 'image' && (item.panorama === 'sphere' || !!panoInfo) && !isExtraLoading;
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/70 flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-      {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-5xl bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 overflow-hidden flex flex-col max-h-[92dvh] lg:h-[88dvh]">
+    <div className="w-full animate-fadeIn">
+      {/* Kartu halaman detail */}
+      <div className="relative w-full bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 overflow-hidden flex flex-col lg:h-[calc(100dvh-8.5rem)] lg:min-h-[620px]">
         
         {/* Header Bar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/50">
           <div className="flex items-center gap-3 min-w-0 pr-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-stone-200 px-2.5 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 dark:border-stone-800 dark:text-stone-300 dark:hover:bg-stone-800"
+              aria-label={language === 'en' ? 'Back to results (Escape)' : 'Kembali ke hasil (Escape)'}
+              title={language === 'en' ? 'Back to results (Escape)' : 'Kembali ke hasil (Escape)'}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">{language === 'en' ? 'Back' : 'Kembali'}</span>
+            </button>
             <h2 className="font-display font-semibold text-base sm:text-lg text-stone-900 dark:text-white truncate">
               {item.cleanTitle}
             </h2>
@@ -659,13 +669,6 @@ useEffect(() => {
               </button>
             )}
 
-            <button
-              onClick={onClose}
-              className="p-2 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors shrink-0"
-              aria-label={language === 'en' ? 'Close (Escape)' : 'Tutup modal (Escape)'}
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
 
