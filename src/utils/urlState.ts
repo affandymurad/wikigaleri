@@ -1,0 +1,139 @@
+import type { CategorySearchMode, CommonsMediaItem, LicenseCategory, MediaType, SortOrder } from '../types/wikimedia';
+
+/**
+ * Pemetaan state pencarian <-> URL.
+ *
+ *   /                                    beranda (kata kunci bawaan)
+ *   /?q=batik&type=image&license=pd      kata kunci + filter jenis media + lisensi
+ *   /?user=Affandy_Murad&view=talk       unggahan atau halaman pembicaraan pengguna
+ *   /?mode=categories&q=Batik&cat=subcategories
+ *   /?mode=nearby | live | random | bookmarks
+ *   /file/Waterworks_Museum_(85472)bw.jpg  detail berkas (nama berkas seperti di Commons)
+ */
+
+export const DEFAULT_QUERY = 'Wikilokal';
+
+export type UrlMode = 'keywords' | 'nearby' | 'categories' | 'live' | 'random' | 'bookmarks';
+
+export interface UrlSearchState {
+  mode: UrlMode;
+  query: string;
+  mediaType: MediaType;
+  license: LicenseCategory;
+  sort: SortOrder;
+  userMode: boolean;
+  userView: 'uploads' | 'talk';
+  categoryView: CategorySearchMode;
+}
+
+const MODES: UrlMode[] = ['keywords', 'nearby', 'categories', 'live', 'random', 'bookmarks'];
+const TYPES: MediaType[] = ['all', 'image', 'audio', 'video', 'document', '3d', 'panorama'];
+const LICENSES: LicenseCategory[] = ['all', 'pd', 'cc_by', 'cc_by_sa', 'gfdl', 'other'];
+const CATEGORY_VIEWS: Record<string, CategorySearchMode> = {
+  media: 'media',
+  subcategories: 'subcategories',
+  parents: 'parent_categories',
+};
+const CATEGORY_VIEW_PARAM: Record<string, string> = {
+  media: 'media',
+  subcategories: 'subcategories',
+  parent_categories: 'parents',
+};
+
+/** Spasi ditulis sebagai garis bawah di URL, seperti di Commons */
+const toUrlText = (s: string) => s.trim().replace(/ /g, '_');
+const fromUrlText = (s: string) => s.replace(/_/g, ' ').trim();
+
+export function buildSearch(s: UrlSearchState): string {
+  const p = new URLSearchParams();
+  if (s.mode !== 'keywords') p.set('mode', s.mode);
+
+  if (s.mode === 'keywords') {
+    if (s.userMode) {
+      p.set('user', toUrlText(s.query));
+      if (s.userView === 'talk') p.set('view', 'talk');
+    } else {
+      const others =
+        s.mediaType !== 'all' || s.license !== 'all' || s.sort !== 'relevance';
+      if (s.query !== DEFAULT_QUERY || others) p.set('q', s.query);
+      if (s.mediaType !== 'all') p.set('type', s.mediaType);
+      if (s.license !== 'all') p.set('license', s.license);
+      if (s.sort !== 'relevance') p.set('sort', s.sort);
+    }
+  } else if (s.mode === 'categories') {
+    p.set('q', s.query);
+    if (s.categoryView !== 'media') p.set('cat', CATEGORY_VIEW_PARAM[s.categoryView]);
+    if (s.categoryView === 'media') {
+      if (s.license !== 'all') p.set('license', s.license);
+      if (s.sort !== 'relevance') p.set('sort', s.sort);
+    }
+  }
+
+  // URLSearchParams menulis spasi sebagai "+", tetap terbaca benar saat di-parse
+  const str = p.toString().replace(/%2F/gi, '/').replace(/%3A/gi, ':');
+  return str ? `?${str}` : '';
+}
+
+export function parseSearch(search: string): UrlSearchState {
+  const p = new URLSearchParams(search);
+  const rawMode = p.get('mode') as UrlMode | null;
+  const user = p.get('user');
+  const mode: UrlMode = rawMode && MODES.includes(rawMode) ? rawMode : 'keywords';
+
+  const type = p.get('type') as MediaType | null;
+  const license = p.get('license') as LicenseCategory | null;
+  const sort = p.get('sort');
+  const cat = CATEGORY_VIEWS[p.get('cat') ?? ''] ?? 'media';
+  const hasOther = ['mode', 'user', 'type', 'license', 'sort', 'view', 'cat'].some((k) => p.has(k));
+
+  const base: UrlSearchState = {
+    mode,
+    query: DEFAULT_QUERY,
+    mediaType: type && TYPES.includes(type) ? type : 'all',
+    license: license && LICENSES.includes(license) ? license : 'all',
+    sort: sort === 'newest' ? 'newest' : 'relevance',
+    userMode: false,
+    userView: 'uploads',
+    categoryView: 'media',
+  };
+
+  if (mode === 'keywords') {
+    if (user !== null) {
+      return { ...base, query: fromUrlText(user), userMode: true, userView: p.get('view') === 'talk' ? 'talk' : 'uploads', mediaType: 'all' };
+    }
+    return { ...base, query: p.has('q') ? (p.get('q') ?? '').trim() : hasOther ? '' : DEFAULT_QUERY };
+  }
+  if (mode === 'categories') {
+    return { ...base, query: (p.get('q') ?? '').trim(), mediaType: 'all', categoryView: cat };
+  }
+  return { ...base, mediaType: 'all', license: 'all', sort: 'relevance' };
+}
+
+// ---------------------------------------------------------------------------
+// Detail berkas
+// ---------------------------------------------------------------------------
+
+/** Path detail seperti URL Commons: /file/Nama_berkas.jpg (tanpa awalan "File:") */
+export function detailPath(item: Pick<CommonsMediaItem, 'id' | 'title'>): string {
+  const name = (item.title || '').replace(/^File:/i, '');
+  if (!name) return `/file/${item.id}`;
+  const enc = encodeURIComponent(name.replace(/ /g, '_')).replace(/%2C/gi, ',').replace(/%3A/gi, ':').replace(/%40/g, '@');
+  return `/file/${enc}`;
+}
+
+export type DetailRef = { kind: 'title'; title: string } | { kind: 'id'; id: number };
+
+/** Baca detail berkas dari path; angka murni dianggap pageid (tautan lama /file/<id>) */
+export function parseDetailPath(pathname: string): DetailRef | null {
+  const m = pathname.match(/^\/file\/(.+?)\/?$/);
+  if (!m) return null;
+  let raw = m[1];
+  try {
+    raw = decodeURIComponent(raw);
+  } catch {
+    /* pakai apa adanya */
+  }
+  if (/^\d+$/.test(raw)) return { kind: 'id', id: Number(raw) };
+  const name = fromUrlText(raw).replace(/^File:/i, '');
+  return name ? { kind: 'title', title: `File:${name}` } : null;
+}

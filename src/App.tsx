@@ -16,7 +16,8 @@ import { LicenseGuideModal, WikimediaTermsModal, DisclaimerModal } from './compo
 import { AttributionQuickCopyModal } from './components/AttributionQuickCopyModal';
 import { CategoryListSection } from './components/CategoryListSection';
 import { CommonsMediaItem, CategorySearchMode } from './types/wikimedia';
-import { CURATED_TOPICS, normalizeCategoryName, fetchMediaDetailByPageId } from './services/wikimediaApi';
+import { CURATED_TOPICS, normalizeCategoryName, fetchMediaDetailByPageId, fetchMediaDetailByTitle } from './services/wikimediaApi';
+import { buildSearch, parseSearch, detailPath, parseDetailPath, type UrlSearchState } from './utils/urlState';
 import { ExternalLink, Search, MapPin, LayoutGrid, FolderTree, FolderRoot, Radio, Bookmark, Shuffle } from 'lucide-react';
 
 export default function App() {
@@ -93,19 +94,19 @@ export default function App() {
   const itemsRef = useRef<CommonsMediaItem[]>([]);
   const savedScroll = useRef(0);
   const restoreScroll = useRef(false);
-  const parseDetailId = (): number | null => {
-    const m = window.location.pathname.match(/^\/file\/(\d+)\/?$/);
-    return m ? Number(m[1]) : null;
-  };
+  const parseDetail = () => parseDetailPath(window.location.pathname);
+  // true saat state sedang diisi dari URL: sinkronisasi URL memakai replaceState agar riwayat tidak bertambah
+  const fromUrl = useRef(false);
+  const [urlReady, setUrlReady] = useState(false);
   const openDetail = (item: CommonsMediaItem) => {
     savedScroll.current = window.scrollY;
-    window.history.pushState({ detail: item.id }, '', `/file/${item.id}`);
+    window.history.pushState({ detail: item.id }, '', detailPath(item));
     setSelectedDetailItem(item);
     window.scrollTo({ top: 0 });
   };
   // Pindah antar berkas: ganti entri riwayat agar tombol kembali langsung ke daftar
   const switchDetail = (item: CommonsMediaItem) => {
-    window.history.replaceState({ detail: item.id }, '', `/file/${item.id}`);
+    window.history.replaceState({ detail: item.id }, '', detailPath(item));
     setSelectedDetailItem(item);
     window.scrollTo({ top: 0 });
   };
@@ -121,7 +122,7 @@ export default function App() {
   };
   // Keluar dari halaman detail untuk berpindah ke hasil pencarian (tanpa memulihkan posisi gulir)
   const clearDetail = () => {
-    if (parseDetailId() !== null) window.history.replaceState(null, '', '/');
+    if (parseDetail() !== null) window.history.replaceState(null, '', '/');
     setSelectedDetailItem(null);
   };
 
@@ -240,25 +241,54 @@ export default function App() {
 
   itemsRef.current = items;
 
+  // Terapkan state pencarian dari URL (?q=, ?type=, ?mode=, ...)
+  const applySearchState = (s: UrlSearchState) => {
+    fromUrl.current = true;
+    setQuery(s.query);
+    setMediaType(s.mediaType);
+    setLicense(s.license);
+    setSort(s.sort);
+    setActiveMode(s.mode);
+    setLiveFeed(s.mode === 'live');
+    setRandomMode(s.mode === 'random');
+    setShowSavedOnly(s.mode === 'bookmarks');
+    setUserMode(s.userMode);
+    setUserView(s.userView);
+    setCategorySearchMode(s.categoryView);
+    setCurrentCategoryName(s.mode === 'categories' ? s.query : '');
+  };
+
   useEffect(() => {
     let cancelled = false;
-    const loadById = async (id: number) => {
-      const found = itemsRef.current.find((i) => i.id === id);
-      const item = found ?? (await fetchMediaDetailByPageId(id));
+    const loadDetail = async (ref: NonNullable<ReturnType<typeof parseDetailPath>>) => {
+      const found =
+        ref.kind === 'id'
+          ? itemsRef.current.find((i) => i.id === ref.id)
+          : itemsRef.current.find((i) => i.title.replace(/ /g, '_') === ref.title.replace(/ /g, '_'));
+      const item = found ?? (ref.kind === 'id' ? await fetchMediaDetailByPageId(ref.id) : await fetchMediaDetailByTitle(ref.title));
       if (cancelled) return;
       if (item) {
+        // ganti ke URL berbasis nama berkas bila dibuka lewat tautan lama /file/<id>
+        if (ref.kind === 'id') window.history.replaceState(window.history.state, '', detailPath(item));
         setSelectedDetailItem(item);
       } else {
         window.history.replaceState(null, '', '/');
         setSelectedDetailItem(null);
       }
     };
-    const initial = parseDetailId();
-    if (initial !== null) void loadById(initial);
+    const initialDetail = parseDetail();
+    if (initialDetail) void loadDetail(initialDetail);
+    else applySearchState(parseSearch(window.location.search));
+    setUrlReady(true);
+
     const onPop = () => {
-      const id = parseDetailId();
-      if (id === null) setSelectedDetailItem(null);
-      else void loadById(id);
+      const ref = parseDetail();
+      if (ref) {
+        void loadDetail(ref);
+      } else {
+        setSelectedDetailItem(null);
+        applySearchState(parseSearch(window.location.search));
+      }
     };
     window.addEventListener('popstate', onPop);
     return () => {
@@ -267,6 +297,26 @@ export default function App() {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // State pencarian -> URL. Pencarian baru menambah riwayat (tombol kembali pulih ke pencarian sebelumnya)
+  useEffect(() => {
+    if (!urlReady || selectedDetailItem || parseDetail()) return;
+    const search = buildSearch({
+      mode: activeMode,
+      query: filter.query,
+      mediaType: filter.mediaType,
+      license: filter.license,
+      sort: filter.sort,
+      userMode,
+      userView,
+      categoryView: categorySearchMode,
+    });
+    if (search !== window.location.search || window.location.pathname !== '/') {
+      const write = fromUrl.current ? window.history.replaceState : window.history.pushState;
+      write.call(window.history, null, '', '/' + search);
+    }
+    fromUrl.current = false;
+  }, [urlReady, selectedDetailItem, activeMode, filter.query, filter.mediaType, filter.license, filter.sort, userMode, userView, categorySearchMode]);
 
   // Judul tab browser mengikuti berkas yang dibuka; posisi gulir daftar dipulihkan saat kembali
   useEffect(() => {

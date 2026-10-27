@@ -8,8 +8,10 @@ import {
 } from '../types/wikimedia';
 import { searchCommonsMedia, fetchRandomCommonsMedia, CURATED_TOPICS } from '../services/wikimediaApi';
 
+import { DEFAULT_QUERY } from '../utils/urlState';
+
 /** Kata kunci bawaan beranda */
-export const DEFAULT_QUERY = 'Wikilokal';
+export { DEFAULT_QUERY };
 
 /** Filter 3D dan panorama 360°: kata kunci bawaan beranda tidak cocok dengannya */
 export const isBrowseOnlyType = (type: string) => type === '3d' || type === 'panorama';
