@@ -7,6 +7,22 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 if (typeof (maplibregl as { setWorkerUrl?: (url: string) => void }).setWorkerUrl === 'function') {
   (maplibregl as { setWorkerUrl: (url: string) => void }).setWorkerUrl(maplibreWorkerUrl);
 }
+import mlcontour from 'maplibre-contour';
+
+// Sumber elevasi (Terrarium) dan protokol kontur didaftarkan sekali untuk seluruh aplikasi.
+let contourDemSource: InstanceType<typeof mlcontour.DemSource> | null = null;
+function getContourDemSource() {
+  if (!contourDemSource) {
+    contourDemSource = new mlcontour.DemSource({
+      url: 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
+      encoding: 'terrarium',
+      maxzoom: 15,
+      worker: true,
+    });
+    contourDemSource.setupMaplibre(maplibregl as never);
+  }
+  return contourDemSource;
+}
 import { CommonsMediaItem } from '../types/wikimedia';
 import { fetchNearbyCommonsMedia, fetchRelatedWikimediaLinks, RelatedWikiLink } from '../services/wikimediaApi';
 import { RelatedWikimediaLinks } from './MediaDetailModal';
@@ -39,6 +55,8 @@ import {
   ChevronRight,
   Landmark,
   Box,
+  Ruler,
+  Mountain,
 } from 'lucide-react';
 
 interface NearbyPhotosSectionProps {
@@ -125,6 +143,27 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   const is3DModeRef = useRef<boolean>(false);
   is3DModeRef.current = is3DMode;
 
+  // Lapisan skala (ScaleControl) dan kontur/topo (raster OpenTopoMap) yang bisa dinyalakan seperti 3D
+  const [isScaleOn, setIsScaleOn] = useState<boolean>(false);
+  const [isTopoOn, setIsTopoOn] = useState<boolean>(false);
+  const isTopoOnRef = useRef<boolean>(false);
+  isTopoOnRef.current = isTopoOn;
+  const scaleControlRef = useRef<maplibregl.ScaleControl | null>(null);
+  const statusBoxRef = useRef<HTMLDivElement | null>(null);
+
+  // Skala harus selalu di atas kotak status di kiri bawah, yang tingginya berubah saat teksnya membungkus
+  // (layar sempit) atau saat titik pencarian muncul. Tinggi kotak dipublikasikan sebagai variabel CSS.
+  useEffect(() => {
+    const box = statusBoxRef.current;
+    const wrapper = box?.parentElement;
+    if (!box || !wrapper || typeof ResizeObserver === 'undefined') return;
+    const update = () => wrapper.style.setProperty('--map-status-h', `${box.offsetHeight + 20}px`);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, []);
+
 // Race guard analisis Gemini + state placeholder foto preview
 const analysisRequestIdRef = useRef<number>(0);
 const [loadedPreviewId, setLoadedPreviewId] = useState<string | number | null>(null);
@@ -166,8 +205,88 @@ return () => ro.disconnect();
       console.warn('MapLibre notice:', e?.error || e);
     });
 
+    // Kontur: garis ketinggian dihitung di browser dari tile elevasi (maplibre-contour) dan digambar
+    // di atas peta dasar Positron, disembunyikan sampai tombol Kontur dinyalakan.
+    const ensureTopoLayer = () => {
+      try {
+        const demSource = getContourDemSource();
+        const visibility = isTopoOnRef.current ? 'visible' : 'none';
+        if (!map.getSource('contour-source')) {
+          map.addSource('contour-source', {
+            type: 'vector',
+            tiles: [
+              demSource.contourProtocolUrl({
+                // Interval garis [minor, major] dalam meter per zoom: makin dekat makin rapat
+                thresholds: {
+                  8: [500, 2000],
+                  10: [200, 1000],
+                  12: [100, 500],
+                  13: [50, 250],
+                  14: [25, 100],
+                  15: [20, 100],
+                  16: [10, 50],
+                },
+                contourLayer: 'contours',
+                elevationKey: 'ele',
+                levelKey: 'level',
+                extent: 4096,
+                buffer: 2,
+              }),
+            ],
+            maxzoom: 16,
+            attribution: 'Elevation: Mapzen / AWS Terrain Tiles (SRTM, NED, GMTED)',
+          });
+        }
+        if (!map.getLayer('contour-lines')) {
+          map.addLayer({
+            id: 'contour-lines',
+            type: 'line',
+            source: 'contour-source',
+            'source-layer': 'contours',
+            layout: { visibility, 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+              'line-color': '#a0622d',
+              'line-opacity': 0.7,
+              // level 1 = garis utama (indeks), level 0 = garis biasa; makin tebal saat zoom mendekat
+              'line-width': [
+                'interpolate', ['linear'], ['zoom'],
+                10, ['match', ['get', 'level'], 1, 1, 0.4],
+                16, ['match', ['get', 'level'], 1, 1.8, 0.8],
+              ],
+            },
+          });
+        }
+        if (!map.getLayer('contour-labels')) {
+          map.addLayer({
+            id: 'contour-labels',
+            type: 'symbol',
+            source: 'contour-source',
+            'source-layer': 'contours',
+            filter: ['>', ['get', 'level'], 0],
+            layout: {
+              visibility,
+              'symbol-placement': 'line',
+              'text-field': ['concat', ['to-string', ['get', 'ele']], ' m'],
+              'symbol-spacing': 300,
+              'text-max-angle': 30,
+              'text-font': ['Noto Sans Regular'],
+              'text-size': 10,
+            },
+            paint: {
+              'text-color': '#7a4a22',
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 1.5,
+            },
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to initialize topo contour layer:', err);
+      }
+    };
+
     // Add OpenMapTiles vector source and MapLibre native fill-extrusion 3D buildings on style load
     map.on('load', () => {
+      ensureTopoLayer();
       // 1. Add OpenMapTiles vector source for 3D buildings (OpenFreeMap planet vector tiles)
       try {
         if (!map.getSource('openmaptiles-buildings')) {
@@ -235,6 +354,7 @@ return () => ro.disconnect();
 
     // Re-apply 3D building visibility when style is reloaded (e.g. theme toggle)
     map.on('style.load', () => {
+      ensureTopoLayer();
       try {
         if (map.getLayer('3d-buildings')) {
           map.setLayoutProperty('3d-buildings', 'visibility', is3DModeRef.current ? 'visible' : 'none');
@@ -764,6 +884,38 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
     }
   };
 
+  // Skala jarak (m/km) di kiri bawah peta
+  const toggleScale = () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (scaleControlRef.current) {
+      map.removeControl(scaleControlRef.current);
+      scaleControlRef.current = null;
+      setIsScaleOn(false);
+    } else {
+      const ctrl = new maplibregl.ScaleControl({ maxWidth: 110, unit: 'metric' });
+      map.addControl(ctrl, 'bottom-left');
+      scaleControlRef.current = ctrl;
+      setIsScaleOn(true);
+    }
+  };
+
+  // Kontur: tampilkan atau sembunyikan lapisan topografi
+  const toggleTopo = () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const next = !isTopoOn;
+    setIsTopoOn(next);
+    isTopoOnRef.current = next;
+    try {
+      ['contour-lines', 'contour-labels'].forEach((id) => {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', next ? 'visible' : 'none');
+      });
+    } catch (err) {
+      console.warn('Topo layer toggle notice:', err);
+    }
+  };
+
   // 5. Focus photo on map when clicked from quick preview strip
   const focusPhotoOnMap = (photo: CommonsMediaItem) => {
     const map = mapInstanceRef.current;
@@ -935,6 +1087,46 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
           >
             <span className="font-display font-extrabold text-xs tracking-tight">3D</span>
           </button>
+
+          {/* Tombol Kontur (garis ketinggian dari data elevasi) */}
+          <button
+            type="button"
+            onClick={toggleTopo}
+            aria-pressed={isTopoOn}
+            aria-label={language === 'en' ? 'Contour lines' : 'Kontur'}
+            title={
+              isTopoOn
+                ? (language === 'en' ? 'Hide contour lines' : 'Sembunyikan kontur')
+                : (language === 'en' ? 'Show contour lines' : 'Tampilkan garis kontur')
+            }
+            className={`w-10 h-10 rounded-lg shadow-md flex items-center justify-center border transition-all cursor-pointer ${
+              isTopoOn
+                ? 'bg-accent-600 text-white border-accent-600 shadow-accent-500/25 ring-2 ring-accent-400/40'
+                : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 border-stone-200/80 dark:border-stone-700'
+            }`}
+          >
+            <Mountain className="w-5 h-5" />
+          </button>
+
+          {/* Tombol Skala */}
+          <button
+            type="button"
+            onClick={toggleScale}
+            aria-pressed={isScaleOn}
+            aria-label={language === 'en' ? 'Scale bar' : 'Skala'}
+            title={
+              isScaleOn
+                ? (language === 'en' ? 'Hide scale bar' : 'Sembunyikan skala')
+                : (language === 'en' ? 'Show scale bar' : 'Tampilkan skala')
+            }
+            className={`w-10 h-10 rounded-lg shadow-md flex items-center justify-center border transition-all cursor-pointer ${
+              isScaleOn
+                ? 'bg-accent-600 text-white border-accent-600 shadow-accent-500/25 ring-2 ring-accent-400/40'
+                : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 border-stone-200/80 dark:border-stone-700'
+            }`}
+          >
+            <Ruler className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Kolom overlay kiri-atas: legenda, tombol aksi, dan badge 3D (tersusun vertikal agar tidak tumpang tindih) */}
@@ -1032,7 +1224,7 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
         </div>
 
         {/* Floating Search Status & Interactive Click Hint (Bottom Left) */}
-        <div className="absolute bottom-3 left-3 z-20 max-w-[calc(100%-4.75rem)] bg-white/90 dark:bg-stone-900/90 px-2.5 py-1 rounded-lg text-xs leading-snug text-stone-500 dark:text-stone-400 font-mono border border-stone-200/50 dark:border-stone-800/50 pointer-events-none">
+        <div ref={statusBoxRef} className="absolute bottom-3 left-3 z-20 max-w-[calc(100%-4.75rem)] bg-white/90 dark:bg-stone-900/90 px-2.5 py-1 rounded-lg text-xs leading-snug text-stone-500 dark:text-stone-400 font-mono border border-stone-200/50 dark:border-stone-800/50 pointer-events-none">
           {t.nearby.radiusHint} • {t.nearby.clickMapHint}
           <br />
           {language === 'en' ? 'Map center' : 'Tengah peta'}: {fmtCoord(viewCenter)}
