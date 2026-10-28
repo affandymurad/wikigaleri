@@ -106,7 +106,7 @@ export default function App() {
   };
   // Pindah antar berkas: ganti entri riwayat agar tombol kembali langsung ke daftar
   const switchDetail = (item: CommonsMediaItem) => {
-    window.history.replaceState({ detail: item.id }, '', detailPath(item));
+    window.history.replaceState({ detail: item.id }, '', detailPath(item) + window.location.search);
     setSelectedDetailItem(item);
     window.scrollTo({ top: 0 });
   };
@@ -269,7 +269,7 @@ export default function App() {
       if (cancelled) return;
       if (item) {
         // ganti ke URL berbasis nama berkas bila dibuka lewat tautan lama /file/<id>
-        if (ref.kind === 'id') window.history.replaceState(window.history.state, '', detailPath(item));
+        if (ref.kind === 'id') window.history.replaceState(window.history.state, '', detailPath(item) + window.location.search);
         setSelectedDetailItem(item);
       } else {
         window.history.replaceState(null, '', '/');

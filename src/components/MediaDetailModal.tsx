@@ -36,6 +36,7 @@ import { Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { PanoramaViewer } from './PanoramaViewer';
 
 import { Translations, Language } from '../i18n/translations';
+import { parseDetailTab, withDetailTab, type DetailTab } from '../utils/urlState';
 
 interface MediaDetailModalProps {
   item: CommonsMediaItem | null;
@@ -58,7 +59,6 @@ interface MediaDetailModalProps {
   onToggleCategorySave?: (category: string) => void;
 }
 
-type DetailTab = 'download' | 'cats' | 'license' | 'history' | 'talk' | 'ai';
 
 const fmtDateTime = (iso: string) => {
   if (!iso) return '';
@@ -267,7 +267,17 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [hasNext, hasPrev, onNext, onPrev, onClose, item]);
 
-  const [activeTab, setActiveTab] = useState<DetailTab>('ai');
+  // Tab aktif ikut URL (?tab=) pada halaman /file/..., diganti dengan replaceState agar riwayat tidak bertambah
+  const [activeTab, setActiveTabState] = useState<DetailTab>(() => parseDetailTab(window.location.search));
+  const setActiveTab = (tab: DetailTab) => {
+    setActiveTabState(tab);
+    try {
+      if (window.location.pathname.startsWith('/file/')) {
+        const next = withDetailTab(window.location.search, tab);
+        if (next !== window.location.search) window.history.replaceState(window.history.state, '', window.location.pathname + next);
+      }
+    } catch { /* abaikan */ }
+  };
   const [attributionFormat, setAttributionFormat] = useState<'plain' | 'markdown' | 'html' | 'wikitext'>('plain');
   const [copiedFormat, setCopiedFormat] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);

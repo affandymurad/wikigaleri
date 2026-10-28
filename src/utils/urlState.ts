@@ -10,6 +10,7 @@ import type { CategorySearchMode, CommonsMediaItem, LicenseCategory, MediaType, 
  *   /?mode=nearby | live | random | bookmarks
  *   /?mode=nearby&lat=-6.1753924&lon=106.8271528&zoom=14   titik tengah dan zoom peta Sekitar
  *   /file/Waterworks_Museum_(85472)bw.jpg  detail berkas (nama berkas seperti di Commons)
+ *   /file/Nama.svg?tab=license             tab detail: download | cats | license | history | talk (ai = bawaan)
  */
 
 export const DEFAULT_QUERY = 'Wikilokal';
@@ -179,5 +180,28 @@ export function withNearbyView(search: string, view: NearbyView | null): string 
     p.set('zoom', String(Math.round(view.zoom * 10) / 10));
   }
   const str = p.toString().replace(/%2F/gi, '/').replace(/%3A/gi, ':');
+  return str ? `?${str}` : '';
+}
+
+// ---------------------------------------------------------------------------
+// Tab pada halaman detail berkas
+// ---------------------------------------------------------------------------
+
+export type DetailTab = 'download' | 'cats' | 'license' | 'history' | 'talk' | 'ai';
+export const DEFAULT_DETAIL_TAB: DetailTab = 'ai';
+const DETAIL_TABS: DetailTab[] = ['ai', 'download', 'cats', 'license', 'history', 'talk'];
+
+/** Baca ?tab= pada URL detail; nilai tidak dikenal atau kosong menjadi tab bawaan */
+export function parseDetailTab(search: string): DetailTab {
+  const tab = new URLSearchParams(search).get('tab') as DetailTab | null;
+  return tab && DETAIL_TABS.includes(tab) ? tab : DEFAULT_DETAIL_TAB;
+}
+
+/** Tulis ?tab= ke query yang ada; tab bawaan tidak ditulis agar URL tetap bersih */
+export function withDetailTab(search: string, tab: DetailTab): string {
+  const p = new URLSearchParams(search);
+  if (tab === DEFAULT_DETAIL_TAB) p.delete('tab');
+  else p.set('tab', tab);
+  const str = p.toString();
   return str ? `?${str}` : '';
 }
