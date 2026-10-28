@@ -91,7 +91,7 @@ export interface GalleryFilterState {
   username?: string;
 }
 
-export type CategorySearchMode = 'media' | 'subcategories' | 'parent_categories';
+export type CategorySearchMode = 'media' | 'subcategories' | 'parent_categories' | 'wikivoyage' | 'wikipedia';
 
 export interface CommonsCategoryItem {
   id: number;

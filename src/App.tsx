@@ -15,6 +15,7 @@ import { AI_NEEDS_KEY } from './services/geminiClient';
 import { LicenseGuideModal, WikimediaTermsModal, DisclaimerModal } from './components/LicenseGuideModal';
 import { AttributionQuickCopyModal } from './components/AttributionQuickCopyModal';
 import { CategoryListSection } from './components/CategoryListSection';
+import { ProjectUsageReportSection } from './components/ProjectUsageReportSection';
 import { CommonsMediaItem, CategorySearchMode } from './types/wikimedia';
 import { CURATED_TOPICS, normalizeCategoryName, fetchMediaDetailByPageId, fetchMediaDetailByTitle } from './services/wikimediaApi';
 import { buildSearch, parseSearch, detailPath, parseDetailPath, parseNearbyView, withNearbyView, type UrlSearchState } from './utils/urlState';
@@ -623,6 +624,46 @@ export default function App() {
                     <FolderRoot className="w-4 h-4" />
                     <span>{t.categoryModes?.parentCategories || 'Kategori Induk'}</span>
                   </button>
+
+                  {/* 4. Laporan pemakaian di EN Wikivoyage */}
+                  <button
+                    type="button"
+                    onClick={() => setCategorySearchMode('wikivoyage')}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                      categorySearchMode === 'wikivoyage'
+                        ? 'border-accent-600 bg-accent-600 text-white shadow-xs'
+                        : 'border-stone-200 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
+                    }`}
+                  >
+                    <img
+                      src="https://commons.wikimedia.org/wiki/Special:FilePath/Wikivoyage-Logo-v3-icon.svg?width=40"
+                      alt=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="w-4 h-4 object-contain"
+                    />
+                    <span>Wikivoyage</span>
+                  </button>
+
+                  {/* 5. Laporan pemakaian di Wikipedia */}
+                  <button
+                    type="button"
+                    onClick={() => setCategorySearchMode('wikipedia')}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                      categorySearchMode === 'wikipedia'
+                        ? 'border-accent-600 bg-accent-600 text-white shadow-xs'
+                        : 'border-stone-200 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
+                    }`}
+                  >
+                    <img
+                      src="https://commons.wikimedia.org/wiki/Special:FilePath/Wikipedia-logo-v2.svg?width=40"
+                      alt=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="w-4 h-4 object-contain"
+                    />
+                    <span>Wikipedia</span>
+                  </button>
                 </div>
               )}
 
@@ -781,6 +822,13 @@ export default function App() {
                 onToggleSaveItem={toggleSaveItem}
                 isLatestUploads={isLatestUploads}
                 t={t}
+              />
+            ) : categorySearchMode === 'wikivoyage' || categorySearchMode === 'wikipedia' ? (
+              <ProjectUsageReportSection
+                key={categorySearchMode}
+                project={categorySearchMode}
+                currentCategory={currentCategoryName || filter.query}
+                language={language}
               />
             ) : (
               <CategoryListSection

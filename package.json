@@ -20,6 +20,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "firebase": "^13.0.0",
     "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.9",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.546.0",
     "maplibre-contour": "^0.1.1",

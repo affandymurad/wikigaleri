@@ -1611,3 +1611,202 @@ export async function fetchRandomCommonsMedia(limit = 24): Promise<SearchResult>
   // 20 halaman 'virtual': setiap halaman memuat batch acak baru
   return { items: items.slice(0, limit), nextOffset: null, totalHits: limit * 20, isLatestUploads: false };
 }
+
+// ---------------------------------------------------------------------------
+// Laporan pemakaian di proyek Wikimedia (Wikivoyage, Wikipedia) untuk satu kategori
+// ---------------------------------------------------------------------------
+
+export interface UsageReportRow {
+  title: string; // "File:Nama.svg"
+  /** Waktu versi berkas terakhir diunggah (ISO), bukan waktu suntingan halaman */
+  lastUploaded: string;
+  /** Deskripsi Commons per kode bahasa (kunci "default" bila hanya ada satu tanpa kode bahasa) */
+  descriptions: Record<string, string>;
+  /** Semua pemakaian di proyek yang diminta (edisi bahasa mana pun); `edition` adalah kode bahasanya (en, de, ...) */
+  articles: { edition: string; title: string; url: string }[];
+}
+
+export interface UsageReport {
+  rows: UsageReportRow[];
+  /** Jumlah berkas langsung di kategori yang diperiksa */
+  checked: number;
+  /** true bila kategori melebihi batas dan hanya sebagian yang diperiksa */
+  truncated: boolean;
+}
+
+export const USAGE_REPORT_MAX_FILES = 1000;
+const REPORT_BATCH = 50;
+
+const stripDescription = (v: string) =>
+  v.replace(/<[^>]*>/g, ' ').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&nbsp;|\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+
+/**
+ * Berkas langsung di sebuah kategori yang dipakai di Wikivoyage atau Wikipedia (edisi mana pun), beserta waktu unggah versi terakhirnya.
+ * Penyaringan edisi dilakukan pemanggil, sehingga ganti edisi tidak perlu memuat ulang.
+ * Subkategori tidak ikut. Memanggil onProgress(selesai, total) di sela-sela agar UI bisa menampilkan kemajuan.
+ */
+export type UsageProject = 'wikivoyage' | 'wikipedia';
+
+export async function fetchCategoryUsageReport(
+  categoryName: string,
+  project: UsageProject,
+  onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal
+): Promise<UsageReport> {
+  const cleanCat = normalizeCategoryName(categoryName);
+  if (!cleanCat) return { rows: [], checked: 0, truncated: false };
+
+  // 1. Daftar berkas langsung di kategori
+  const titles: string[] = [];
+  let truncated = false;
+  let cmcontinue: string | undefined;
+  do {
+    const params = new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      origin: '*',
+      list: 'categorymembers',
+      cmtitle: `Category:${cleanCat}`,
+      cmtype: 'file',
+      cmlimit: '500',
+    });
+    if (cmcontinue) params.set('cmcontinue', cmcontinue);
+    const res = await commonsFetch(`${COMMONS_API_BASE}?${params.toString()}`, { signal });
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const data = await res.json();
+    for (const m of (data?.query?.categorymembers || []) as Array<{ title: string }>) titles.push(m.title);
+    cmcontinue = data?.continue?.cmcontinue;
+    if (titles.length >= USAGE_REPORT_MAX_FILES) {
+      truncated = titles.length > USAGE_REPORT_MAX_FILES || !!cmcontinue;
+      titles.length = Math.min(titles.length, USAGE_REPORT_MAX_FILES);
+      break;
+    }
+  } while (cmcontinue);
+
+  // 2. Per kelompok: waktu unggah terakhir, deskripsi, dan pemakaian lintas wiki (disaring ke proyek yang diminta)
+  const rows: UsageReportRow[] = [];
+  onProgress?.(0, titles.length);
+  for (let i = 0; i < titles.length; i += REPORT_BATCH) {
+    const batch = titles.slice(i, i + REPORT_BATCH);
+    type Acc = { title: string; lastUploaded: string; descriptions: Record<string, string>; articles: Map<string, { edition: string; title: string; url: string }> };
+    const acc = new Map<number, Acc>();
+    let cont: Record<string, string> | undefined;
+    do {
+      const params = new URLSearchParams({
+        action: 'query',
+        format: 'json',
+        origin: '*',
+        titles: batch.join('|'),
+        prop: 'imageinfo|globalusage',
+        iiprop: 'timestamp|extmetadata',
+        iiextmetadatafilter: 'ImageDescription',
+        iiextmetadatamultilang: '1',
+        guprop: 'url|namespace',
+        gulimit: 'max',
+      });
+      if (cont) for (const [k, v] of Object.entries(cont)) params.set(k, v);
+      const res = await commonsFetch(`${COMMONS_API_BASE}?${params.toString()}`, { signal });
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const data = await res.json();
+      const pages = Object.values(data?.query?.pages || {}) as Array<{
+        pageid: number;
+        title: string;
+        imageinfo?: Array<{ timestamp?: string; extmetadata?: { ImageDescription?: { value?: string | Record<string, string> } } }>;
+        globalusage?: Array<{ title: string; wiki: string; url?: string; ns?: string | number }>;
+      }>;
+      for (const p of pages) {
+        const cur: Acc = acc.get(p.pageid) || { title: p.title, lastUploaded: '', descriptions: {}, articles: new Map() };
+        const info = p.imageinfo?.[0];
+        if (info?.timestamp) cur.lastUploaded = info.timestamp;
+        const desc = info?.extmetadata?.ImageDescription?.value;
+        if (typeof desc === 'string') {
+          const text = stripDescription(desc);
+          if (text) cur.descriptions.default = text;
+        } else if (desc && typeof desc === 'object') {
+          for (const [lang, v] of Object.entries(desc)) {
+            const text = stripDescription(String(v));
+            if (text) cur.descriptions[lang] = text;
+          }
+        }
+        for (const u of p.globalusage || []) {
+          const m = new RegExp(`^([a-z-]+)\\.${project}\\.org$`).exec(u.wiki);
+          if (!m) continue;
+          // hanya halaman artikel (ruang nama utama); halaman pengguna, bicara, dan proyek tidak dihitung
+          if (u.ns !== undefined && String(u.ns) !== '0') continue;
+          const name = (u.title || '').replace(/_/g, ' ');
+          cur.articles.set(`${m[1]}:${name}`, {
+            edition: m[1],
+            title: name,
+            url: u.url || `https://${u.wiki}/wiki/${encodeURIComponent((u.title || '').replace(/ /g, '_'))}`,
+          });
+        }
+        acc.set(p.pageid, cur);
+      }
+      cont = data?.continue;
+    } while (cont);
+
+    for (const a of acc.values()) {
+      if (a.articles.size === 0) continue;
+      rows.push({
+        title: a.title,
+        lastUploaded: a.lastUploaded,
+        descriptions: a.descriptions,
+        articles: [...a.articles.values()],
+      });
+    }
+    onProgress?.(Math.min(i + REPORT_BATCH, titles.length), titles.length);
+  }
+
+  return { rows, checked: titles.length, truncated };
+}
+
+const fileBaseName = (s: string) => decodeURIComponent(s.replace(/^.*[/:]/, '')).replace(/_/g, ' ').trim().toLowerCase();
+
+/**
+ * Keterangan (caption) tiap berkas pada satu artikel Wikivoyage atau Wikipedia, dibaca dari HTML hasil render:
+ * <figcaption> (gambar thumb), .thumbcaption (gaya lama), .gallerytext (galeri), atau .infobox-caption (kotak info). Kosong bila tanpa keterangan.
+ * Kunci hasil adalah nama berkas tanpa awalan "File:" dalam huruf kecil dan spasi (bukan garis bawah).
+ */
+export async function fetchProjectCaptions(
+  project: UsageProject,
+  edition: string,
+  articleTitle: string,
+  fileTitles: string[],
+  signal?: AbortSignal
+): Promise<Record<string, string>> {
+  const params = new URLSearchParams({
+    action: 'parse',
+    format: 'json',
+    origin: '*',
+    page: articleTitle,
+    prop: 'text',
+    redirects: '1',
+    disableeditsection: '1',
+  });
+  const res = await fetchWithRetry(`https://${edition}.${project}.org/w/api.php?${params.toString()}`, { signal });
+  if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+  const data = await res.json();
+  const html: string | undefined = data?.parse?.text?.['*'];
+  const out: Record<string, string> = {};
+  if (!html) return out;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const wanted = new Map(fileTitles.map((t) => [fileBaseName(t.replace(/^File:/i, '')), t]));
+  const clean = (el: Element | null | undefined) => (el?.textContent || '').replace(/\s+/g, ' ').trim();
+  for (const a of Array.from(doc.querySelectorAll('a[href*=":"]'))) {
+    const key = fileBaseName(a.getAttribute('href') || '');
+    if (!wanted.has(key) || out[key]) continue;
+    const fig = a.closest('figure');
+    const thumb = a.closest('.thumb, .thumbinner');
+    const gallery = a.closest('.gallerybox');
+    const caption =
+      clean(fig?.querySelector('figcaption')) ||
+      clean(thumb?.querySelector('.thumbcaption')) ||
+      clean(gallery?.querySelector('.gallerytext')) ||
+      clean(a.closest('.infobox-image, .infobox-full-data, td, .infobox')?.querySelector('.infobox-caption')) ||
+      (a.querySelector('img')?.getAttribute('alt') || '').trim();
+    if (caption) out[key] = caption;
+  }
+  return out;
+}
+
+export const captionKey = (fileTitle: string) => fileBaseName(fileTitle.replace(/^File:/i, ''));

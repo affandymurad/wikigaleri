@@ -45,7 +45,7 @@ export const CuratedTopics: React.FC<CuratedTopicsProps> = ({
   activeTopicId,
   onSelectTopic,
   t,
-  defaultCollapsed = false,
+  defaultCollapsed = true,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState<boolean>(defaultCollapsed);
   const [selectedGroup, setSelectedGroup] = useState<CuratedTopicGroup | 'all'>('all');

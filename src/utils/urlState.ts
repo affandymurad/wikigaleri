@@ -6,7 +6,7 @@ import type { CategorySearchMode, CommonsMediaItem, LicenseCategory, MediaType, 
  *   /                                    beranda (kata kunci bawaan)
  *   /?q=batik&type=image&license=pd      kata kunci + filter jenis media + lisensi
  *   /?user=Affandy_Murad&view=talk       unggahan atau halaman pembicaraan pengguna
- *   /?mode=categories&q=Batik&cat=subcategories
+ *   /?mode=categories&q=Batik&cat=subcategories | parents | wikivoyage | wikipedia
  *   /?mode=nearby | live | random | bookmarks
  *   /?mode=nearby&lat=-6.1753924&lon=106.8271528&zoom=14   titik tengah dan zoom peta Sekitar
  *   /file/Waterworks_Museum_(85472)bw.jpg  detail berkas (nama berkas seperti di Commons)
@@ -35,11 +35,15 @@ const CATEGORY_VIEWS: Record<string, CategorySearchMode> = {
   media: 'media',
   subcategories: 'subcategories',
   parents: 'parent_categories',
+  wikivoyage: 'wikivoyage',
+  wikipedia: 'wikipedia',
 };
 const CATEGORY_VIEW_PARAM: Record<string, string> = {
   media: 'media',
   subcategories: 'subcategories',
   parent_categories: 'parents',
+  wikivoyage: 'wikivoyage',
+  wikipedia: 'wikipedia',
 };
 
 /** Spasi ditulis sebagai garis bawah di URL, seperti di Commons */
