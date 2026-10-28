@@ -214,37 +214,39 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   }, [is3DMode]);
 
   // Alamat dan koordinat titik tengah peta, dengan tombol salin
-  const [addr, setAddr] = useState<{ status: 'loading' | 'ok' | 'none' | 'error'; text: string }>({ status: 'loading', text: '' });
-  const [addrRetry, setAddrRetry] = useState<number>(0);
+  // Alamat tidak dimuat otomatis (menghindari galat 429 dari Nominatim): pengguna menekan tombol "Tampilkan alamat",
+  // dan hasilnya disimpan per koordinat sehingga kembali ke titik yang sama tidak meminta ulang.
+  const [addr, setAddr] = useState<{ status: 'idle' | 'loading' | 'ok' | 'none' | 'error' | 'limited'; text: string }>({ status: 'idle', text: '' });
   const [copied, setCopied] = useState<'coord' | 'addr' | null>(null);
   const addrCacheRef = useRef(new Map<string, string>());
-  const lastAddrAtRef = useRef<number>(0);
+  const addrAbortRef = useRef<AbortController | null>(null);
+  const addrKey = (c: LatLng) => `${c.lat.toFixed(4)},${c.lng.toFixed(4)},${language}`;
+
+  // Peta bergeser: batalkan permintaan yang berjalan dan kembali ke tombol (atau alamat dari cache)
   useEffect(() => {
-    const key = `${viewCenter.lat.toFixed(4)},${viewCenter.lng.toFixed(4)},${language}`;
-    const cached = addrCacheRef.current.get(key);
-    if (cached) {
-      setAddr({ status: 'ok', text: cached });
-      return;
-    }
-    setAddr({ status: 'loading', text: '' });
+    addrAbortRef.current?.abort();
+    const cached = addrCacheRef.current.get(addrKey(viewCenter));
+    setAddr(cached ? { status: 'ok', text: cached } : { status: 'idle', text: '' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewCenter.lat, viewCenter.lng, language]);
+  useEffect(() => () => addrAbortRef.current?.abort(), []);
+
+  const loadAddress = async () => {
+    addrAbortRef.current?.abort();
     const ctrl = new AbortController();
-    const timer = window.setTimeout(async () => {
-      try {
-        await sleep(Math.max(0, 1100 - (Date.now() - lastAddrAtRef.current)), ctrl.signal);
-        lastAddrAtRef.current = Date.now();
-        const text = await reverseGeocode(viewCenter.lat, viewCenter.lng, language === 'en' ? 'en' : 'id', ctrl.signal);
-        addrCacheRef.current.set(key, text);
-        setAddr({ status: 'ok', text });
-      } catch (e) {
-        if ((e as { name?: string })?.name === 'AbortError') return;
-        setAddr({ status: (e as Error)?.message === 'Unable to geocode' ? 'none' : 'error', text: '' });
-      }
-    }, 700);
-    return () => {
-      window.clearTimeout(timer);
-      ctrl.abort();
-    };
-  }, [viewCenter.lat, viewCenter.lng, language, addrRetry]);
+    addrAbortRef.current = ctrl;
+    const center = viewCenter;
+    setAddr({ status: 'loading', text: '' });
+    try {
+      const text = await reverseGeocode(center.lat, center.lng, language === 'en' ? 'en' : 'id', ctrl.signal);
+      addrCacheRef.current.set(addrKey(center), text);
+      setAddr({ status: 'ok', text });
+    } catch (e) {
+      if ((e as { name?: string })?.name === 'AbortError') return;
+      const msg = (e as Error)?.message || '';
+      setAddr({ status: msg === 'Unable to geocode' ? 'none' : /429/.test(msg) ? 'limited' : 'error', text: '' });
+    }
+  };
 
   const copyText = async (kind: 'coord' | 'addr', value: string) => {
     try {
@@ -1196,15 +1198,26 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
                     {copied === 'addr' ? <Check className="w-3.5 h-3.5 text-[#3E5C39] dark:text-[hsl(111_19%_73%)]" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                 </>
+              ) : addr.status === 'idle' ? (
+                <button
+                  type="button"
+                  onClick={loadAddress}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium cursor-pointer ${MAP_CARD} ${MAP_HOVER}`}
+                >
+                  <MapPin className="w-3 h-3" />
+                  {language === 'en' ? 'Show address' : 'Tampilkan alamat'}
+                </button>
               ) : (
                 <span className={MAP_MUTED}>
                   {addr.status === 'none'
                     ? (language === 'en' ? 'No address for this point' : 'Tidak ada alamat untuk titik ini')
-                    : (language === 'en' ? 'Could not load the address' : 'Alamat tidak dapat dimuat')}
-                  {addr.status === 'error' && (
+                    : addr.status === 'limited'
+                      ? (language === 'en' ? 'Too many requests, try again in a moment' : 'Terlalu banyak permintaan, coba lagi sebentar')
+                      : (language === 'en' ? 'Could not load the address' : 'Alamat tidak dapat dimuat')}
+                  {(addr.status === 'error' || addr.status === 'limited') && (
                     <button
                       type="button"
-                      onClick={() => setAddrRetry((n) => n + 1)}
+                      onClick={loadAddress}
                       className="ml-1.5 underline font-medium text-[#4A4338] dark:text-[hsl(37_11%_75.6%)] cursor-pointer"
                     >
                       {language === 'en' ? 'Retry' : 'Coba lagi'}
