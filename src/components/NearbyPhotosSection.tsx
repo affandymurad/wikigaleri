@@ -872,10 +872,8 @@ setIsAnalyzingArea(false);
 
       if (results.length === 0) {
         setLocationError(t.nearby.noPhotosFound);
-} else {
-// Analisis area Gemini otomatis di belakang layar (tidak memilih foto / membuka popup)
-void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false);
-}
+      }
+      // Analisis area Gemini (dan pencarian alamatnya) tidak berjalan otomatis: hanya lewat tombol Gemini Assistant
     } catch (err) {
       console.error('Failed to search nearby commons:', err);
       setLocationError(err instanceof Error ? err.message : 'Error fetching nearby commons');
