@@ -8,6 +8,7 @@ import type { CategorySearchMode, CommonsMediaItem, LicenseCategory, MediaType, 
  *   /?user=Affandy_Murad&view=talk       unggahan atau halaman pembicaraan pengguna
  *   /?mode=categories&q=Batik&cat=subcategories
  *   /?mode=nearby | live | random | bookmarks
+ *   /?mode=nearby&lat=-6.1753924&lon=106.8271528&zoom=14   titik tengah dan zoom peta Sekitar
  *   /file/Waterworks_Museum_(85472)bw.jpg  detail berkas (nama berkas seperti di Commons)
  */
 
@@ -136,4 +137,47 @@ export function parseDetailPath(pathname: string): DetailRef | null {
   if (/^\d+$/.test(raw)) return { kind: 'id', id: Number(raw) };
   const name = fromUrlText(raw).replace(/^File:/i, '');
   return name ? { kind: 'title', title: `File:${name}` } : null;
+}
+
+// ---------------------------------------------------------------------------
+// Tampilan peta Sekitar
+// ---------------------------------------------------------------------------
+
+export interface NearbyView {
+  lat: number;
+  lng: number;
+  zoom: number;
+}
+
+export const DEFAULT_NEARBY_VIEW: NearbyView = { lat: -6.1753924, lng: 106.8271528, zoom: 14 };
+
+/** Baca ?lat=&lon=&zoom=; null bila lat/lon tidak ada atau di luar rentang. Zoom opsional (bawaan 14). */
+export function parseNearbyView(search: string): NearbyView | null {
+  const p = new URLSearchParams(search);
+  const latRaw = p.get('lat');
+  const lonRaw = p.get('lon') ?? p.get('lng');
+  if (latRaw === null || lonRaw === null || latRaw.trim() === '' || lonRaw.trim() === '') return null;
+  const lat = Number(latRaw);
+  const lng = Number(lonRaw);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  const zoomRaw = p.get('zoom');
+  const z = zoomRaw !== null && zoomRaw.trim() !== '' ? Number(zoomRaw) : NaN;
+  const zoom = Number.isFinite(z) ? Math.min(19, Math.max(1, z)) : DEFAULT_NEARBY_VIEW.zoom;
+  return { lat, lng, zoom };
+}
+
+/** Salin lat/lon/zoom dari query yang ada ke query baru (dipakai saat mode lain menulis ulang URL) */
+export function withNearbyView(search: string, view: NearbyView | null): string {
+  const p = new URLSearchParams(search);
+  p.delete('lat');
+  p.delete('lon');
+  p.delete('lng');
+  p.delete('zoom');
+  if (view) {
+    p.set('lat', view.lat.toFixed(6));
+    p.set('lon', view.lng.toFixed(6));
+    p.set('zoom', String(Math.round(view.zoom * 10) / 10));
+  }
+  const str = p.toString().replace(/%2F/gi, '/').replace(/%3A/gi, ':');
+  return str ? `?${str}` : '';
 }

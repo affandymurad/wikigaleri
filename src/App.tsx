@@ -17,7 +17,7 @@ import { AttributionQuickCopyModal } from './components/AttributionQuickCopyModa
 import { CategoryListSection } from './components/CategoryListSection';
 import { CommonsMediaItem, CategorySearchMode } from './types/wikimedia';
 import { CURATED_TOPICS, normalizeCategoryName, fetchMediaDetailByPageId, fetchMediaDetailByTitle } from './services/wikimediaApi';
-import { buildSearch, parseSearch, detailPath, parseDetailPath, type UrlSearchState } from './utils/urlState';
+import { buildSearch, parseSearch, detailPath, parseDetailPath, parseNearbyView, withNearbyView, type UrlSearchState } from './utils/urlState';
 import { ExternalLink, Search, MapPin, LayoutGrid, FolderTree, FolderRoot, Radio, Bookmark, Shuffle } from 'lucide-react';
 
 export default function App() {
@@ -301,7 +301,7 @@ export default function App() {
   // State pencarian -> URL. Pencarian baru menambah riwayat (tombol kembali pulih ke pencarian sebelumnya)
   useEffect(() => {
     if (!urlReady || selectedDetailItem || parseDetail()) return;
-    const search = buildSearch({
+    let search = buildSearch({
       mode: activeMode,
       query: filter.query,
       mediaType: filter.mediaType,
@@ -311,6 +311,8 @@ export default function App() {
       userView,
       categoryView: categorySearchMode,
     });
+    // lat/lon/zoom peta Sekitar ditulis oleh petanya sendiri; jangan dihapus saat URL ditulis ulang
+    if (activeMode === 'nearby') search = withNearbyView(search, parseNearbyView(window.location.search));
     if (search !== window.location.search || window.location.pathname !== '/') {
       const write = fromUrl.current ? window.history.replaceState : window.history.pushState;
       write.call(window.history, null, '', '/' + search);

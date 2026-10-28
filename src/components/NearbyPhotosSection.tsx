@@ -36,6 +36,7 @@ import {
 } from '../services/geminiClient';
 import { getFileExtension } from '../utils/licenseUtils';
 import { Translations, Language } from '../i18n/translations';
+import { DEFAULT_NEARBY_VIEW, parseNearbyView, withNearbyView } from '../utils/urlState';
 import {
   MapPin,
   LocateFixed,
@@ -152,12 +153,14 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   const analysisResultRef = useRef<HTMLDivElement | null>(null);
 
   // States
-  const [mapCenter, setMapCenter] = useState<[number, number]>([-6.1753924, 106.8271528]); // [lat, lng] Default: Monumen Nasional (Monas), Jakarta
+  // Titik awal dan zoom bisa diatur lewat URL (?lat=&lon=&zoom=); bawaannya Monumen Nasional (Monas), Jakarta
+  const [initialView] = useState(() => parseNearbyView(window.location.search) ?? DEFAULT_NEARBY_VIEW);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([initialView.lat, initialView.lng]); // [lat, lng]
   // Titik tengah tampilan peta saat ini (hanya berubah setelah peta berhenti digeser)
-  const [viewCenter, setViewCenter] = useState<LatLng>({ lat: -6.1753924, lng: 106.8271528 });
+  const [viewCenter, setViewCenter] = useState<LatLng>({ lat: initialView.lat, lng: initialView.lng });
   // Pusat peta yang dipakai untuk penanda "peta bergeser": hanya berubah oleh geseran/zoom pengguna, bukan oleh
   // gerakan kamera otomatis saat sebuah foto dipilih (klik foto atau penanda), supaya penanda tidak muncul terus
-  const [shiftCenter, setShiftCenter] = useState<LatLng>({ lat: -6.1753924, lng: 106.8271528 });
+  const [shiftCenter, setShiftCenter] = useState<LatLng>({ lat: initialView.lat, lng: initialView.lng });
   const ignoreMoveRef = useRef<boolean>(false);
   // Lebar peta dalam meter (dasar ambang "peta bergeser") dan titik pusat pencarian terakhir
   const [mapSpanM, setMapSpanM] = useState<number>(0);
@@ -287,7 +290,7 @@ return () => ro.disconnect();
       // Gaya peta vektor terang (OpenFreeMap Positron): abu-abu netral, jalan putih, taman hijau pucat, label mengikuti jalan
       style: 'https://tiles.openfreemap.org/styles/positron',
       center: [mapCenter[1], mapCenter[0]], // MapLibre takes [lng, lat]
-      zoom: 15,
+      zoom: initialView.zoom,
       maxZoom: 19, // Prevent zooming beyond OpenStreetMap tile limits
       pitch: 0,
       maxPitch: 85,
@@ -476,6 +479,13 @@ return () => ro.disconnect();
       const c = map.getCenter();
       setMapCenter([c.lat, c.lng]);
       setViewCenter({ lat: c.lat, lng: c.lng });
+      // Posisi peta ikut ditulis ke URL (replaceState, tanpa menambah riwayat) agar tautannya bisa dibagikan
+      try {
+        const next = withNearbyView(window.location.search, { lat: c.lat, lng: c.lng, zoom: map.getZoom() });
+        if (window.location.pathname === '/' && next !== window.location.search) {
+          window.history.replaceState(window.history.state, '', '/' + next);
+        }
+      } catch { /* abaikan */ }
       // originalEvent hanya ada pada gerakan oleh pengguna (geser, zoom, gulir)
       const byUser = !!(e as { originalEvent?: unknown }).originalEvent;
       if (byUser || !ignoreMoveRef.current) setShiftCenter({ lat: c.lat, lng: c.lng });
