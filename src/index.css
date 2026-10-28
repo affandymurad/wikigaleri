@@ -127,7 +127,3 @@
   background: rgba(107, 118, 135, 0.55);
 }
 
-/* Skala peta di kiri bawah: naik di atas kotak status ("Searching within…" / koordinat pusat peta) */
-.maplibregl-ctrl-bottom-left {
-  margin-bottom: var(--map-status-h, 4.5rem);
-}

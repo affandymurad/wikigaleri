@@ -57,6 +57,10 @@ import {
   Box,
   Ruler,
   Mountain,
+  Loader2,
+  Copy,
+  Check,
+  ArrowRight,
 } from 'lucide-react';
 
 interface NearbyPhotosSectionProps {
@@ -76,6 +80,49 @@ interface PhotoCluster {
 }
 
 const PREVIEW_PAGE_SIZE = 18;
+
+// Gaya peta Sekitar disamakan dengan WikiAbstrak: palet krem hangat dengan pil bulat dan kartu membulat.
+// Mode gelap memakai nilai HSL dari palet gelap WikiAbstrak.
+const MAP_CARD =
+  'bg-[#FFFDF9]/95 dark:bg-[hsl(40_7%_12.5%)]/95 border border-[#E8E2D6] dark:border-[hsl(40_17%_24%)] text-[#4A4338] dark:text-[hsl(37_11%_75.6%)] shadow-sm';
+const MAP_HOVER = 'hover:bg-[#F2EDE2] dark:hover:bg-[hsl(41_7%_17%)]';
+const MAP_MUTED = 'text-[#8A7E6C] dark:text-[hsl(37_10%_63%)]';
+const MAP_DARK_BTN =
+  'bg-[#4A4338] text-[#FFFDF9] border-[#4A4338] hover:bg-[#383229] dark:bg-[hsl(37_11%_75.6%)] dark:text-[hsl(40_7%_12.5%)] dark:border-[hsl(37_11%_75.6%)] dark:hover:bg-[hsl(37_11%_85%)]';
+const mapToolBtn = (on: boolean) =>
+  `p-2 rounded-full border shadow-sm transition-colors cursor-pointer ${on ? MAP_DARK_BTN : `${MAP_CARD} ${MAP_HOVER}`}`;
+
+// Beberapa berkas Commons mengulang nama pembuat dua kali ("AB" + "AB"); tampilkan sekali saja
+const dedupAuthor = (author?: string): string => {
+  const raw = (author || 'Commons').trim();
+  const half = raw.length / 2;
+  return Number.isInteger(half) && half > 0 && raw.slice(0, half) === raw.slice(half) ? raw.slice(0, half) : raw;
+};
+
+const sleep = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal.aborted) return reject(new DOMException('Aborted', 'AbortError'));
+    const id = window.setTimeout(resolve, ms);
+    signal.addEventListener('abort', () => {
+      window.clearTimeout(id);
+      reject(new DOMException('Aborted', 'AbortError'));
+    });
+  });
+
+// Alamat titik tengah peta (Nominatim). Tidak semua titik punya alamat sampai tingkat jalan (zoom 18), jadi dicoba lagi
+// dengan cakupan lebih luas (zoom 14 lalu 10); jeda 1,1 detik menghormati batas 1 permintaan per detik.
+async function reverseGeocode(lat: number, lon: number, lang: string, signal: AbortSignal): Promise<string> {
+  for (const zoom of [18, 14, 10]) {
+    if (zoom !== 18) await sleep(1100, signal);
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=${zoom}&accept-language=${lang}`;
+    const res = await fetch(url, { signal });
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const data = await res.json();
+    if (data.display_name) return data.display_name as string;
+    if (data.error && data.error !== 'Unable to geocode') throw new Error(data.error);
+  }
+  throw new Error('Unable to geocode');
+}
 
 type LatLng = { lat: number; lng: number };
 
@@ -108,6 +155,10 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   const [mapCenter, setMapCenter] = useState<[number, number]>([-6.1753924, 106.8271528]); // [lat, lng] Default: Monumen Nasional (Monas), Jakarta
   // Titik tengah tampilan peta saat ini (hanya berubah setelah peta berhenti digeser)
   const [viewCenter, setViewCenter] = useState<LatLng>({ lat: -6.1753924, lng: 106.8271528 });
+  // Pusat peta yang dipakai untuk penanda "peta bergeser": hanya berubah oleh geseran/zoom pengguna, bukan oleh
+  // gerakan kamera otomatis saat sebuah foto dipilih (klik foto atau penanda), supaya penanda tidak muncul terus
+  const [shiftCenter, setShiftCenter] = useState<LatLng>({ lat: -6.1753924, lng: 106.8271528 });
+  const ignoreMoveRef = useRef<boolean>(false);
   // Lebar peta dalam meter (dasar ambang "peta bergeser") dan titik pusat pencarian terakhir
   const [mapSpanM, setMapSpanM] = useState<number>(0);
   const [searchOrigin, setSearchOrigin] = useState<LatLng | null>(null);
@@ -149,20 +200,66 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   const isTopoOnRef = useRef<boolean>(false);
   isTopoOnRef.current = isTopoOn;
   const scaleControlRef = useRef<maplibregl.ScaleControl | null>(null);
-  const statusBoxRef = useRef<HTMLDivElement | null>(null);
 
-  // Skala harus selalu di atas kotak status di kiri bawah, yang tingginya berubah saat teksnya membungkus
-  // (layar sempit) atau saat titik pencarian muncul. Tinggi kotak dipublikasikan sebagai variabel CSS.
+  // Petunjuk Mode 3D hanya tampil beberapa detik setelah mode dinyalakan
+  const [show3DHint, setShow3DHint] = useState<boolean>(false);
   useEffect(() => {
-    const box = statusBoxRef.current;
-    const wrapper = box?.parentElement;
-    if (!box || !wrapper || typeof ResizeObserver === 'undefined') return;
-    const update = () => wrapper.style.setProperty('--map-status-h', `${box.offsetHeight + 20}px`);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(box);
-    return () => ro.disconnect();
-  }, []);
+    if (!is3DMode) {
+      setShow3DHint(false);
+      return;
+    }
+    setShow3DHint(true);
+    const id = window.setTimeout(() => setShow3DHint(false), 6000);
+    return () => window.clearTimeout(id);
+  }, [is3DMode]);
+
+  // Alamat dan koordinat titik tengah peta, dengan tombol salin
+  const [addr, setAddr] = useState<{ status: 'loading' | 'ok' | 'none' | 'error'; text: string }>({ status: 'loading', text: '' });
+  const [addrRetry, setAddrRetry] = useState<number>(0);
+  const [copied, setCopied] = useState<'coord' | 'addr' | null>(null);
+  const addrCacheRef = useRef(new Map<string, string>());
+  const lastAddrAtRef = useRef<number>(0);
+  useEffect(() => {
+    const key = `${viewCenter.lat.toFixed(4)},${viewCenter.lng.toFixed(4)},${language}`;
+    const cached = addrCacheRef.current.get(key);
+    if (cached) {
+      setAddr({ status: 'ok', text: cached });
+      return;
+    }
+    setAddr({ status: 'loading', text: '' });
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        await sleep(Math.max(0, 1100 - (Date.now() - lastAddrAtRef.current)), ctrl.signal);
+        lastAddrAtRef.current = Date.now();
+        const text = await reverseGeocode(viewCenter.lat, viewCenter.lng, language === 'en' ? 'en' : 'id', ctrl.signal);
+        addrCacheRef.current.set(key, text);
+        setAddr({ status: 'ok', text });
+      } catch (e) {
+        if ((e as { name?: string })?.name === 'AbortError') return;
+        setAddr({ status: (e as Error)?.message === 'Unable to geocode' ? 'none' : 'error', text: '' });
+      }
+    }, 700);
+    return () => {
+      window.clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [viewCenter.lat, viewCenter.lng, language, addrRetry]);
+
+  const copyText = async (kind: 'coord' | 'addr', value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = value;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    setCopied(kind);
+    window.setTimeout(() => setCopied((c) => (c === kind ? null : c)), 1500);
+  };
 
 // Race guard analisis Gemini + state placeholder foto preview
 const analysisRequestIdRef = useRef<number>(0);
@@ -365,50 +462,24 @@ return () => ro.disconnect();
     });
 
     // Add navigation controls (zoom & pitch/bearing compass)
-    map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true }), 'bottom-right');
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
 
-    // Add compact attribution control at bottom-right
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+    // Atribusi ringkas di kiri bawah (skala menumpuk di atasnya), seperti WikiAbstrak
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
     mapInstanceRef.current = map;
 
     // Track map center on moveend
-    map.on('moveend', () => {
+    map.on('moveend', (e) => {
       const c = map.getCenter();
       setMapCenter([c.lat, c.lng]);
       setViewCenter({ lat: c.lat, lng: c.lng });
+      // originalEvent hanya ada pada gerakan oleh pengguna (geser, zoom, gulir)
+      const byUser = !!(e as { originalEvent?: unknown }).originalEvent;
+      if (byUser || !ignoreMoveRef.current) setShiftCenter({ lat: c.lat, lng: c.lng });
+      ignoreMoveRef.current = false;
       const b = map.getBounds();
       setMapSpanM(distanceMeters({ lat: c.lat, lng: b.getWest() }, { lat: c.lat, lng: b.getEast() }));
-    });
-
-    // Click anywhere on map to set search center geotag
-    map.on('click', (e) => {
-      const { lng, lat } = e.lngLat;
-      setMapCenter([lat, lng]);
-
-      // Move or create center target pin
-      if (centerPinRef.current) {
-        centerPinRef.current.setLngLat([lng, lat]);
-      } else {
-        const pinEl = document.createElement('div');
-        pinEl.className = 'maplibre-center-pin';
-        pinEl.style.width = '16px';
-        pinEl.style.height = '16px';
-        pinEl.style.backgroundColor = '#181e29';
-        pinEl.style.border = '3px solid #ffffff';
-        pinEl.style.borderRadius = '50%';
-        pinEl.style.boxShadow = '0 0 0 4px rgba(24, 30, 41, 0.35), 0 2px 6px rgba(0,0,0,0.3)';
-        pinEl.style.cursor = 'pointer';
-
-        const marker = new maplibregl.Marker({
-          element: pinEl,
-          pitchAlignment: 'viewport',
-          anchor: 'bottom',
-        })
-          .setLngLat([lng, lat])
-          .addTo(map);
-        centerPinRef.current = marker;
-      }
     });
 
     return () => {
@@ -482,50 +553,41 @@ return () => ro.disconnect();
 
       const markerEl = document.createElement('div');
       markerEl.style.cursor = 'pointer';
-      markerEl.style.transition = 'background-color 0.2s ease, box-shadow 0.2s ease, width 0.2s ease, height 0.2s ease';
+      markerEl.style.transition = 'background-color 0.2s ease, width 0.2s ease, height 0.2s ease';
 
       if (isSelected) {
         markerEl.style.zIndex = '50';
       }
 
       if (isMulti) {
-        // Dot clustering with number count
-        const dotBg = isSelected ? '#d97706' : '#34508a';
-        const dotRing = isSelected ? 'rgba(217, 119, 6, 0.55)' : 'rgba(52, 80, 138, 0.35)';
+        // Kluster seperti WikiAbstrak: lingkaran #4A4338 (85%) bercincin krem, diameter naik menurut jumlah foto;
+        // kluster yang memuat foto terpilih berwarna biru seperti titik terpilih
+        const n = cluster.items.length;
+        const diameter = n >= 200 ? 56 : n >= 50 ? 46 : n >= 10 ? 36 : 28;
 
         markerEl.className = 'maplibre-cluster-marker';
-        markerEl.style.width = isSelected ? '36px' : '32px';
-        markerEl.style.height = isSelected ? '36px' : '32px';
+        markerEl.style.width = `${diameter}px`;
+        markerEl.style.height = `${diameter}px`;
         markerEl.style.borderRadius = '50%';
-        markerEl.style.backgroundColor = dotBg;
-        markerEl.style.color = '#ffffff';
+        markerEl.style.backgroundColor = isSelected ? '#2F6FDE' : 'rgba(74, 67, 56, 0.85)';
+        markerEl.style.color = '#FFFDF9';
         markerEl.style.display = 'flex';
         markerEl.style.alignItems = 'center';
         markerEl.style.justifyContent = 'center';
-        markerEl.style.fontSize = isSelected ? '13px' : '12px';
-        markerEl.style.fontWeight = '700';
-        markerEl.style.border = isSelected ? '3px solid #ffffff' : 'none';
-        markerEl.style.boxShadow = isSelected
-          ? `0 0 0 6px ${dotRing}, 0 6px 12px rgba(0, 0, 0, 0.35)`
-          : `0 0 0 4px ${dotRing}, 0 4px 6px -1px rgba(0, 0, 0, 0.25)`;
-        // ukuran/ring sudah membedakan marker terpilih; transform dibiarkan untuk MapLibre
+        markerEl.style.fontSize = '12px';
+        markerEl.style.border = '2px solid #FFFDF9';
+        // transform dibiarkan untuk MapLibre
         markerEl.style.userSelect = 'none';
-        markerEl.textContent = String(cluster.items.length);
+        markerEl.textContent = String(n);
       } else {
-        // Single photo dot
-        const dotBg = isSelected ? '#d97706' : '#46659f';
-        const dotRing = isSelected ? 'rgba(217, 119, 6, 0.55)' : 'rgba(70, 101, 159, 0.4)';
-
+        // Titik tunggal seperti WikiAbstrak: #9E4235 berukuran 12 px, terpilih #2F6FDE berukuran 20 px
         markerEl.className = 'maplibre-single-marker';
-        markerEl.style.width = isSelected ? '26px' : '20px';
-        markerEl.style.height = isSelected ? '26px' : '20px';
+        markerEl.style.width = isSelected ? '20px' : '12px';
+        markerEl.style.height = isSelected ? '20px' : '12px';
         markerEl.style.borderRadius = '50%';
-        markerEl.style.backgroundColor = dotBg;
-        markerEl.style.border = isSelected ? '3.5px solid #ffffff' : '2.5px solid #ffffff';
-        markerEl.style.boxShadow = isSelected
-          ? `0 0 0 6px ${dotRing}, 0 4px 10px rgba(0,0,0,0.4)`
-          : `0 0 0 4px ${dotRing}, 0 2px 4px rgba(0,0,0,0.3)`;
-        // ukuran/ring sudah membedakan marker terpilih; transform dibiarkan untuk MapLibre
+        markerEl.style.backgroundColor = isSelected ? '#2F6FDE' : '#9E4235';
+        markerEl.style.border = '2px solid #FFFDF9';
+        // transform dibiarkan untuk MapLibre
       }
 
       markerEl.addEventListener('click', (ev) => {
@@ -533,6 +595,7 @@ return () => ro.disconnect();
         setSelectedCluster(cluster);
         setSelectedClusterItemIndex(0);
         setSelectedPhoto(cluster.items[0]);
+        ignoreMoveRef.current = true;
         map.easeTo({ center: [cluster.lng, cluster.lat], duration: 400 });
       });
 
@@ -591,10 +654,10 @@ setSelectedPhoto(activeItem);
       const userEl = document.createElement('div');
       userEl.style.width = '18px';
       userEl.style.height = '18px';
-      userEl.style.backgroundColor = '#181e29';
-      userEl.style.border = '3px solid #ffffff';
+      userEl.style.backgroundColor = '#4A4338';
+      userEl.style.border = '3px solid #FFFDF9';
       userEl.style.borderRadius = '50%';
-      userEl.style.boxShadow = '0 0 0 5px rgba(24, 30, 41, 0.3), 0 2px 8px rgba(0,0,0,0.3)';
+      userEl.style.boxShadow = '0 1px 4px rgba(41, 36, 30, 0.4)';
 
       if (tooltipText) {
         userEl.title = tooltipText;
@@ -758,7 +821,7 @@ if (reqId === analysisRequestIdRef.current) setIsAnalyzingArea(false);
   };
 
   // Peta dianggap bergeser bila pusat tampilan menjauh dari titik pencarian lebih dari 20% lebar peta (minimal 250 m)
-  const shiftMeters = searchOrigin ? distanceMeters(viewCenter, searchOrigin) : 0;
+  const shiftMeters = searchOrigin ? distanceMeters(shiftCenter, searchOrigin) : 0;
   const isShifted = hasSearched && !!searchOrigin && shiftMeters > Math.max(250, mapSpanM * 0.2);
   const fmtDistance = (m: number) =>
     m < 1000
@@ -766,11 +829,6 @@ if (reqId === analysisRequestIdRef.current) setIsAnalyzingArea(false);
       : `${(m / 1000).toLocaleString(language === 'en' ? 'en-GB' : 'id-ID', { maximumFractionDigits: 1 })} km`;
 
   const handleSearchThisArea = () => {
-    // titik baru = pusat peta, jadi pin klik yang lama dilepas
-    if (centerPinRef.current) {
-      centerPinRef.current.remove();
-      centerPinRef.current = null;
-    }
     void handleFindNearbyCommons();
   };
 
@@ -794,9 +852,10 @@ setIsAnalyzingArea(false);
     setAreaAnalysisError(null);
 
     const map = mapInstanceRef.current;
-    const pin = centerPinRef.current?.getLngLat();
-    const currentCenter = pin ?? (map ? map.getCenter() : { lng: mapCenter[1], lat: mapCenter[0] });
+    // Pencarian selalu memakai titik tengah peta (garis silang), sama dengan koordinat di kartu Map Center
+    const currentCenter = map ? map.getCenter() : { lng: mapCenter[1], lat: mapCenter[0] };
     setSearchOrigin({ lat: currentCenter.lat, lng: currentCenter.lng });
+    setShiftCenter({ lat: currentCenter.lat, lng: currentCenter.lng });
 
     try {
       const results = await fetchNearbyCommonsMedia(currentCenter.lat, currentCenter.lng, 10000, 50);
@@ -952,6 +1011,7 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
     setSelectedClusterItemIndex(0);
 
     // Fly camera smoothly to the pinpoint coordinates [lng, lat]
+    ignoreMoveRef.current = true;
     map.flyTo({
       center: [photo.longitude, photo.latitude],
       zoom: Math.max(map.getZoom(), 17),
@@ -1046,248 +1106,213 @@ void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false)
 
 <div className="flex flex-col lg:flex-row gap-4 items-stretch">
 <div className="flex-1 min-w-0 space-y-4">
-      {/* MAPLIBRE GL MAP CONTAINER: Modern WebGL rendering for OpenStreetMap */}
-      <div className="relative isolate z-0 w-full h-[460px] sm:h-[500px] lg:h-[620px] rounded-lg overflow-hidden border border-stone-200 dark:border-stone-800 shadow-md bg-stone-100 dark:bg-stone-900">
+      {/* MAPLIBRE GL MAP CONTAINER: gaya disamakan dengan peta Sekitar WikiAbstrak */}
+      <div className="relative isolate z-0 w-full h-[460px] sm:h-[500px] lg:h-[620px] rounded-2xl overflow-hidden border border-[#E8E2D6] dark:border-[hsl(40_17%_24%)] bg-[#F2EDE2] dark:bg-[hsl(41_7%_17%)]">
         {/* MapLibre DOM container */}
         <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-        {/* Floating Controls Overlay (Top Right inside map): Lokasi Saya & SATU Tombol 3D Gabungan */}
-        <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 pointer-events-auto">
-          {/* Tombol Lokasi Saya */}
-          <button
-            type="button"
-            onClick={handleLocateUser}
-            disabled={isLocatingUser}
-            aria-label={t.nearby.locationBtn}
-            title={t.nearby.locationBtn}
-            className="w-10 h-10 rounded-lg shadow-md bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 flex items-center justify-center border border-stone-200/80 dark:border-stone-700 transition-colors cursor-pointer disabled:opacity-60"
-          >
-            <LocateFixed
-              className={`w-5 h-5 text-accent-600 dark:text-accent-400 ${
-                isLocatingUser ? 'animate-spin' : ''
-              }`}
-            />
-          </button>
-
-          {/* SATU Tombol 3D Gabungan (Kemiringan + Gedung 3D fill-extrusion) */}
-          <button
-            type="button"
-            onClick={toggle3D}
-            aria-label={language === 'en' ? '3D mode' : 'Mode 3D'}
-            title={
-              is3DMode
-                ? (language === 'en' ? 'Disable 3D Mode' : 'Nonaktifkan Mode 3D')
-                : (language === 'en' ? 'Enable 3D Mode' : 'Aktifkan Mode 3D')
-            }
-            className={`w-10 h-10 rounded-lg shadow-md flex items-center justify-center border transition-all cursor-pointer font-bold text-xs ${
-              is3DMode
-                ? 'bg-accent-600 text-white border-accent-600 shadow-accent-500/25 ring-2 ring-accent-400/40'
-                : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 border-stone-200/80 dark:border-stone-700'
-            }`}
-          >
-            <span className="font-display font-extrabold text-xs tracking-tight">3D</span>
-          </button>
-
-          {/* Tombol Kontur (garis ketinggian dari data elevasi) */}
-          <button
-            type="button"
-            onClick={toggleTopo}
-            aria-pressed={isTopoOn}
-            aria-label={language === 'en' ? 'Contour lines' : 'Kontur'}
-            title={
-              isTopoOn
-                ? (language === 'en' ? 'Hide contour lines' : 'Sembunyikan kontur')
-                : (language === 'en' ? 'Show contour lines' : 'Tampilkan garis kontur')
-            }
-            className={`w-10 h-10 rounded-lg shadow-md flex items-center justify-center border transition-all cursor-pointer ${
-              isTopoOn
-                ? 'bg-accent-600 text-white border-accent-600 shadow-accent-500/25 ring-2 ring-accent-400/40'
-                : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 border-stone-200/80 dark:border-stone-700'
-            }`}
-          >
-            <Mountain className="w-5 h-5" />
-          </button>
-
-          {/* Tombol Skala */}
-          <button
-            type="button"
-            onClick={toggleScale}
-            aria-pressed={isScaleOn}
-            aria-label={language === 'en' ? 'Scale bar' : 'Skala'}
-            title={
-              isScaleOn
-                ? (language === 'en' ? 'Hide scale bar' : 'Sembunyikan skala')
-                : (language === 'en' ? 'Show scale bar' : 'Tampilkan skala')
-            }
-            className={`w-10 h-10 rounded-lg shadow-md flex items-center justify-center border transition-all cursor-pointer ${
-              isScaleOn
-                ? 'bg-accent-600 text-white border-accent-600 shadow-accent-500/25 ring-2 ring-accent-400/40'
-                : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 border-stone-200/80 dark:border-stone-700'
-            }`}
-          >
-            <Ruler className="w-5 h-5" />
-          </button>
+        {/* Penanda titik tengah yang dipakai untuk koordinat dan alamat */}
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 z-10" aria-hidden="true">
+          <div className="absolute left-1/2 top-0 h-full w-px bg-[#4A4338]/60 dark:bg-[hsl(37_11%_75.6%)]/60" />
+          <div className="absolute top-1/2 left-0 w-full h-px bg-[#4A4338]/60 dark:bg-[hsl(37_11%_75.6%)]/60" />
         </div>
 
-        {/* Kolom overlay kiri-atas: legenda, tombol aksi, dan badge 3D (tersusun vertikal agar tidak tumpang tindih) */}
-        <div className="absolute top-3 left-3 right-16 z-20 flex flex-col items-start gap-2 pointer-events-none">
-        {/* Legend / Info Bar Overlay (Top Left inside map container) */}
-        <div className="relative z-20 max-w-full flex-wrap bg-white/95 dark:bg-stone-900/95 px-3 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-800 text-xs shadow-sm flex items-center gap-3 pointer-events-auto">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-accent-600 inline-block" />
-            <span className="text-stone-600 dark:text-stone-300 font-medium">{language === 'en' ? 'Commons photo' : 'Foto Commons'}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block" />
-            <span className="text-stone-600 dark:text-stone-300 font-medium">{language === 'en' ? 'Selected' : 'Dipilih'}</span>
-          </div>
-          {nearbyPhotos.length > 0 && (
-            <span className="text-stone-400 font-mono text-xs">
-              • {t.nearby.foundPhotos(nearbyPhotos.length)}
-            </span>
-          )}
-        </div>
-
-        {/* Overlay aksi di depan peta: Cari Commons Terdekat & Asisten Gemini */}
-        <div className="relative flex flex-wrap items-center gap-2 pointer-events-auto [&_button]:shadow-sm">
-          {/* Button 1: Tombol Cari Commons Terdekat */}
-          <button
-            type="button"
-            onClick={handleFindNearbyCommons}
-            disabled={isLoadingNearby}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-60 cursor-pointer"
-            title={language === 'en' ? 'Search geotagged photos on Wikimedia Commons near the current coordinates' : 'Cari foto bergeotag di Wikimedia Commons pada koordinat geotag saat ini'}
-          >
-            <Search className={`w-4 h-4 ${isLoadingNearby ? 'animate-spin' : ''}`} />
-            <span>{isLoadingNearby ? t.nearby.searching : t.nearby.findCommonsBtn}</span>
-          </button>
-
-          {/* Button 2: Tombol Gemini Assistant */}
-          <button
-            type="button"
-            onClick={handleRunAreaGeminiAssistant}
-            disabled={isAnalyzingArea}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-60 cursor-pointer"
-            title={t.nearby.geminiAssistantBtn}
-          >
-            <Sparkles className={`w-4 h-4 ${isAnalyzingArea ? 'animate-spin' : ''}`} />
-            <span>{isAnalyzingArea ? t.nearby.geminiAnalyzing : t.nearby.geminiAssistantBtn}</span>
-          </button>
-        </div>
-
-        {/* Peta bergeser dari titik pencarian terakhir */}
-        {isShifted && searchOrigin && (
-          <div role="status" className="relative z-20 max-w-full pointer-events-auto bg-amber-50/95 dark:bg-amber-950/90 text-amber-900 dark:text-amber-100 border border-amber-300 dark:border-amber-800 px-3 py-2 rounded-lg text-xs shadow-sm flex flex-col gap-1.5 animate-fadeIn">
-            <span className="font-semibold">
-              {language === 'en'
-                ? `Map moved ${fmtDistance(shiftMeters)} from the search point`
-                : `Peta bergeser ${fmtDistance(shiftMeters)} dari titik pencarian`}
-            </span>
-            <span className="font-mono text-[11px] leading-snug opacity-90">
-              {language === 'en' ? 'Results are for' : 'Hasil untuk'} {fmtCoord(searchOrigin)}
-              <br />
-              {language === 'en' ? 'Map center' : 'Tengah peta'} {fmtCoord(viewCenter)}
-            </span>
-            <span className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={handleSearchThisArea}
-                disabled={isLoadingNearby}
-                className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-2.5 py-1 font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-60 cursor-pointer"
-              >
-                <Search className="h-3.5 w-3.5" />
-                {language === 'en' ? 'Search this area' : 'Cari di area ini'}
-              </button>
-              <button
-                type="button"
-                onClick={handleBackToSearchPoint}
-                className="inline-flex items-center gap-1.5 rounded-md border border-amber-400 px-2.5 py-1 font-medium transition-colors hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-900/60 cursor-pointer"
-              >
-                <MapPin className="h-3.5 w-3.5" />
-                {language === 'en' ? 'Back to search point' : 'Kembali ke titik pencarian'}
-              </button>
-            </span>
-          </div>
-        )}
-
-        {/* 3D Mode Active Status Badge Overlay */}
-        {is3DMode && (
-          <div className="relative z-20 max-w-full pointer-events-auto bg-accent-950/85 text-white border border-accent-500/30 px-3 py-1.5 rounded-lg text-xs font-mono shadow-sm flex items-center gap-2 animate-fadeIn pointer-events-none">
-            <Box className="w-3.5 h-3.5 text-accent-400 shrink-0" />
-            <span>
-              {language === 'en'
-                ? '3D Mode: 3D buildings • Right-click drag / Ctrl+drag to tilt & rotate'
-                : 'Mode 3D: Gedung 3D (fill-extrusion) • Klik kanan / Ctrl+geser untuk kemiringan & rotasi'}
-            </span>
-          </div>
-        )}
-        </div>
-
-        {/* Floating Search Status & Interactive Click Hint (Bottom Left) */}
-        <div ref={statusBoxRef} className="absolute bottom-3 left-3 z-20 max-w-[calc(100%-4.75rem)] bg-white/90 dark:bg-stone-900/90 px-2.5 py-1 rounded-lg text-xs leading-snug text-stone-500 dark:text-stone-400 font-mono border border-stone-200/50 dark:border-stone-800/50 pointer-events-none">
-          {t.nearby.radiusHint} • {t.nearby.clickMapHint}
-          <br />
-          {language === 'en' ? 'Map center' : 'Tengah peta'}: {fmtCoord(viewCenter)}
-          {searchOrigin && (
-            <>
-              {' • '}
-              {language === 'en' ? 'Search point' : 'Titik pencarian'}: {fmtCoord(searchOrigin)}
-            </>
-          )}
-        </div>
-
-        {/* Dismissable Detail Popup Overlay (Top Right inside map, offset to left of overlay buttons) */}
-        {activeClusterPhoto && (
-          <div className="absolute top-3 right-16 z-30 w-80 max-w-[calc(100%-76px)] bg-white dark:bg-stone-900 rounded-lg shadow-sm border border-stone-200 dark:border-stone-800 overflow-hidden animate-fadeIn text-xs transition-all">
-            {/* Header: Title & Dismiss button */}
-            <div className="flex items-center justify-between p-3 border-b border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-800/40">
-              <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                <span className="w-2 h-2 rounded-full bg-moss-500 shrink-0" />
-                <span className="font-semibold text-stone-900 dark:text-white truncate text-xs">
-                  {activeClusterPhoto.cleanTitle}
-                </span>
+        {/* Kolom overlay kiri-atas: status, tombol aksi, kartu titik tengah, dan petunjuk 3D */}
+        <div className="absolute top-3 left-3 right-14 z-20 flex flex-col items-start gap-2 pointer-events-none">
+          <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
+            {(isLoadingNearby || (hasSearched && nearbyPhotos.length > 0)) && (
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs ${MAP_CARD}`}>
+                {isLoadingNearby ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>{t.nearby.searching}</span>
+                  </>
+                ) : (
+                  <span>{t.nearby.foundPhotos(nearbyPhotos.length)}</span>
+                )}
               </div>
+            )}
 
-              {/* Dismiss Button */}
+            {/* Cari Commons Terdekat */}
+            <button
+              type="button"
+              onClick={handleFindNearbyCommons}
+              disabled={isLoadingNearby}
+              title={language === 'en' ? 'Search geotagged photos on Wikimedia Commons near the current coordinates' : 'Cari foto bergeotag di Wikimedia Commons pada koordinat geotag saat ini'}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer ${
+                !hasSearched || isShifted ? MAP_DARK_BTN : `${MAP_CARD} ${MAP_HOVER}`
+              }`}
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span>{t.nearby.findCommonsBtn}</span>
+            </button>
+
+            {/* Asisten Gemini */}
+            <button
+              type="button"
+              onClick={handleRunAreaGeminiAssistant}
+              disabled={isAnalyzingArea}
+              title={t.nearby.geminiAssistantBtn}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer ${MAP_CARD} ${MAP_HOVER}`}
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${isAnalyzingArea ? 'animate-spin' : ''}`} />
+              <span>{isAnalyzingArea ? t.nearby.geminiAnalyzing : t.nearby.geminiAssistantBtn}</span>
+            </button>
+          </div>
+
+          {/* Kartu titik tengah: koordinat, alamat, dan penanda "peta bergeser" */}
+          <div className={`${activeClusterPhoto ? 'hidden min-[1300px]:block' : ''} pointer-events-auto max-w-full sm:max-w-sm px-3 py-2 rounded-xl text-xs space-y-1.5 ${MAP_CARD}`}>
+            <div className={`text-[10px] uppercase tracking-wide ${MAP_MUTED}`}>
+              {language === 'en' ? 'Map Center' : 'Titik Tengah Peta'}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono">{`${viewCenter.lat.toFixed(6)}, ${viewCenter.lng.toFixed(6)}`}</span>
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedPhoto(null);
-                  setSelectedCluster(null);
-                  setSelectedClusterItemIndex(0);
-                }}
-                className="w-6 h-6 rounded-lg hover:bg-stone-200 dark:hover:bg-stone-700 flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition-colors shrink-0 cursor-pointer"
-                title={t.nearby.dismiss}
+                onClick={() => copyText('coord', `${viewCenter.lat.toFixed(6)}, ${viewCenter.lng.toFixed(6)}`)}
+                title={language === 'en' ? 'Copy' : 'Salin'}
+                aria-label={`${language === 'en' ? 'Copy' : 'Salin'}: ${viewCenter.lat.toFixed(6)}, ${viewCenter.lng.toFixed(6)}`}
+                className={`p-1 rounded-md shrink-0 cursor-pointer text-[#7A7060] dark:text-[hsl(37_10%_63%)] ${MAP_HOVER}`}
               >
-                <X className="w-3.5 h-3.5" />
+                {copied === 'coord' ? <Check className="w-3.5 h-3.5 text-[#3E5C39] dark:text-[hsl(111_19%_73%)]" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
+            </div>
+            <div className="flex items-start gap-2">
+              {addr.status === 'loading' ? (
+                <span className={`flex items-center gap-1.5 ${MAP_MUTED}`}>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  {language === 'en' ? 'Loading address…' : 'Memuat alamat…'}
+                </span>
+              ) : addr.status === 'ok' ? (
+                <>
+                  <span className="leading-snug">{addr.text}</span>
+                  <button
+                    type="button"
+                    onClick={() => copyText('addr', addr.text)}
+                    title={language === 'en' ? 'Copy' : 'Salin'}
+                    aria-label={`${language === 'en' ? 'Copy' : 'Salin'}: ${addr.text}`}
+                    className={`p-1 -mt-0.5 rounded-md shrink-0 cursor-pointer text-[#7A7060] dark:text-[hsl(37_10%_63%)] ${MAP_HOVER}`}
+                  >
+                    {copied === 'addr' ? <Check className="w-3.5 h-3.5 text-[#3E5C39] dark:text-[hsl(111_19%_73%)]" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </>
+              ) : (
+                <span className={MAP_MUTED}>
+                  {addr.status === 'none'
+                    ? (language === 'en' ? 'No address for this point' : 'Tidak ada alamat untuk titik ini')
+                    : (language === 'en' ? 'Could not load the address' : 'Alamat tidak dapat dimuat')}
+                  {addr.status === 'error' && (
+                    <button
+                      type="button"
+                      onClick={() => setAddrRetry((n) => n + 1)}
+                      className="ml-1.5 underline font-medium text-[#4A4338] dark:text-[hsl(37_11%_75.6%)] cursor-pointer"
+                    >
+                      {language === 'en' ? 'Retry' : 'Coba lagi'}
+                    </button>
+                  )}
+                </span>
+              )}
+            </div>
+
+            {/* Peta bergeser dari titik pencarian terakhir */}
+            {isShifted && searchOrigin && (
+              <div role="status" className="-mx-3 -mb-2 mt-1 px-3 py-2 rounded-b-xl border-t border-[#E6CF8F] bg-[#FFF6E0] text-[#5C4410] dark:border-amber-800 dark:bg-amber-950/70 dark:text-amber-100 space-y-1.5">
+                <div className="font-semibold">
+                  {language === 'en'
+                    ? `Map moved ${fmtDistance(shiftMeters)} from the search point`
+                    : `Peta bergeser ${fmtDistance(shiftMeters)} dari titik pencarian`}
+                </div>
+                <div className="font-mono text-[11px] leading-snug opacity-90">
+                  {language === 'en' ? 'Results are for' : 'Hasil untuk'} {fmtCoord(searchOrigin)}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleSearchThisArea}
+                    disabled={isLoadingNearby}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[#8A5F0F] px-2.5 py-1 font-semibold text-[#FFFDF9] transition-colors hover:bg-[#6E4C0C] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    {language === 'en' ? 'Search this area' : 'Cari di area ini'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBackToSearchPoint}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-[#D6B65A] px-2.5 py-1 font-medium transition-colors hover:bg-[#F7E8BE] dark:border-amber-700 dark:hover:bg-amber-900/60 cursor-pointer"
+                  >
+                    <MapPin className="w-3.5 h-3.5" />
+                    {language === 'en' ? 'Back to search point' : 'Kembali ke titik pencarian'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Petunjuk Mode 3D: tampil beberapa detik setelah mode dinyalakan */}
+          {is3DMode && show3DHint && (
+            <div className="pointer-events-none max-w-full sm:max-w-sm flex items-start gap-2 px-3 py-1.5 rounded-lg bg-[#4A4338]/90 text-[#FFFDF9] text-[11px] leading-snug shadow-sm">
+              <Box className="w-3.5 h-3.5 shrink-0 mt-px" />
+              <span>
+                {language === 'en'
+                  ? '3D Mode: 3D buildings • Right-click drag / Ctrl+drag to tilt & rotate'
+                  : 'Mode 3D: Gedung 3D • Klik kanan / Ctrl+geser untuk kemiringan & rotasi'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Kartu foto terpilih (kiri bawah): mendukung beberapa foto pada satu titik lewat tombol ‹ › */}
+        {activeClusterPhoto && (
+          <div className={`absolute left-3 right-3 ${isScaleOn ? 'bottom-16' : 'bottom-8'} sm:left-auto sm:right-14 sm:bottom-3 sm:w-80 z-30 p-3 rounded-xl bg-[#FFFDF9] dark:bg-[hsl(40_7%_12.5%)] border border-[#E8E2D6] dark:border-[hsl(40_17%_24%)] shadow-lg space-y-2 text-xs animate-fadeIn`}>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedPhoto(null);
+                setSelectedCluster(null);
+                setSelectedClusterItemIndex(0);
+              }}
+              aria-label={t.nearby.dismiss}
+              title={t.nearby.dismiss}
+              className={`absolute top-2 right-2 z-10 p-1 rounded-full cursor-pointer text-[#7A7060] dark:text-[hsl(37_10%_63%)] ${MAP_HOVER}`}
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+
+            <div className="pr-6">
+              <div className="font-display text-base font-semibold text-[#29241E] dark:text-[hsl(33_12%_84%)] leading-snug line-clamp-2">
+                {activeClusterPhoto.cleanTitle}
+              </div>
+              <div className="text-[11px] font-mono text-[#7A7060] dark:text-[hsl(37_10%_63%)] truncate">
+                {dedupAuthor(activeClusterPhoto.author)}
+                {activeClusterPhoto.licenseShort ? ` • ${activeClusterPhoto.licenseShort}` : ''}
+              </div>
             </div>
 
             {/* Thumbnail Image */}
-            <div className="relative aspect-video bg-stone-100 dark:bg-stone-800 overflow-hidden">
-{loadedPreviewId !== activeClusterPhoto.id && failedPreviewId !== activeClusterPhoto.id && (
-<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-stone-100 dark:bg-stone-800 animate-pulse" role="status" aria-live="polite">
-<div className="w-6 h-6 rounded-full border-2 border-stone-300 dark:border-stone-600 border-t-accent-600 animate-spin" />
-<span className="text-xs text-stone-500 dark:text-stone-400">{language === 'en' ? 'Loading photo…' : 'Memuat foto…'}</span>
-</div>
-)}
-{failedPreviewId === activeClusterPhoto.id && (
-<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400">
-<ImageIcon className="w-6 h-6" />
-<span className="text-xs">{language === 'en' ? 'Photo failed to load' : 'Foto gagal dimuat'}</span>
-<button type="button" onClick={() => { setFailedPreviewId(null); setPreviewRetry((n) => n + 1); }} className="px-2 py-1 text-xs font-semibold rounded-md bg-white dark:bg-stone-700 border border-stone-200 dark:border-stone-600 hover:bg-stone-50 cursor-pointer">{language === 'en' ? 'Retry' : 'Coba lagi'}</button>
-</div>
-)}
-<img
-key={`${activeClusterPhoto.id}-${previewRetry}`}
-src={activeClusterPhoto.thumbnailUrl || activeClusterPhoto.fileUrl}
-alt={activeClusterPhoto.cleanTitle}
-className={`w-full h-full object-cover transition-opacity duration-200 ${loadedPreviewId === activeClusterPhoto.id ? 'opacity-100' : 'opacity-0'}`}
-onLoad={() => setLoadedPreviewId(activeClusterPhoto.id)}
-onError={() => setFailedPreviewId(activeClusterPhoto.id)}
-/>
+            <div className="relative h-28 sm:h-auto sm:aspect-video rounded-lg bg-[#F2EDE2] dark:bg-[hsl(41_7%_17%)] overflow-hidden">
+              {loadedPreviewId !== activeClusterPhoto.id && failedPreviewId !== activeClusterPhoto.id && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#F2EDE2] dark:bg-[hsl(41_7%_17%)] animate-pulse" role="status" aria-live="polite">
+                  <div className="w-6 h-6 rounded-full border-2 border-[#C9BFAE] border-t-[#6B6151] animate-spin" />
+                  <span className={`text-xs ${MAP_MUTED}`}>{language === 'en' ? 'Loading photo…' : 'Memuat foto…'}</span>
+                </div>
+              )}
+              {failedPreviewId === activeClusterPhoto.id && (
+                <div className={`absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#F2EDE2] dark:bg-[hsl(41_7%_17%)] ${MAP_MUTED}`}>
+                  <ImageIcon className="w-6 h-6" />
+                  <span className="text-xs">{language === 'en' ? 'Photo failed to load' : 'Foto gagal dimuat'}</span>
+                  <button type="button" onClick={() => { setFailedPreviewId(null); setPreviewRetry((n) => n + 1); }} className={`px-2 py-1 text-xs font-semibold rounded-md cursor-pointer ${MAP_CARD} ${MAP_HOVER}`}>{language === 'en' ? 'Retry' : 'Coba lagi'}</button>
+                </div>
+              )}
+              <img
+                key={`${activeClusterPhoto.id}-${previewRetry}`}
+                src={activeClusterPhoto.thumbnailUrl || activeClusterPhoto.fileUrl}
+                alt={activeClusterPhoto.cleanTitle}
+                className={`w-full h-full object-cover transition-opacity duration-200 ${loadedPreviewId === activeClusterPhoto.id ? 'opacity-100' : 'opacity-0'}`}
+                onLoad={() => setLoadedPreviewId(activeClusterPhoto.id)}
+                onError={() => setFailedPreviewId(activeClusterPhoto.id)}
+              />
 
-              {/* Cluster Navigation Controls if multiple photos at this coordinate */}
+              {/* Navigasi kluster bila ada beberapa foto pada titik ini */}
               {selectedCluster && selectedCluster.items.length > 1 && (
                 <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-center justify-between text-white text-xs">
                   <button
@@ -1325,44 +1350,93 @@ onError={() => setFailedPreviewId(activeClusterPhoto.id)}
               )}
             </div>
 
-            {/* Content Body */}
-            <div className="p-3 space-y-2.5">
-              <div className="space-y-1">
-                <p className="text-xs text-stone-500 dark:text-stone-400 line-clamp-2">
-                  {activeClusterPhoto.description || (language === 'en' ? 'Geotagged photo file from Wikimedia Commons' : 'Berkas foto bergeotag dari Wikimedia Commons')}
-                </p>
+            <p className="text-xs text-[#695F4F] dark:text-[hsl(37_11%_68%)] line-clamp-2">
+              {activeClusterPhoto.description || (language === 'en' ? 'Geotagged photo file from Wikimedia Commons' : 'Berkas foto bergeotag dari Wikimedia Commons')}
+            </p>
 
-                <div className="flex items-center gap-2 text-xs text-stone-400 dark:text-stone-500 font-mono">
-                  <span>{activeClusterPhoto.author || 'Commons'}</span>
-                  <span>•</span>
-                  <span>{activeClusterPhoto.licenseShort}</span>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex items-center gap-2 pt-1 border-t border-stone-100 dark:border-stone-800">
-                <button
-                  type="button"
-                  onClick={() => onOpenDetail(activeClusterPhoto)}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>{t.nearby.viewInModal}</span>
-                </button>
-
-                <a
-                  href={activeClusterPhoto.pageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-1.5 rounded-lg border border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-400 transition-colors"
-                  title={language === 'en' ? 'View on Wikimedia Commons' : 'Lihat di Wikimedia Commons'}
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onOpenDetail(activeClusterPhoto)}
+                className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${MAP_DARK_BTN}`}
+              >
+                <span>{t.nearby.viewInModal}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+              <a
+                href={activeClusterPhoto.pageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`p-2 rounded-lg border border-[#E8E2D6] dark:border-[hsl(40_17%_24%)] text-[#4A4338] dark:text-[hsl(37_11%_75.6%)] transition-colors ${MAP_HOVER}`}
+                title={language === 'en' ? 'View on Wikimedia Commons' : 'Lihat di Wikimedia Commons'}
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
             </div>
           </div>
         )}
+
+        {/* Tombol alat di kanan atas: lokasi saya, 3D, kontur, skala */}
+        <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 pointer-events-auto">
+          <button
+            type="button"
+            onClick={handleLocateUser}
+            disabled={isLocatingUser}
+            aria-label={t.nearby.locationBtn}
+            title={t.nearby.locationBtn}
+            className={`p-2 rounded-full border shadow-sm transition-colors cursor-pointer disabled:opacity-60 ${MAP_CARD} ${MAP_HOVER}`}
+          >
+            <LocateFixed className={`w-4 h-4 ${isLocatingUser ? 'animate-spin' : ''}`} />
+          </button>
+
+          {/* Mode 3D (kemiringan kamera + gedung 3D) */}
+          <button
+            type="button"
+            onClick={toggle3D}
+            aria-pressed={is3DMode}
+            aria-label={language === 'en' ? '3D mode' : 'Mode 3D'}
+            title={
+              is3DMode
+                ? (language === 'en' ? 'Disable 3D Mode' : 'Nonaktifkan Mode 3D')
+                : (language === 'en' ? 'Enable 3D Mode' : 'Aktifkan Mode 3D')
+            }
+            className={`${mapToolBtn(is3DMode)} flex items-center justify-center`}
+          >
+            <span className="w-4 h-4 flex items-center justify-center text-[11px] font-extrabold tracking-tight leading-none">3D</span>
+          </button>
+
+          {/* Kontur (garis ketinggian dari data elevasi) */}
+          <button
+            type="button"
+            onClick={toggleTopo}
+            aria-pressed={isTopoOn}
+            aria-label={language === 'en' ? 'Contour lines' : 'Kontur'}
+            title={
+              isTopoOn
+                ? (language === 'en' ? 'Hide contour lines' : 'Sembunyikan kontur')
+                : (language === 'en' ? 'Show contour lines' : 'Tampilkan garis kontur')
+            }
+            className={mapToolBtn(isTopoOn)}
+          >
+            <Mountain className="w-4 h-4" />
+          </button>
+
+          {/* Skala */}
+          <button
+            type="button"
+            onClick={toggleScale}
+            aria-pressed={isScaleOn}
+            aria-label={language === 'en' ? 'Scale bar' : 'Skala'}
+            title={
+              isScaleOn
+                ? (language === 'en' ? 'Hide scale bar' : 'Sembunyikan skala')
+                : (language === 'en' ? 'Show scale bar' : 'Tampilkan skala')
+            }
+            className={mapToolBtn(isScaleOn)}
+          >
+            <Ruler className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
 </div>
