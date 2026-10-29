@@ -1,14 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, ExternalLink, FileCode, FileText, Loader2, Search, Upload, X } from 'lucide-react';
-import { BulkFileRow, fetchBulkFiles } from '../services/wikimediaApi';
-import { parseBulkList } from '../utils/bulkFiles';
-import { parseBulkFiles, withBulkFiles } from '../utils/urlState';
+import { AlertCircle, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, ExternalLink, FileCode, FileText, ListPlus, Loader2, Search, Upload, X } from 'lucide-react';
+import { BulkFileRow, fetchBulkFiles, fetchCategoryFileNames } from '../services/wikimediaApi';
+import { extensionOf, parseBulkList } from '../utils/bulkFiles';
+import { parseBulkCategory, parseBulkFiles, withBulkCategory, withBulkFiles } from '../utils/urlState';
 
 interface BulkFilesSectionProps {
   language?: 'en' | 'id';
+  /** Kategori Commons yang berkasnya dimuat saat tab dibuka (tombol Bulk di mode Kategori); ?category= di URL berlaku sama */
+  seedCategory?: string | null;
 }
 
 const BULK_MAX_FILES = 2000;
+const SAMPLE_CATEGORY = 'Wikilokal';
+const SAMPLE_LIMIT = BULK_MAX_FILES;
 const MAX_TXT_BYTES = 1024 * 1024;
 const PAGE_SIZES = [5, 10, 15, 20, 25, 50, 100]; // 0 = semua
 
@@ -18,7 +22,7 @@ const TEXT = {
     subtitle: 'Paste file names, one per line, or upload a TXT file. Each name is looked up once on Wikimedia Commons.',
     inputLabel: 'List of file names (one per line)',
     placeholder: 'Visa policy of Turkmenistan NewMap.png\nFile:Visa_policy_of_the_USA.svg\nhttps://commons.wikimedia.org/wiki/File:Example.jpg',
-    hint: 'The “File:” prefix, underscores, and Commons links are accepted. Names listed more than once are checked once.',
+    hint: 'The “File:” prefix, underscores, Commons links, and names without an extension are accepted (every file with that name is listed). Names listed more than once are checked once.',
     upload: 'Upload TXT',
     txtOnly: 'TXT files only (.txt)',
     notTxt: 'Only TXT files (.txt) are accepted.',
@@ -27,6 +31,11 @@ const TEXT = {
     overwrite: 'Replace the current list with the contents of this file?',
     run: 'Search',
     clear: 'Clear',
+    sample: 'Sample: all files of Wikilokal',
+    sampleFail: 'Could not load the category files.',
+    loadingTitle: 'Loading',
+    loadingCategory: (c: string) => `Loading files of the category “${c}”…`,
+    sampleEmpty: 'The category has no files.',
     empty: 'Enter at least one file name first.',
     parsedTitle: (n: number) => `${n.toLocaleString('en-US')} unique file names`,
     dupLine: (d: number) => (d ? `${d} duplicate name${d === 1 ? '' : 's'} found; each is checked once.` : 'No duplicates found.'),
@@ -35,11 +44,11 @@ const TEXT = {
     sameFile: 'Different names that lead to the same file',
     sameFileLine: (a: string, b: string) => `“${a}” and “${b}”`,
     truncated: (max: number) => `Only the first ${max.toLocaleString('en-US')} names are checked.`,
-    checking: (d: number, n: number) => `Checking Commons… ${d.toLocaleString('en-US')} of ${n.toLocaleString('en-US')} files`,
+    checking: (d: number, n: number) => `Checking Commons: ${d.toLocaleString('en-US')} of ${n.toLocaleString('en-US')} files`,
     retry: 'Try again',
     count: (n: number, total: number) => `${n.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} files shown`,
     found: (f: number, m: number) => `${f.toLocaleString('en-US')} found, ${m.toLocaleString('en-US')} not found`,
-    headers: ['File', 'Keyword', 'Original file name', 'Last uploaded', 'Uploader', 'Commons description'],
+    headers: ['File', 'Keyword', 'Original file name', 'Extension', 'Last uploaded', 'Uploader', 'Commons description'],
     notFound: 'Not found on Commons',
     redirect: 'redirect',
     searchPlaceholder: 'Search the table…',
@@ -57,7 +66,7 @@ const TEXT = {
     subtitle: 'Tempel nama berkas, satu per baris, atau unggah berkas TXT. Tiap nama dicari sekali di Wikimedia Commons.',
     inputLabel: 'Daftar nama berkas (satu per baris)',
     placeholder: 'Visa policy of Turkmenistan NewMap.png\nFile:Visa_policy_of_the_USA.svg\nhttps://commons.wikimedia.org/wiki/File:Example.jpg',
-    hint: 'Awalan “File:”, garis bawah, dan tautan Commons diterima. Nama yang tercantum lebih dari sekali hanya dicek sekali.',
+    hint: 'Awalan “File:”, garis bawah, tautan Commons, dan nama tanpa ekstensi diterima (semua berkas dengan nama itu ditampilkan). Nama yang tercantum lebih dari sekali hanya dicek sekali.',
     upload: 'Unggah TXT',
     txtOnly: 'Hanya berkas TXT (.txt)',
     notTxt: 'Hanya berkas TXT (.txt) yang diterima.',
@@ -66,6 +75,11 @@ const TEXT = {
     overwrite: 'Ganti daftar saat ini dengan isi berkas ini?',
     run: 'Cari',
     clear: 'Bersihkan',
+    sample: 'Contoh: semua berkas Wikilokal',
+    sampleFail: 'Berkas kategori tidak dapat dimuat.',
+    loadingTitle: 'Memuat',
+    loadingCategory: (c: string) => `Memuat berkas kategori “${c}”…`,
+    sampleEmpty: 'Kategori ini tidak punya berkas.',
     empty: 'Isi setidaknya satu nama berkas dulu.',
     parsedTitle: (n: number) => `${n.toLocaleString('id-ID')} nama berkas unik`,
     dupLine: (d: number) => (d ? `${d} nama ganda ditemukan; masing-masing hanya dicek sekali.` : 'Tidak ada nama ganda.'),
@@ -74,11 +88,11 @@ const TEXT = {
     sameFile: 'Nama berbeda yang menuju berkas yang sama',
     sameFileLine: (a: string, b: string) => `“${a}” dan “${b}”`,
     truncated: (max: number) => `Hanya ${max.toLocaleString('id-ID')} nama pertama yang dicek.`,
-    checking: (d: number, n: number) => `Memeriksa Commons… ${d.toLocaleString('id-ID')} dari ${n.toLocaleString('id-ID')} berkas`,
+    checking: (d: number, n: number) => `Memeriksa Commons: ${d.toLocaleString('id-ID')} dari ${n.toLocaleString('id-ID')} berkas`,
     retry: 'Coba lagi',
     count: (n: number, total: number) => `${n.toLocaleString('id-ID')} dari ${total.toLocaleString('id-ID')} berkas ditampilkan`,
     found: (f: number, m: number) => `${f.toLocaleString('id-ID')} ditemukan, ${m.toLocaleString('id-ID')} tidak ditemukan`,
-    headers: ['Berkas', 'Kata kunci', 'Nama berkas asli', 'Terakhir diunggah', 'Pengunggah', 'Deskripsi Commons'],
+    headers: ['Berkas', 'Kata kunci', 'Nama berkas asli', 'Ekstensi', 'Terakhir diunggah', 'Pengunggah', 'Deskripsi Commons'],
     notFound: 'Tidak ditemukan di Commons',
     redirect: 'pengalihan',
     searchPlaceholder: 'Cari di tabel…',
@@ -115,7 +129,7 @@ const download = (blob: Blob, name: string) => {
 
 type Notice = { duplicates: { keyword: string; lines: number[] }[]; sameFile: [string, string][]; truncated: boolean };
 
-export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = 'id' }) => {
+export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = 'id', seedCategory = null }) => {
   const tx = TEXT[language];
   const [text, setText] = useState<string>(() => (parseBulkFiles(window.location.search) ?? []).join('\n'));
   const [rows, setRows] = useState<BulkFileRow[] | null>(null);
@@ -136,14 +150,15 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  const writeUrl = (names: string[] | null) => {
+  // Daftar dari kategori ditulis sebagai ?category=; daftar ketikan/unggahan sebagai ?files=
+  const writeUrl = (names: string[] | null, category: string | null = null) => {
     try {
-      const next = withBulkFiles(window.location.search, names);
+      const next = withBulkCategory(withBulkFiles(window.location.search, category ? null : names), category);
       if (next !== window.location.search) window.history.replaceState(window.history.state, '', window.location.pathname + next);
     } catch { /* abaikan */ }
   };
 
-  const run = async (source: string = text) => {
+  const run = async (source: string = text, category: string | null = null) => {
     const parsed = parseBulkList(source);
     if (parsed.entries.length === 0) {
       setError(tx.empty);
@@ -158,7 +173,7 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
     setQuery('');
     setUniqueCount(parsed.entries.length);
     setProgress({ done: 0, total: entries.length });
-    writeUrl(entries.map((e) => e.name));
+    writeUrl(entries.map((e) => e.name), category);
     try {
       const result = await fetchBulkFiles(entries, (done, total) => !ctrl.signal.aborted && setProgress({ done, total }), ctrl.signal);
       if (ctrl.signal.aborted) return;
@@ -168,7 +183,7 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
       for (const r of result) {
         if (!r.exists) continue;
         const prev = seen.get(r.title);
-        if (prev !== undefined) sameFile.push([prev, r.keyword]);
+        if (prev !== undefined && prev !== r.keyword) sameFile.push([prev, r.keyword]);
         else seen.set(r.title, r.keyword);
       }
       setNotice({
@@ -188,7 +203,9 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
 
   // Daftar dari URL (?files=) langsung diperiksa saat tab dibuka
   useEffect(() => {
-    if (text.trim()) void run(text);
+    const cat = seedCategory ?? parseBulkCategory(window.location.search);
+    if (cat) void loadCategory(cat);
+    else if (text.trim()) void run(text);
     return () => abortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -216,6 +233,33 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
     }
   };
 
+  // Nama berkas sebuah kategori Commons (paling banyak SAMPLE_LIMIT) dimuat ke kotak teks lalu diperiksa
+  // sampleBusy: kategori yang sedang dimuat (untuk panel pemuatan); sampleBtnBusy: hanya bila dimulai dari tombol contoh
+  const [sampleBusy, setSampleBusy] = useState<string | null>(null);
+  const [sampleBtnBusy, setSampleBtnBusy] = useState(false);
+  const loadCategory = async (category: string, confirmOverwrite = false) => {
+    if (confirmOverwrite && text.trim() && !window.confirm(tx.overwrite)) return;
+    setSampleBusy(category);
+    setSampleBtnBusy(confirmOverwrite);
+    try {
+      const names = await fetchCategoryFileNames(category, SAMPLE_LIMIT);
+      if (names.length === 0) {
+        setError(tx.sampleEmpty);
+        return;
+      }
+      const content = names.join('\n');
+      setText(content);
+      setError(null);
+      void run(content, category);
+    } catch {
+      setError(tx.sampleFail);
+    } finally {
+      setSampleBusy(null);
+      setSampleBtnBusy(false);
+    }
+  };
+  const loadSample = () => loadCategory(SAMPLE_CATEGORY, true);
+
   const clearAll = () => {
     abortRef.current?.abort();
     setText('');
@@ -233,6 +277,7 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
     return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
   };
   const nameOf = (r: BulkFileRow) => (r.exists ? r.title.replace(/^File:/, '') : '');
+  const extOf = (r: BulkFileRow) => (r.exists ? extensionOf(nameOf(r)) : '');
 
   const allRows = useMemo(() => {
     const list = rows ?? [];
@@ -245,7 +290,7 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
   const filtered = useMemo(() => {
     if (terms.length === 0) return allRows;
     return allRows.filter((r) => {
-      const hay = [r.keyword, nameOf(r), r.lastUploaded.slice(0, 10), fmtDate(r.lastUploaded), r.uploader, pickDescription(r.descriptions, language)].join(' ').toLowerCase();
+      const hay = [r.keyword, nameOf(r), extOf(r), r.lastUploaded.slice(0, 10), fmtDate(r.lastUploaded), r.uploader, pickDescription(r.descriptions, language)].join(' ').toLowerCase();
       return terms.every((t) => hay.includes(t));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -277,7 +322,7 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
 
   const exportCsv = () => {
     const lines = filtered.map((r) =>
-      [r.exists ? r.title : '', r.keyword, nameOf(r) || tx.notFound, r.lastUploaded, r.uploader, pickDescription(r.descriptions, language)].map(csvCell).join(',')
+      [r.exists ? r.title : '', r.keyword, nameOf(r) || tx.notFound, extOf(r), r.lastUploaded, r.uploader, pickDescription(r.descriptions, language)].map(csvCell).join(',')
     );
     const head = headers;
     download(new Blob(['﻿' + [head.map(csvCell).join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' }), `commons_bulk_${stamp}.csv`);
@@ -291,6 +336,7 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
         r.exists ? `| [[${r.title}|60px|link=commons:${r.title}]]` : '| -',
         `| ${wikiText(r.keyword)}`,
         r.exists ? `| [[:commons:${r.title}|${nameOf(r)}]]` : `| ${wikiText(tx.notFound)}`,
+        `| ${extOf(r) || '-'}`,
         `| ${r.lastUploaded ? r.lastUploaded.slice(0, 10) : '-'}`,
         `| ${wikiText(r.uploader) || '-'}`,
         `| ${wikiText(pickDescription(r.descriptions, language)) || '-'}`
@@ -308,7 +354,7 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
         title: titleText,
         subtitle: terms.length > 0 ? `${tx.matches(filtered.length, allRows.length)} — “${query.trim()}”` : `${tx.count(filtered.length, allRows.length)} · ${tx.found(foundCount, allRows.length - foundCount)}`,
         footer: `${tx.generated} ${stamp}`,
-        headers: [`${headers[0]} / ${headers[2]}`, headers[1], headers[3], headers[4], headers[5]],
+        headers: [`${headers[0]} / ${headers[2]}`, headers[1], headers[4], headers[5], headers[6]],
         rows: filtered.map((r) => ({
           file: nameOf(r) || tx.notFound,
           fileUrl: r.exists ? commonsFileUrl(r.title) : '',
@@ -397,6 +443,10 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
             <Upload className="w-3.5 h-3.5" />
             {tx.upload}
           </button>
+          <button type="button" onClick={() => void loadSample()} disabled={!!progress || !!sampleBusy} className={actionBtn}>
+            {sampleBtnBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ListPlus className="w-3.5 h-3.5" />}
+            {tx.sample}
+          </button>
           <span className="text-xs text-stone-500 dark:text-stone-400">{tx.txtOnly}</span>
           {(text || rows) && (
             <button type="button" onClick={clearAll} className={`${actionBtn} ms-auto`}>
@@ -407,11 +457,34 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
         </div>
       </div>
 
-      {progress && (
-        <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400" role="status">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          {tx.checking(progress.done, progress.total)}
-        </div>
+      {(sampleBusy || progress) && (
+        <section aria-label={tx.loadingTitle} className="rounded-xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50" role="status" aria-live="polite">
+          <div className="flex items-center gap-2 text-sm font-semibold text-stone-800 dark:text-stone-100">
+            <Loader2 className="w-4 h-4 animate-spin text-accent-600" />
+            {tx.loadingTitle}
+          </div>
+          <ol className="mt-2 space-y-2 text-xs text-stone-600 dark:text-stone-300">
+            {sampleBusy && (
+              <li className="space-y-1">
+                <div>{tx.loadingCategory(sampleBusy)}</div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700">
+                  <div className="h-full w-1/3 animate-pulse rounded-full bg-accent-600" />
+                </div>
+              </li>
+            )}
+            {progress && (
+              <li className="space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span>{tx.checking(progress.done, progress.total)}</span>
+                  <span className="tabular-nums font-semibold">{dataPercent}%</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700">
+                  <div className="h-full rounded-full bg-accent-600 transition-[width] duration-300" style={{ width: `${dataPercent}%` }} />
+                </div>
+              </li>
+            )}
+          </ol>
+        </section>
       )}
 
       {error && (
@@ -507,23 +580,24 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
                     <th className={th}>{headers[0]}</th>
                     <th className={th}>{headers[1]}</th>
                     <th className={th}>{headers[2]}</th>
+                    <th className={th}>{headers[3]}</th>
                     <th className={th}>
                       <button
                         type="button"
                         onClick={() => setDateSort((s) => (s === 'none' ? 'desc' : s === 'desc' ? 'asc' : 'none'))}
                         className="inline-flex items-center gap-1 uppercase tracking-wide cursor-pointer"
                       >
-                        {headers[3]}
+                        {headers[4]}
                         {dateSort === 'desc' ? <ArrowDown className="w-3 h-3" /> : dateSort === 'asc' ? <ArrowUp className="w-3 h-3" /> : null}
                       </button>
                     </th>
-                    <th className={th}>{headers[4]}</th>
                     <th className={th}>{headers[5]}</th>
+                    <th className={th}>{headers[6]}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 bg-white dark:divide-stone-800 dark:bg-stone-900">
                   {pageRows.map((r) => (
-                    <tr key={r.keyword} className="align-top">
+                    <tr key={`${r.keyword}|${r.title}`} className="align-top">
                       <td className="px-3 py-2">
                         {r.exists && r.thumb ? (
                           <a href={commonsFileUrl(r.title)} target="_blank" rel="noopener noreferrer" aria-label={nameOf(r)}>
@@ -554,6 +628,7 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
                           <span className="font-normal text-red-700 dark:text-red-400">{tx.notFound}</span>
                         )}
                       </td>
+                      <td className="px-3 py-2 whitespace-nowrap font-mono text-stone-600 dark:text-stone-300">{extOf(r) || '-'}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-stone-600 dark:text-stone-300" title={r.lastUploaded}>
                         {fmtDate(r.lastUploaded)}
                       </td>

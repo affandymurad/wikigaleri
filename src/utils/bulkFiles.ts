@@ -60,3 +60,14 @@ export function parseBulkList(text: string): BulkParse {
   const entries = [...map.values()];
   return { entries, duplicates: entries.filter((e) => e.lines.length > 1), total };
 }
+
+/** Ekstensi berkas yang diizinkan di Commons; dipakai untuk mengenali nama yang sudah berekstensi */
+const KNOWN_EXTENSIONS = new Set([
+  'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'tif', 'tiff', 'bmp', 'xcf', 'ico', 'webm', 'ogv', 'ogg', 'oga', 'opus', 'mp3', 'wav', 'flac', 'mid', 'midi', 'mp4', 'pdf', 'djvu', 'stl', 'apng', 'avif', 'jp2', 'jxl', 'srt', 'tab', 'map', 'gpx', 'glb', 'gltf', 'obj', 'mpg', 'mpeg', 'm4a',
+]);
+
+/** Ekstensi (huruf kecil) bila nama berakhir dengan ekstensi Commons yang dikenal, selain itu string kosong */
+export function extensionOf(name: string): string {
+  const m = name.match(/\.([A-Za-z0-9]{2,5})$/);
+  return m && KNOWN_EXTENSIONS.has(m[1].toLowerCase()) ? m[1].toLowerCase() : '';
+}

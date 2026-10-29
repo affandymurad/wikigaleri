@@ -40,6 +40,10 @@ export function useCommonsGallery() {
   userModeRef.current = userMode;
   const liveFeedRef = useRef<boolean>(false);
   liveFeedRef.current = liveFeed;
+  // Mode Kategori: cari anggota kategori itu saja (incategory:), bukan kata kunci teks biasa
+  const [categoryMode, setCategoryMode] = useState<boolean>(false);
+  const categoryModeRef = useRef<boolean>(false);
+  categoryModeRef.current = categoryMode;
   const [randomMode, setRandomMode] = useState<boolean>(false);
   const randomRef = useRef<boolean>(false);
   randomRef.current = randomMode;
@@ -91,7 +95,9 @@ export function useCommonsGallery() {
         ? { ...currentFilter, query: '', username: undefined, mediaType: 'all' as const, license: 'all' as const }
         : userModeRef.current
           ? { ...currentFilter, query: '', username: currentFilter.query.trim(), mediaType: 'all' as const }
-          : currentFilter;
+          : categoryModeRef.current
+            ? { ...currentFilter, query: `incategory:"${currentFilter.query.trim().replace(/^(Category|Kategori)\s*:\s*/i, '').replace(/"/g, ' ')}"` }
+            : currentFilter;
 
       try {
         const offset = (pageNumber - 1) * ITEMS_PER_PAGE;
@@ -126,7 +132,7 @@ export function useCommonsGallery() {
     pageTokensRef.current = {};
     setCurrentPage(1);
     fetchPage(filter, 1);
-  }, [filter.query, filter.mediaType, filter.license, filter.sort, liveFeed, userMode, randomMode]);
+  }, [filter.query, filter.mediaType, filter.license, filter.sort, liveFeed, userMode, randomMode, categoryMode]);
 
   const goToPage = useCallback(
     (page: number) => {
@@ -264,6 +270,7 @@ export function useCommonsGallery() {
     setLiveFeed,
     userMode,
     setUserMode,
+    setCategoryMode,
     refresh,
   };
 }

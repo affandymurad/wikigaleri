@@ -10,6 +10,7 @@ import type { CategorySearchMode, CommonsMediaItem, LicenseCategory, MediaType, 
  *   /?mode=categories&q=Batik&cat=subcategories | parents | wikivoyage | wikipedia
  *   /?mode=categories&q=Batik&cat=wikipedia&lang=de        bahasa/edisi pada tab Wikivoyage dan Wikipedia
  *   /?mode=nearby | live | random | bookmarks
+ *   /?mode=bulk&category=Wikilokal                         tab Massal berisi semua berkas sebuah kategori Commons
  *   /?mode=bulk&files=Nama_A.jpg|Nama_B.png               tab Massal (Bulk): daftar nama berkas dipisah "|" (diperiksa otomatis)
  *   /?mode=nearby&lat=-6.1753924&lon=106.8271528&zoom=14   titik tengah dan zoom peta Sekitar
  *   /file/Waterworks_Museum_(85472)bw.jpg  detail berkas (nama berkas seperti di Commons)
@@ -196,6 +197,21 @@ export function parseBulkFiles(search: string): string[] | null {
   if (!raw) return null;
   const names = raw.split('|').map((x) => fromUrlText(x)).filter(Boolean);
   return names.length ? names : null;
+}
+
+/** Kategori sumber daftar tab Massal dari ?category= (spasi = garis bawah); null bila tidak ada */
+export function parseBulkCategory(search: string): string | null {
+  const raw = new URLSearchParams(search).get('category');
+  const name = raw ? fromUrlText(raw) : '';
+  return name || null;
+}
+
+export function withBulkCategory(search: string, category: string | null): string {
+  const p = new URLSearchParams(search);
+  p.delete('category');
+  if (category) p.set('category', toUrlText(category));
+  const str = p.toString().replace(/%2F/gi, '/').replace(/%3A/gi, ':').replace(/%7C/gi, '|');
+  return str ? `?${str}` : '';
 }
 
 /** Batas panjang daftar di URL; lebih panjang dari ini daftar tidak ditulis ke URL */

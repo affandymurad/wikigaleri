@@ -70,6 +70,7 @@ async function commonsFetch(url: string, init?: RequestInit): Promise<Response> 
 }
 
 
+import { extensionOf } from '../utils/bulkFiles';
 const COMMONS_API_BASE = 'https://commons.wikimedia.org/w/api.php';
 
 export const CURATED_TOPIC_GROUPS: { id: CuratedTopicGroup; labelEn: string; labelId: string }[] = [
@@ -1793,6 +1794,62 @@ export async function fetchCategoryUsageReport(
   return { rows, checked: titles.length, truncated };
 }
 
+/**
+ * Nama berkas (tanpa "File:") di sebuah kategori Commons, paling banyak `limit`. Memakai pencarian `incategory:` yang
+ * sama dengan tab Media di mode Kategori, sehingga jumlahnya konsisten (nama kategori tidak peka huruf besar-kecil:
+ * "Wikirempah" dan "WikiRempah" sama-sama terbaca).
+ */
+export async function fetchCategoryFileNames(categoryName: string, limit = 500): Promise<string[]> {
+  const cat = normalizeCategoryName(categoryName).replace(/"/g, ' ');
+  if (!cat) return [];
+  const names: string[] = [];
+  let offset: number | undefined;
+  do {
+    const params = new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      origin: '*',
+      list: 'search',
+      srnamespace: '6',
+      srsearch: `incategory:"${cat}"`,
+      srlimit: '500',
+      srprop: '',
+      // urutan stabil; dengan urutan lain halaman hasil bisa tumpang tindih dan berkas terlewat
+      srsort: 'title_natural_asc',
+    });
+    if (offset) params.set('sroffset', String(offset));
+    const res = await commonsFetch(`${COMMONS_API_BASE}?${params.toString()}`);
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const data = await res.json();
+    for (const m of (data?.query?.search || []) as Array<{ title: string }>) names.push(m.title.replace(/^File:/, ''));
+    offset = data?.continue?.sroffset;
+  } while (offset && names.length < limit);
+  return [...new Set(names)].slice(0, limit);
+}
+
+/**
+ * Berkas Commons yang bernama persis `${name}.${ekstensi}`, untuk nama yang diketik tanpa ekstensi.
+ * Mengembalikan semua yang cocok (mis. Nama.jpg dan Nama.png), tanpa awalan "File:".
+ */
+async function findFilesByBaseName(name: string): Promise<string[]> {
+  const params = new URLSearchParams({
+    action: 'query',
+    format: 'json',
+    origin: '*',
+    list: 'allpages',
+    apnamespace: '6',
+    apprefix: `${name}.`,
+    aplimit: '20',
+  });
+  const res = await commonsFetch(`${COMMONS_API_BASE}?${params.toString()}`);
+  if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+  const data = await res.json();
+  return ((data?.query?.allpages || []) as Array<{ title: string }>)
+    .map((p) => p.title.replace(/^File:/, ''))
+    // hanya yang sisanya tepat satu ekstensi Commons (bukan "Nama.versi2.jpg")
+    .filter((t) => extensionOf(t) !== '' && t.slice(name.length + 1).toLowerCase() === extensionOf(t));
+}
+
 export interface BulkFileRow {
   /** Teks baris seperti diketik pengguna */
   keyword: string;
@@ -1820,9 +1877,38 @@ export async function fetchBulkFiles(
   signal?: AbortSignal
 ): Promise<BulkFileRow[]> {
   const rows: BulkFileRow[] = [];
-  onProgress?.(0, entries.length);
-  for (let i = 0; i < entries.length; i += REPORT_BATCH) {
-    const batch = entries.slice(i, i + REPORT_BATCH);
+  // Nama tanpa ekstensi dicocokkan dulu ke berkas Commons; tiap yang cocok menjadi satu baris
+  const noExt = entries.filter((e) => extensionOf(e.name) === '').length;
+  const total = entries.length + noExt;
+  onProgress?.(0, total);
+  const expanded: typeof entries = [];
+  let resolved = 0;
+  const queue = entries.map((e, idx) => ({ e, idx }));
+  const slots: (typeof entries)[] = entries.map(() => []);
+  const worker = async () => {
+    while (queue.length) {
+      const { e, idx } = queue.shift()!;
+      throwIfAborted(signal);
+      if (extensionOf(e.name) !== '') {
+        slots[idx] = [e];
+        continue;
+      }
+      let found: string[] = [];
+      try {
+        found = await findFilesByBaseName(e.name);
+      } catch {
+        /* dianggap tidak ditemukan */
+      }
+      slots[idx] = found.length ? found.map((n) => ({ ...e, name: n })) : [e];
+      resolved += 1;
+      onProgress?.(resolved, total);
+    }
+  };
+  await Promise.all(Array.from({ length: 5 }, worker));
+  for (const s of slots) expanded.push(...s);
+  const base = noExt;
+  for (let i = 0; i < expanded.length; i += REPORT_BATCH) {
+    const batch = expanded.slice(i, i + REPORT_BATCH);
     const params = new URLSearchParams({
       action: 'query',
       format: 'json',
@@ -1885,7 +1971,7 @@ export async function fetchBulkFiles(
         descriptions,
       });
     }
-    onProgress?.(Math.min(i + REPORT_BATCH, entries.length), entries.length);
+    onProgress?.(base + Math.round((Math.min(i + REPORT_BATCH, expanded.length) / expanded.length) * entries.length), total);
   }
   return rows;
 }

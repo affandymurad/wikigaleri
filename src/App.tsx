@@ -19,8 +19,8 @@ import { ProjectUsageReportSection } from './components/ProjectUsageReportSectio
 import { BulkFilesSection } from './components/BulkFilesSection';
 import { CommonsMediaItem, CategorySearchMode } from './types/wikimedia';
 import { CURATED_TOPICS, normalizeCategoryName, fetchMediaDetailByPageId, fetchMediaDetailByTitle } from './services/wikimediaApi';
-import { buildSearch, parseSearch, detailPath, parseDetailPath, parseNearbyView, withNearbyView, parseReportLang, withReportLang, parseBulkFiles, withBulkFiles, type UrlSearchState } from './utils/urlState';
-import { ExternalLink, Search, MapPin, LayoutGrid, FolderTree, FolderRoot, Radio, Bookmark, Shuffle } from 'lucide-react';
+import { buildSearch, parseSearch, detailPath, parseDetailPath, parseNearbyView, withNearbyView, parseReportLang, withReportLang, parseBulkFiles, withBulkFiles, parseBulkCategory, withBulkCategory, type UrlSearchState } from './utils/urlState';
+import { ExternalLink, Search, MapPin, LayoutGrid, FolderTree, FolderRoot, Radio, Bookmark, Shuffle, ListChecks } from 'lucide-react';
 
 export default function App() {
   const { isDark, toggleDarkMode } = useDarkMode();
@@ -71,6 +71,7 @@ export default function App() {
   setRandomMode,
     userMode,
     setUserMode,
+    setCategoryMode,
   } = useCommonsGallery();
   const { savedUsers, savedCategories, toggleUser, toggleCategory, isUserSaved, isCategorySaved } = useBookmarkLists();
 
@@ -78,11 +79,18 @@ export default function App() {
   type ActiveMode = 'keywords' | 'nearby' | 'categories' | 'bulk' | 'live' | 'random' | 'bookmarks';
   const [activeMode, setActiveMode] = useState<ActiveMode>('keywords');
 
+  // Mode Kategori mencari anggota kategorinya saja
+  useEffect(() => {
+    setCategoryMode(activeMode === 'categories');
+  }, [activeMode, setCategoryMode]);
+
   // Mode Kategori sub-search mode: 'media' | 'subcategories' | 'parent_categories'
   // Mode Nama Pengguna: 'uploads' (unggahan) | 'talk' (halaman pembicaraan pengguna)
   const [userView, setUserView] = useState<'uploads' | 'talk'>('uploads');
   const [categorySearchMode, setCategorySearchMode] = useState<CategorySearchMode>('media');
   const [currentCategoryName, setCurrentCategoryName] = useState<string>('');
+  // Kategori asal saat tab Massal dibuka lewat tombol Bulk di mode Kategori
+  const [bulkSeedCategory, setBulkSeedCategory] = useState<string | null>(null);
 
   // Modals state
   const [selectedDetailItem, setSelectedDetailItem] = useState<CommonsMediaItem | null>(null);
@@ -184,6 +192,7 @@ export default function App() {
     setShowSavedOnly(mode === 'bookmarks');
     if (mode === 'categories') setMediaType('all');
     if (mode !== 'keywords') { setUserMode(false); setUserView('uploads'); }
+    if (mode !== 'bulk') setBulkSeedCategory(null);
     if (mode === 'keywords' && (activeMode === 'categories' || activeMode === 'bulk')) setQuery('');
     setActiveMode(mode);
     if (mode === 'categories') {
@@ -191,6 +200,15 @@ export default function App() {
       setCurrentCategoryName(clean);
       setQuery(clean);
     }
+  };
+
+  // Tombol Bulk di mode Kategori: buka tab Massal berisi semua berkas kategori yang sedang dibuka
+  const openBulkForCategory = (catName: string) => {
+    const clean = normalizeCategoryName(catName);
+    if (!clean) return;
+    handleSwitchMode('bulk');
+    setBulkSeedCategory(clean);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Buka pencarian username (mode Kata Kunci > Nama Pengguna)
@@ -319,7 +337,10 @@ export default function App() {
     // lat/lon/zoom peta Sekitar ditulis oleh petanya sendiri; jangan dihapus saat URL ditulis ulang
     if (activeMode === 'nearby') search = withNearbyView(search, parseNearbyView(window.location.search));
     // daftar berkas tab Massal ditulis oleh tabnya sendiri
-    if (activeMode === 'bulk') search = withBulkFiles(search, parseBulkFiles(window.location.search));
+    if (activeMode === 'bulk') {
+      search = withBulkFiles(search, parseBulkFiles(window.location.search));
+      search = withBulkCategory(search, parseBulkCategory(window.location.search));
+    }
     // bahasa tab Wikivoyage/Wikipedia ditulis oleh tabnya sendiri; dibawa saat berpindah antar keduanya
     if (activeMode === 'categories' && (categorySearchMode === 'wikivoyage' || categorySearchMode === 'wikipedia')) {
       search = withReportLang(search, parseReportLang(window.location.search));
@@ -612,6 +633,14 @@ export default function App() {
                     {language === 'id' ? 'Buka di Wikimedia Commons' : 'Open on Wikimedia Commons'}
                     <ExternalLink className="h-3 w-3 opacity-60" />
                   </a>
+                  <button
+                    type="button"
+                    onClick={() => openBulkForCategory(currentCategoryName)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 px-3.5 py-1.5 text-xs font-semibold text-stone-600 transition hover:bg-stone-50 cursor-pointer dark:border-stone-600 dark:text-stone-300 dark:hover:bg-stone-800"
+                  >
+                    <ListChecks className="h-3.5 w-3.5" />
+                    {language === 'id' ? 'Massal' : 'Bulk'}
+                  </button>
                 </div>
               )}
 
@@ -714,7 +743,7 @@ export default function App() {
         {/* Mode Massal: daftar nama berkas (satu per baris atau TXT) dicari di Commons */}
         {activeMode === 'bulk' && (
           <section aria-label="Bulk" className="pt-1">
-            <BulkFilesSection language={language} />
+            <BulkFilesSection language={language} seedCategory={bulkSeedCategory} />
           </section>
         )}
 
