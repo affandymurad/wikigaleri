@@ -338,7 +338,7 @@ export const BulkFilesSection: React.FC<BulkFilesSectionProps> = ({ language = '
         r.exists ? `| [[:commons:${r.title}|${nameOf(r)}]]` : `| ${wikiText(tx.notFound)}`,
         `| ${extOf(r) || '-'}`,
         `| ${r.lastUploaded ? r.lastUploaded.slice(0, 10) : '-'}`,
-        `| ${wikiText(r.uploader) || '-'}`,
+        `| ${r.uploader ? `[[:commons:User:${r.uploader}|${r.uploader}]]` : '-'}`,
         `| ${wikiText(pickDescription(r.descriptions, language)) || '-'}`
       );
     }

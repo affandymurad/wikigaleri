@@ -302,7 +302,7 @@ export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps>
         `| [[${r.title}|60px|link=commons:${r.title}]]<br>[[:commons:${r.title}|${name}]]`,
         `| ${articles}`,
         `| ${r.lastUploaded ? r.lastUploaded.slice(0, 10) : '-'}`,
-        `| ${cell(wikiText(r.uploader))}`,
+        `| ${r.uploader ? `[[:commons:User:${r.uploader}|${r.uploader}]]` : '-'}`,
         `| ${cell(captionCell(r).split('\n').map(wikiText).join('<br>'))}`,
         `| ${cell(wikiText(pickDescription(r.descriptions, lang)))}`
       );
