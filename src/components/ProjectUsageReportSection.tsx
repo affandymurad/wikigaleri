@@ -26,6 +26,8 @@ interface ProjectUsageReportSectionProps {
   currentCategory: string;
   project: UsageProject;
   language?: 'en' | 'id';
+  /** Naik tiap kali tombol Cari ditekan, supaya pencarian yang sama bisa dimuat ulang */
+  searchNonce?: number;
 }
 
 const commonsFileUrl = (title: string) => `https://commons.wikimedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_')).replace(/%3A/g, ':')}`;
@@ -44,7 +46,7 @@ const wikiText = (s: string) => {
 const pickDescription = (d: Record<string, string>, lang: string) =>
   d[lang] ?? d.default ?? d.en ?? Object.values(d)[0] ?? '';
 
-export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps> = ({ currentCategory, project, language = 'id' }) => {
+export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps> = ({ currentCategory, project, language = 'id', searchNonce = 0 }) => {
   const category = useMemo(() => normalizeCategoryName(currentCategory) || '', [currentCategory]);
   // Bahasa/edisi ikut URL (?lang=); tanpa parameter memakai bahasa aplikasi
   const [lang, setLangState] = useState<string>(() => parseReportLang(window.location.search) ?? language);
@@ -104,14 +106,15 @@ export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps>
         if (!ctrl.signal.aborted) setReport(r);
       })
       .catch((e) => {
-        if (ctrl.signal.aborted || e?.name === 'AbortError') return;
+        // hanya abaikan pembatalan milik efek ini; AbortError dari luar ditampilkan agar bisa dicoba lagi
+        if (ctrl.signal.aborted) return;
         setError(e instanceof Error ? e.message : String(e));
       })
       .finally(() => {
         if (!ctrl.signal.aborted) setProgress(null);
       });
     return () => ctrl.abort();
-  }, [category, project, reloadKey]);
+  }, [category, project, reloadKey, searchNonce]);
 
   // Reset keterangan saat kategori berganti
   useEffect(() => {
@@ -119,7 +122,7 @@ export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps>
     sectionsRef.current = {};
     captionsDone.current = new Set();
     setCaptionTick((t) => t + 1);
-  }, [category, reloadKey]);
+  }, [category, reloadKey, searchNonce]);
 
   const fmtDate = (iso: string) => {
     if (!iso) return '-';

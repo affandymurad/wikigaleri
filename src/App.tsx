@@ -155,7 +155,10 @@ export default function App() {
     }
   };
 
+  // Naik tiap pencarian kategori, supaya Cari dengan kategori yang sama memuat ulang laporan Wikipedia/Wikivoyage
+  const [categorySearchNonce, setCategorySearchNonce] = useState(0);
   const handleCategorySearch = (q: string) => {
+    setCategorySearchNonce((n) => n + 1);
     const clean = (q.trim() ? normalizeCategoryName(q) : '');
     setCurrentCategoryName(clean);
     setQuery(clean);
@@ -849,6 +852,7 @@ export default function App() {
               <ProjectUsageReportSection
                 key={categorySearchMode}
                 project={categorySearchMode}
+                searchNonce={categorySearchNonce}
                 currentCategory={currentCategoryName || filter.query}
                 language={language}
               />

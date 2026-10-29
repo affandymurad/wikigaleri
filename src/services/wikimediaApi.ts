@@ -1658,6 +1658,10 @@ const plainTextOf = (root: Element): string => {
   return (copy.textContent || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
 };
 
+const throwIfAborted = (signal?: AbortSignal) => {
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+};
+
 const stripDescription = (v: string) => plainTextOf(new DOMParser().parseFromString(v, 'text/html').body);
 
 /**
@@ -1691,9 +1695,13 @@ export async function fetchCategoryUsageReport(
       cmlimit: '500',
     });
     if (cmcontinue) params.set('cmcontinue', cmcontinue);
-    const res = await commonsFetch(`${COMMONS_API_BASE}?${params.toString()}`, { signal });
+    // Tanpa sinyal pembatalan: respons disimpan di cache bersama, dan badan respons yang terikat sinyal
+    // yang sudah dibatalkan akan gagal dibaca oleh pemanggil berikutnya. Pembatalan diperiksa manual.
+    const res = await commonsFetch(`${COMMONS_API_BASE}?${params.toString()}`);
+    throwIfAborted(signal);
     if (!res.ok) throw new Error(`HTTP error ${res.status}`);
     const data = await res.json();
+    throwIfAborted(signal);
     for (const m of (data?.query?.categorymembers || []) as Array<{ title: string }>) titles.push(m.title);
     cmcontinue = data?.continue?.cmcontinue;
     if (titles.length >= USAGE_REPORT_MAX_FILES) {
@@ -1726,9 +1734,11 @@ export async function fetchCategoryUsageReport(
         gulimit: 'max',
       });
       if (cont) for (const [k, v] of Object.entries(cont)) params.set(k, v);
-      const res = await commonsFetch(`${COMMONS_API_BASE}?${params.toString()}`, { signal });
+      const res = await commonsFetch(`${COMMONS_API_BASE}?${params.toString()}`);
+      throwIfAborted(signal);
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const data = await res.json();
+      throwIfAborted(signal);
       const pages = Object.values(data?.query?.pages || {}) as Array<{
         pageid: number;
         title: string;
