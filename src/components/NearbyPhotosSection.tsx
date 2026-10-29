@@ -174,6 +174,8 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   const [locationNotice, setLocationNotice] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState<boolean>(false);
+  // Pesan "tidak ada berkas" hanya relevan untuk posisi pencarian; hilang begitu peta digeser pengguna
+  const emptyNoticeRef = useRef<boolean>(false);
 
   // Pagination state for preview strip
   const [previewPage, setPreviewPage] = useState<number>(1);
@@ -488,6 +490,10 @@ return () => ro.disconnect();
       } catch { /* abaikan */ }
       // originalEvent hanya ada pada gerakan oleh pengguna (geser, zoom, gulir)
       const byUser = !!(e as { originalEvent?: unknown }).originalEvent;
+      if (byUser && emptyNoticeRef.current) {
+        emptyNoticeRef.current = false;
+        setLocationError(null);
+      }
       if (byUser || !ignoreMoveRef.current) setShiftCenter({ lat: c.lat, lng: c.lng });
       ignoreMoveRef.current = false;
       const b = map.getBounds();
@@ -855,6 +861,7 @@ if (reqId === analysisRequestIdRef.current) setIsAnalyzingArea(false);
 analysisRequestIdRef.current += 1;
 setIsAnalyzingArea(false);
     setLocationError(null);
+    emptyNoticeRef.current = false;
     setHasSearched(true);
     setSelectedPhoto(null);
     setSelectedCluster(null);
@@ -882,6 +889,7 @@ setIsAnalyzingArea(false);
 
       if (results.length === 0) {
         setLocationError(t.nearby.noPhotosFound);
+        emptyNoticeRef.current = true;
       } else {
         // Analisis area Gemini otomatis di belakang layar (tidak memilih foto / membuka popup)
         void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false);

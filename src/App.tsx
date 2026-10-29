@@ -16,9 +16,10 @@ import { LicenseGuideModal, WikimediaTermsModal, DisclaimerModal } from './compo
 import { AttributionQuickCopyModal } from './components/AttributionQuickCopyModal';
 import { CategoryListSection } from './components/CategoryListSection';
 import { ProjectUsageReportSection } from './components/ProjectUsageReportSection';
+import { BulkFilesSection } from './components/BulkFilesSection';
 import { CommonsMediaItem, CategorySearchMode } from './types/wikimedia';
 import { CURATED_TOPICS, normalizeCategoryName, fetchMediaDetailByPageId, fetchMediaDetailByTitle } from './services/wikimediaApi';
-import { buildSearch, parseSearch, detailPath, parseDetailPath, parseNearbyView, withNearbyView, parseReportLang, withReportLang, type UrlSearchState } from './utils/urlState';
+import { buildSearch, parseSearch, detailPath, parseDetailPath, parseNearbyView, withNearbyView, parseReportLang, withReportLang, parseBulkFiles, withBulkFiles, type UrlSearchState } from './utils/urlState';
 import { ExternalLink, Search, MapPin, LayoutGrid, FolderTree, FolderRoot, Radio, Bookmark, Shuffle } from 'lucide-react';
 
 export default function App() {
@@ -74,7 +75,7 @@ export default function App() {
   const { savedUsers, savedCategories, toggleUser, toggleCategory, isUserSaved, isCategorySaved } = useBookmarkLists();
 
   // Navigation Mode: 'keywords' (Kata Kunci) | 'nearby' (Terdekat) | 'categories' (Kategori)
-  type ActiveMode = 'keywords' | 'nearby' | 'categories' | 'live' | 'random' | 'bookmarks';
+  type ActiveMode = 'keywords' | 'nearby' | 'categories' | 'bulk' | 'live' | 'random' | 'bookmarks';
   const [activeMode, setActiveMode] = useState<ActiveMode>('keywords');
 
   // Mode Kategori sub-search mode: 'media' | 'subcategories' | 'parent_categories'
@@ -183,7 +184,7 @@ export default function App() {
     setShowSavedOnly(mode === 'bookmarks');
     if (mode === 'categories') setMediaType('all');
     if (mode !== 'keywords') { setUserMode(false); setUserView('uploads'); }
-    if (mode === 'keywords' && activeMode === 'categories') setQuery('');
+    if (mode === 'keywords' && (activeMode === 'categories' || activeMode === 'bulk')) setQuery('');
     setActiveMode(mode);
     if (mode === 'categories') {
       const clean = (currentCategoryName ? normalizeCategoryName(currentCategoryName) : '');
@@ -317,6 +318,8 @@ export default function App() {
     });
     // lat/lon/zoom peta Sekitar ditulis oleh petanya sendiri; jangan dihapus saat URL ditulis ulang
     if (activeMode === 'nearby') search = withNearbyView(search, parseNearbyView(window.location.search));
+    // daftar berkas tab Massal ditulis oleh tabnya sendiri
+    if (activeMode === 'bulk') search = withBulkFiles(search, parseBulkFiles(window.location.search));
     // bahasa tab Wikivoyage/Wikipedia ditulis oleh tabnya sendiri; dibawa saat berpindah antar keduanya
     if (activeMode === 'categories' && (categorySearchMode === 'wikivoyage' || categorySearchMode === 'wikipedia')) {
       search = withReportLang(search, parseReportLang(window.location.search));
@@ -410,7 +413,7 @@ export default function App() {
                 type="button"
                 onClick={() => handleSwitchMode('keywords')}
                 className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                  (activeMode === 'keywords' || activeMode === 'categories')
+                  (activeMode === 'keywords' || activeMode === 'categories' || activeMode === 'bulk')
                     ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs '
                     : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
                 }`}
@@ -478,11 +481,11 @@ export default function App() {
 
           </div>
 
-          {(activeMode === 'keywords' || activeMode === 'categories') && (
+          {(activeMode === 'keywords' || activeMode === 'categories' || activeMode === 'bulk') && (
             <MediaTypeFilter
               mediaType={filter.mediaType}
               onSelectMediaType={(type) => {
-                if (activeMode === 'categories') handleSwitchMode('keywords');
+                if (activeMode === 'categories' || activeMode === 'bulk') handleSwitchMode('keywords');
                 // Kata kunci bawaan beranda ('Wikilokal') tidak cocok dengan model 3D / panorama: kosongkan kolomnya
                 // (kolom kosong = tidak ada data). Pulihkan saat kembali ke filter lain dengan kolom masih kosong.
                 if (isBrowseOnlyType(type) && filter.query === DEFAULT_QUERY) setQuery('');
@@ -492,7 +495,7 @@ export default function App() {
               t={t}
               userMode={userMode}
               onSetUserMode={(on) => {
-                if (on && activeMode === 'categories') handleSwitchMode('keywords');
+                if (on && (activeMode === 'categories' || activeMode === 'bulk')) handleSwitchMode('keywords');
                 setUserMode(on);
                 setUserView('uploads');
                 setQuery('');
@@ -504,6 +507,12 @@ export default function App() {
                 else if (activeMode === 'categories') handleSwitchMode('keywords');
               }}
               categoryLabel={language === 'id' ? 'Kategori' : 'Categories'}
+              bulkMode={activeMode === 'bulk'}
+              onSetBulkMode={(on) => {
+                if (on) handleSwitchMode('bulk');
+                else if (activeMode === 'bulk') handleSwitchMode('keywords');
+              }}
+              bulkLabel={language === 'id' ? 'Massal' : 'Bulk'}
             />
           )}
 
@@ -701,6 +710,13 @@ export default function App() {
             </div>
           )}
         </section>
+
+        {/* Mode Massal: daftar nama berkas (satu per baris atau TXT) dicari di Commons */}
+        {activeMode === 'bulk' && (
+          <section aria-label="Bulk" className="pt-1">
+            <BulkFilesSection language={language} />
+          </section>
+        )}
 
         {/* Mode 2: Terdekat (Satu section Foto Terdekat / Nearby Photos) */}
         {activeMode === 'nearby' && (

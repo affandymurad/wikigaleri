@@ -10,6 +10,7 @@ import type { CategorySearchMode, CommonsMediaItem, LicenseCategory, MediaType, 
  *   /?mode=categories&q=Batik&cat=subcategories | parents | wikivoyage | wikipedia
  *   /?mode=categories&q=Batik&cat=wikipedia&lang=de        bahasa/edisi pada tab Wikivoyage dan Wikipedia
  *   /?mode=nearby | live | random | bookmarks
+ *   /?mode=bulk&files=Nama_A.jpg|Nama_B.png               tab Massal (Bulk): daftar nama berkas dipisah "|" (diperiksa otomatis)
  *   /?mode=nearby&lat=-6.1753924&lon=106.8271528&zoom=14   titik tengah dan zoom peta Sekitar
  *   /file/Waterworks_Museum_(85472)bw.jpg  detail berkas (nama berkas seperti di Commons)
  *   /file/Nama.svg?tab=license             tab detail: download | cats | license | history | talk (ai = bawaan)
@@ -17,7 +18,7 @@ import type { CategorySearchMode, CommonsMediaItem, LicenseCategory, MediaType, 
 
 export const DEFAULT_QUERY = 'Wikilokal';
 
-export type UrlMode = 'keywords' | 'nearby' | 'categories' | 'live' | 'random' | 'bookmarks';
+export type UrlMode = 'keywords' | 'nearby' | 'categories' | 'bulk' | 'live' | 'random' | 'bookmarks';
 
 export interface UrlSearchState {
   mode: UrlMode;
@@ -30,7 +31,7 @@ export interface UrlSearchState {
   categoryView: CategorySearchMode;
 }
 
-const MODES: UrlMode[] = ['keywords', 'nearby', 'categories', 'live', 'random', 'bookmarks'];
+const MODES: UrlMode[] = ['keywords', 'nearby', 'categories', 'bulk', 'live', 'random', 'bookmarks'];
 const TYPES: MediaType[] = ['all', 'image', 'audio', 'video', 'document', '3d', 'panorama'];
 const LICENSES: LicenseCategory[] = ['all', 'pd', 'cc_by', 'cc_by_sa', 'gfdl', 'other'];
 const CATEGORY_VIEWS: Record<string, CategorySearchMode> = {
@@ -186,6 +187,26 @@ export function withNearbyView(search: string, view: NearbyView | null): string 
     p.set('zoom', String(Math.round(view.zoom * 10) / 10));
   }
   const str = p.toString().replace(/%2F/gi, '/').replace(/%3A/gi, ':');
+  return str ? `?${str}` : '';
+}
+
+/** Daftar nama berkas tab Massal dari ?files= (dipisah "|", garis bawah = spasi); null bila tidak ada */
+export function parseBulkFiles(search: string): string[] | null {
+  const raw = new URLSearchParams(search).get('files');
+  if (!raw) return null;
+  const names = raw.split('|').map((x) => fromUrlText(x)).filter(Boolean);
+  return names.length ? names : null;
+}
+
+/** Batas panjang daftar di URL; lebih panjang dari ini daftar tidak ditulis ke URL */
+export const BULK_URL_MAX_CHARS = 4000;
+
+export function withBulkFiles(search: string, names: string[] | null): string {
+  const p = new URLSearchParams(search);
+  p.delete('files');
+  const joined = names ? names.map(toUrlText).join('|') : '';
+  if (joined && joined.length <= BULK_URL_MAX_CHARS) p.set('files', joined);
+  const str = p.toString().replace(/%2F/gi, '/').replace(/%3A/gi, ':').replace(/%7C/gi, '|');
   return str ? `?${str}` : '';
 }
 

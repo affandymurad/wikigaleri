@@ -1,6 +1,6 @@
 import React from 'react';
 import { MediaType } from '../types/wikimedia';
-import { Grid, Image, Music, Video, FileText, Box, Rotate3d, User, FolderTree } from 'lucide-react';
+import { Grid, Image, Music, Video, FileText, Box, Rotate3d, User, FolderTree, ListChecks } from 'lucide-react';
 import { Translations } from '../i18n/translations';
 
 interface MediaTypeFilterProps {
@@ -12,6 +12,9 @@ interface MediaTypeFilterProps {
   categoryMode?: boolean;
   onSetCategoryMode?: (on: boolean) => void;
   categoryLabel?: string;
+  bulkMode?: boolean;
+  onSetBulkMode?: (on: boolean) => void;
+  bulkLabel?: string;
   t: Translations;
 }
 
@@ -24,6 +27,9 @@ export const MediaTypeFilter: React.FC<MediaTypeFilterProps> = ({
   categoryMode = false,
   onSetCategoryMode,
   categoryLabel = 'Kategori',
+  bulkMode = false,
+  onSetBulkMode,
+  bulkLabel = 'Massal',
   t,
 }) => {
   const options: { id: MediaType; label: string; icon: React.ReactNode }[] = [
@@ -72,7 +78,7 @@ export const MediaTypeFilter: React.FC<MediaTypeFilterProps> = ({
         aria-label="Filter Jenis Dokumen"
       >
         {options.map((opt) => {
-          const isActive = !userMode && !categoryMode && mediaType === opt.id;
+          const isActive = !userMode && !categoryMode && !bulkMode && mediaType === opt.id;
           return (
             <button
               key={opt.id}
@@ -122,6 +128,22 @@ export const MediaTypeFilter: React.FC<MediaTypeFilterProps> = ({
           >
             <FolderTree className="w-4 h-4" />
             <span>{categoryLabel}</span>
+          </button>
+        )}
+        {onSetBulkMode && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={bulkMode}
+            onClick={() => onSetBulkMode(true)}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+              bulkMode
+                ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs font-semibold '
+                : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-200/50 dark:hover:bg-stone-700/50'
+            }`}
+          >
+            <ListChecks className="w-4 h-4" />
+            <span>{bulkLabel}</span>
           </button>
         )}
       </div>

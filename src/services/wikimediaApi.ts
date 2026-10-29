@@ -1793,6 +1793,103 @@ export async function fetchCategoryUsageReport(
   return { rows, checked: titles.length, truncated };
 }
 
+export interface BulkFileRow {
+  /** Teks baris seperti diketik pengguna */
+  keyword: string;
+  /** Nomor baris tempat nama ini tercantum (lebih dari satu bila duplikat) */
+  lines: number[];
+  /** Judul berkas asli di Commons setelah pengalihan, "File:Nama.jpg"; kosong bila tidak ditemukan */
+  title: string;
+  exists: boolean;
+  /** Nama yang diketik adalah pengalihan ke berkas lain */
+  redirected: boolean;
+  lastUploaded: string;
+  /** Pengguna yang mengunggah versi terbaru berkas */
+  uploader: string;
+  thumb?: string;
+  descriptions: Record<string, string>;
+}
+
+/**
+ * Memeriksa daftar nama berkas di Commons: judul asli (mengikuti pengalihan), waktu unggah versi terakhir,
+ * gambar mini, dan deskripsi. Urutan hasil sama dengan urutan masukan.
+ */
+export async function fetchBulkFiles(
+  entries: { keyword: string; name: string; lines: number[] }[],
+  onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal
+): Promise<BulkFileRow[]> {
+  const rows: BulkFileRow[] = [];
+  onProgress?.(0, entries.length);
+  for (let i = 0; i < entries.length; i += REPORT_BATCH) {
+    const batch = entries.slice(i, i + REPORT_BATCH);
+    const params = new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      origin: '*',
+      redirects: '1',
+      titles: batch.map((e) => `File:${e.name}`).join('|'),
+      prop: 'imageinfo',
+      iiprop: 'timestamp|url|user|extmetadata',
+      iiurlwidth: '96',
+      iiextmetadatafilter: 'ImageDescription',
+      iiextmetadatamultilang: '1',
+    });
+    const res = await commonsFetch(`${COMMONS_API_BASE}?${params.toString()}`);
+    throwIfAborted(signal);
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const data = await res.json();
+    throwIfAborted(signal);
+    const q = data?.query || {};
+    const normalized = new Map<string, string>(((q.normalized || []) as Array<{ from: string; to: string }>).map((x) => [x.from, x.to]));
+    const redirects = new Map<string, string>(((q.redirects || []) as Array<{ from: string; to: string }>).map((x) => [x.from, x.to]));
+    type Page = {
+      title: string;
+      missing?: unknown;
+      invalid?: unknown;
+      imageinfo?: Array<{ timestamp?: string; user?: string; thumburl?: string; extmetadata?: { ImageDescription?: { value?: string | Record<string, string> } } }>;
+    };
+    const byTitle = new Map<string, Page>();
+    for (const p of Object.values(q.pages || {}) as Page[]) byTitle.set(p.title, p);
+    for (const e of batch) {
+      const asked = `File:${e.name}`;
+      let t = normalized.get(asked) ?? asked;
+      let redirected = false;
+      for (let hop = 0; hop < 5 && redirects.has(t); hop++) {
+        t = redirects.get(t)!;
+        redirected = true;
+      }
+      const page = byTitle.get(t);
+      const info = page?.imageinfo?.[0];
+      const exists = !!page && page.missing === undefined && page.invalid === undefined && !!info;
+      const descriptions: Record<string, string> = {};
+      const desc = info?.extmetadata?.ImageDescription?.value;
+      if (typeof desc === 'string') {
+        const text = stripDescription(desc);
+        if (text) descriptions.default = text;
+      } else if (desc && typeof desc === 'object') {
+        for (const [lang, v] of Object.entries(desc)) {
+          const text = stripDescription(String(v));
+          if (text) descriptions[lang] = text;
+        }
+      }
+      rows.push({
+        keyword: e.keyword,
+        lines: e.lines,
+        title: exists ? t : '',
+        exists,
+        redirected: exists && redirected,
+        lastUploaded: info?.timestamp || '',
+        uploader: info?.user || '',
+        thumb: info?.thumburl,
+        descriptions,
+      });
+    }
+    onProgress?.(Math.min(i + REPORT_BATCH, entries.length), entries.length);
+  }
+  return rows;
+}
+
 const fileBaseName = (s: string) => decodeURIComponent(s.replace(/^.*[/:]/, '')).replace(/_/g, ' ').trim().toLowerCase();
 
 /**
