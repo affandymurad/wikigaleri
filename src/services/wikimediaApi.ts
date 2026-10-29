@@ -139,6 +139,15 @@ export const CURATED_TOPICS: CuratedTopic[] = [
     group: 'media_type',
   },
   {
+    id: 'visa-policy-maps',
+    label: 'Peta Kebijakan Visa',
+    categoryName: 'Maps of visa policy',
+    query: 'Visa policy map',
+    mediaType: 'image',
+    description: 'Peta kebijakan visa per negara, dipakai di Wikipedia dan Wikivoyage.',
+    group: 'media_type',
+  },
+  {
     id: 'diagrams-science',
     label: 'Diagram & Infografik',
     categoryName: 'Diagrams',
@@ -1620,6 +1629,8 @@ export interface UsageReportRow {
   title: string; // "File:Nama.svg"
   /** Waktu versi berkas terakhir diunggah (ISO), bukan waktu suntingan halaman */
   lastUploaded: string;
+  /** Gambar mini (96 px) untuk tampilan web; tidak dipakai di ekspor */
+  thumb?: string;
   /** Deskripsi Commons per kode bahasa (kunci "default" bila hanya ada satu tanpa kode bahasa) */
   descriptions: Record<string, string>;
   /** Semua pemakaian di proyek yang diminta (edisi bahasa mana pun); `edition` adalah kode bahasanya (en, de, ...) */
@@ -1637,8 +1648,17 @@ export interface UsageReport {
 export const USAGE_REPORT_MAX_FILES = 1000;
 const REPORT_BATCH = 50;
 
-const stripDescription = (v: string) =>
-  v.replace(/<[^>]*>/g, ' ').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&nbsp;|\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+// Elemen yang bukan isi teks: gaya/skrip tertanam (TemplateStyles), penanda kutipan [1], dan elemen tersembunyi
+const NOISE_SELECTOR = 'style, script, link, noscript, .mw-ref, sup.reference, .reference, .noprint, .mw-editsection, [hidden], [style*="display:none"], [style*="display: none"]';
+
+/** Teks polos sebuah elemen tanpa kode CSS/skrip dan penanda kutipan */
+const plainTextOf = (root: Element): string => {
+  const copy = root.cloneNode(true) as Element;
+  copy.querySelectorAll(NOISE_SELECTOR).forEach((n) => n.remove());
+  return (copy.textContent || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+};
+
+const stripDescription = (v: string) => plainTextOf(new DOMParser().parseFromString(v, 'text/html').body);
 
 /**
  * Berkas langsung di sebuah kategori yang dipakai di Wikivoyage atau Wikipedia (edisi mana pun), beserta waktu unggah versi terakhirnya.
@@ -1688,7 +1708,7 @@ export async function fetchCategoryUsageReport(
   onProgress?.(0, titles.length);
   for (let i = 0; i < titles.length; i += REPORT_BATCH) {
     const batch = titles.slice(i, i + REPORT_BATCH);
-    type Acc = { title: string; lastUploaded: string; descriptions: Record<string, string>; articles: Map<string, { edition: string; title: string; url: string }> };
+    type Acc = { title: string; lastUploaded: string; thumb?: string; descriptions: Record<string, string>; articles: Map<string, { edition: string; title: string; url: string }> };
     const acc = new Map<number, Acc>();
     let cont: Record<string, string> | undefined;
     do {
@@ -1698,7 +1718,8 @@ export async function fetchCategoryUsageReport(
         origin: '*',
         titles: batch.join('|'),
         prop: 'imageinfo|globalusage',
-        iiprop: 'timestamp|extmetadata',
+        iiprop: 'timestamp|extmetadata|url',
+        iiurlwidth: '96',
         iiextmetadatafilter: 'ImageDescription',
         iiextmetadatamultilang: '1',
         guprop: 'url|namespace',
@@ -1711,13 +1732,14 @@ export async function fetchCategoryUsageReport(
       const pages = Object.values(data?.query?.pages || {}) as Array<{
         pageid: number;
         title: string;
-        imageinfo?: Array<{ timestamp?: string; extmetadata?: { ImageDescription?: { value?: string | Record<string, string> } } }>;
+        imageinfo?: Array<{ timestamp?: string; thumburl?: string; extmetadata?: { ImageDescription?: { value?: string | Record<string, string> } } }>;
         globalusage?: Array<{ title: string; wiki: string; url?: string; ns?: string | number }>;
       }>;
       for (const p of pages) {
         const cur: Acc = acc.get(p.pageid) || { title: p.title, lastUploaded: '', descriptions: {}, articles: new Map() };
         const info = p.imageinfo?.[0];
         if (info?.timestamp) cur.lastUploaded = info.timestamp;
+        if (info?.thumburl) cur.thumb = info.thumburl;
         const desc = info?.extmetadata?.ImageDescription?.value;
         if (typeof desc === 'string') {
           const text = stripDescription(desc);
@@ -1750,6 +1772,7 @@ export async function fetchCategoryUsageReport(
       rows.push({
         title: a.title,
         lastUploaded: a.lastUploaded,
+        thumb: a.thumb,
         descriptions: a.descriptions,
         articles: [...a.articles.values()],
       });
@@ -1767,13 +1790,19 @@ const fileBaseName = (s: string) => decodeURIComponent(s.replace(/^.*[/:]/, ''))
  * <figcaption> (gambar thumb), .thumbcaption (gaya lama), .gallerytext (galeri), atau .infobox-caption (kotak info). Kosong bila tanpa keterangan.
  * Kunci hasil adalah nama berkas tanpa awalan "File:" dalam huruf kecil dan spasi (bukan garis bawah).
  */
+export interface ProjectCaptionResult {
+  captions: Record<string, string>;
+  /** id judul bagian (anchor) tempat berkas muncul; tidak ada untuk gambar di bagian pembuka sebelum judul pertama */
+  sections: Record<string, string>;
+}
+
 export async function fetchProjectCaptions(
   project: UsageProject,
   edition: string,
   articleTitle: string,
   fileTitles: string[],
   signal?: AbortSignal
-): Promise<Record<string, string>> {
+): Promise<ProjectCaptionResult> {
   const params = new URLSearchParams({
     action: 'parse',
     format: 'json',
@@ -1787,14 +1816,26 @@ export async function fetchProjectCaptions(
   if (!res.ok) throw new Error(`HTTP error ${res.status}`);
   const data = await res.json();
   const html: string | undefined = data?.parse?.text?.['*'];
-  const out: Record<string, string> = {};
+  const out: ProjectCaptionResult = { captions: {}, sections: {} };
   if (!html) return out;
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  const wanted = new Map(fileTitles.map((t) => [fileBaseName(t.replace(/^File:/i, '')), t]));
-  const clean = (el: Element | null | undefined) => (el?.textContent || '').replace(/\s+/g, ' ').trim();
+  const wanted = new Set(fileTitles.map((t) => fileBaseName(t.replace(/^File:/i, ''))));
+  const clean = (el: Element | null | undefined) => (el ? plainTextOf(el) : '');
+  const headings = Array.from(doc.querySelectorAll('h2, h3, h4, h5, h6'));
+  // judul bagian terdekat di atas sebuah elemen (urutan dokumen); id ada di <hN> atau di span.mw-headline (gaya lama)
+  const sectionOf = (el: Element): string => {
+    let found = '';
+    for (const h of headings) {
+      if (!(h.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)) break;
+      found = h.id || h.querySelector('.mw-headline')?.id || found;
+    }
+    return found;
+  };
+  const firstSection: Record<string, string> = {};
   for (const a of Array.from(doc.querySelectorAll('a[href*=":"]'))) {
     const key = fileBaseName(a.getAttribute('href') || '');
-    if (!wanted.has(key) || out[key]) continue;
+    if (!wanted.has(key) || out.captions[key]) continue;
+    if (!(key in firstSection)) firstSection[key] = sectionOf(a);
     const fig = a.closest('figure');
     const thumb = a.closest('.thumb, .thumbinner');
     const gallery = a.closest('.gallerybox');
@@ -1804,8 +1845,13 @@ export async function fetchProjectCaptions(
       clean(gallery?.querySelector('.gallerytext')) ||
       clean(a.closest('.infobox-image, .infobox-full-data, td, .infobox')?.querySelector('.infobox-caption')) ||
       (a.querySelector('img')?.getAttribute('alt') || '').trim();
-    if (caption) out[key] = caption;
+    if (caption) {
+      out.captions[key] = caption;
+      out.sections[key] = sectionOf(a); // bagian dari kemunculan yang dipakai untuk keterangan
+    }
   }
+  for (const [k, v] of Object.entries(firstSection)) if (!(k in out.sections) && v) out.sections[k] = v;
+  for (const k of Object.keys(out.sections)) if (!out.sections[k]) delete out.sections[k];
   return out;
 }
 

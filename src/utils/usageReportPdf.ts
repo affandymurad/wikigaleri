@@ -3,7 +3,10 @@
 // digambar lewat kanvas dengan font sistem lalu disisipkan sebagai gambar.
 
 type RGB = readonly [number, number, number];
-const C = { ink: [41, 36, 30], muted: [110, 100, 84], line: [221, 213, 199], head: [61, 55, 46], bg: [250, 247, 242], white: [255, 255, 255] } as const;
+const C = { ink: [41, 36, 30], muted: [110, 100, 84], line: [221, 213, 199], head: [61, 55, 46], bg: [250, 247, 242], white: [255, 255, 255], link: [47, 82, 112] } as const;
+
+const WIKIGALERI_URL = 'https://wikigaleri.web.app';
+const CREATOR_URL = 'https://meta.wikimedia.org/wiki/User:Affandy_Murad';
 
 const GLYPH_RANGES: [number, number][] = [[0x20,0x7E],[0xA0,0x2AF],[0x300,0x377],[0x37A,0x37F],[0x384,0x38A],[0x38C,0x38C],[0x38E,0x3A1],[0x3A3,0x3E1],[0x3F0,0x52F],[0x1E00,0x1F15],[0x2000,0x2027],[0x202F,0x205F],[0x20A0,0x20BE]];
 const hasUnsupportedGlyph = (str: string) => {
@@ -43,6 +46,8 @@ const loadFonts = () => {
 export interface ReportPdfRow {
   file: string;
   fileUrl: string;
+  /** URL gambar mini; hanya dipakai di PDF */
+  thumb?: string;
   articles: string;
   date: string;
   caption: string;
@@ -58,6 +63,56 @@ export interface ReportPdfInput {
   rtl: boolean;
   fileName: string;
 }
+
+interface PdfThumb {
+  data: string;
+  w: number;
+  h: number;
+}
+
+// Gambar mini dimuat lewat kanvas (upload.wikimedia.org mengirim header CORS) dan dijadikan JPEG kecil; yang gagal dilewati
+async function loadThumbs(urls: (string | undefined)[], concurrency = 8): Promise<(PdfThumb | null)[]> {
+  const out: (PdfThumb | null)[] = urls.map(() => null);
+  let next = 0;
+  const one = (url: string) =>
+    new Promise<PdfThumb | null>((resolve) => {
+      const img = new Image();
+      const timer = window.setTimeout(() => resolve(null), 8000);
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        window.clearTimeout(timer);
+        try {
+          const cv = document.createElement('canvas');
+          cv.width = img.naturalWidth;
+          cv.height = img.naturalHeight;
+          const cx = cv.getContext('2d')!;
+          cx.fillStyle = '#fff';
+          cx.fillRect(0, 0, cv.width, cv.height);
+          cx.drawImage(img, 0, 0);
+          resolve({ data: cv.toDataURL('image/jpeg', 0.8), w: cv.width, h: cv.height });
+        } catch {
+          resolve(null);
+        }
+      };
+      img.onerror = () => {
+        window.clearTimeout(timer);
+        resolve(null);
+      };
+      img.src = url;
+    });
+  const worker = async () => {
+    while (next < urls.length) {
+      const i = next++;
+      const u = urls[i];
+      if (u) out[i] = await one(u);
+    }
+  };
+  await Promise.all(Array.from({ length: concurrency }, worker));
+  return out;
+}
+
+const THUMB_BOX = 12; // mm
+const THUMB_COL_PAD = THUMB_BOX + 4; // mm, ruang di kiri teks nama berkas
 
 export async function exportUsageReportPdf(input: ReportPdfInput): Promise<void> {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
@@ -79,6 +134,7 @@ export async function exportUsageReportPdf(input: ReportPdfInput): Promise<void>
   const M = 12;
   const contentW = pageW - M * 2;
   const rtlDoc = input.rtl;
+  const thumbs = await loadThumbs(input.rows.map((r) => r.thumb));
 
   // Teks bebas (judul/subjudul): vektor bila bisa, kanvas bila ada aksara lain. Mengembalikan tinggi yang terpakai.
   const drawText = (text: string, y: number, sizePt: number, bold: boolean, col: RGB): number => {
@@ -143,6 +199,11 @@ export async function exportUsageReportPdf(input: ReportPdfInput): Promise<void>
     rowPageBreak: 'avoid',
     didParseCell: (d: any) => {
       d.cell.pdfCanvas = canvasFallback && hasUnsupportedGlyph(d.cell.raw);
+      // kolom berkas: sisakan ruang untuk gambar mini di sisi awal (kanan pada dokumen RTL)
+      if (d.section === 'body' && d.column.index === 0 && thumbs[d.row.index]) {
+        d.cell.styles.cellPadding = rtlDoc ? { top: 2, bottom: 2, left: 2, right: THUMB_COL_PAD } : { top: 2, bottom: 2, left: THUMB_COL_PAD, right: 2 };
+        d.cell.styles.minCellHeight = THUMB_BOX + 4;
+      }
     },
     willDrawCell: (d: any) => {
       if (d.cell.pdfCanvas) {
@@ -187,6 +248,14 @@ export async function exportUsageReportPdf(input: ReportPdfInput): Promise<void>
         doc.addImage(cv.toDataURL('image/jpeg', 0.85), 'JPEG', d.cell.x + padL, d.cell.y + padT, wMm, lines.length * lineMm);
       }
       if (d.section === 'body' && d.column.index === 0) {
+        const th = thumbs[d.row.index];
+        if (th) {
+          const k = Math.min(THUMB_BOX / th.w, THUMB_BOX / th.h);
+          const w = th.w * k;
+          const h = th.h * k;
+          const x = rtlDoc ? d.cell.x + d.cell.width - 2 - THUMB_BOX + (THUMB_BOX - w) / 2 : d.cell.x + 2 + (THUMB_BOX - w) / 2;
+          doc.addImage(th.data, 'JPEG', x, d.cell.y + 2 + (THUMB_BOX - h) / 2, w, h);
+        }
         const url = input.rows[d.row.index]?.fileUrl;
         if (url) doc.link(d.cell.x, d.cell.y, d.cell.width, d.cell.height, { url });
       }
@@ -199,8 +268,31 @@ export async function exportUsageReportPdf(input: ReportPdfInput): Promise<void>
     doc.setFont(fontName, 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(C.muted[0], C.muted[1], C.muted[2]);
-    const foot = hasUnsupportedGlyph(input.footer) ? 'WikiGaleri' : input.footer;
-    doc.text(foot, M, pageH - 7);
+    // Kaki halaman: WikiGaleri + URL-nya dan pembuat, masing-masing bertautan; lalu tanggal pembuatan
+    const generated = hasUnsupportedGlyph(input.footer) ? input.footer.split(' ').pop() || '' : input.footer;
+    const parts: { text: string; url?: string }[] = [
+      { text: 'WikiGaleri', url: WIKIGALERI_URL },
+      { text: '  |  ' },
+      { text: 'wikigaleri.web.app', url: WIKIGALERI_URL },
+      { text: '  |  by ' },
+      { text: 'Affandy Murad', url: CREATOR_URL },
+      { text: `  |  ${generated}` },
+    ];
+    let fx = M;
+    for (const part of parts) {
+      doc.text(part.text, fx, pageH - 7);
+      const w = doc.getTextWidth(part.text);
+      if (part.url) {
+        doc.setTextColor(C.link[0], C.link[1], C.link[2]);
+        doc.text(part.text, fx, pageH - 7);
+        doc.setDrawColor(C.link[0], C.link[1], C.link[2]);
+        doc.setLineWidth(0.1);
+        doc.line(fx, pageH - 6.4, fx + w, pageH - 6.4);
+        doc.link(fx, pageH - 10, w, 4, { url: part.url });
+        doc.setTextColor(C.muted[0], C.muted[1], C.muted[2]);
+      }
+      fx += w;
+    }
     doc.text(`${pg} / ${total}`, pageW - M, pageH - 7, { align: 'right' });
   }
   doc.save(input.fileName);

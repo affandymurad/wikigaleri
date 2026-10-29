@@ -373,7 +373,7 @@ export const translations: Record<Language, Translations> = {
     },
     curated: {
       title: 'Curated Collection Boards',
-      countLabel: '36 Curated Collections',
+      countLabel: '37 Curated Collections',
       show: 'Show',
       hide: 'Hide',
       groups: {
@@ -416,6 +416,11 @@ export const translations: Record<Language, Translations> = {
           label: 'Historic Maps & Cartography',
           description: 'Old maps from the 16th to 19th century, in the public domain.',
           typeLabel: 'Cartography',
+        },
+        'visa-policy-maps': {
+          label: 'Visa Policy Maps',
+          description: 'Visa policy maps by country, used on Wikipedia and Wikivoyage.',
+          typeLabel: 'Maps',
         },
         'diagrams-science': {
           label: 'Diagrams & Infographics',
@@ -891,7 +896,7 @@ export const translations: Record<Language, Translations> = {
     },
     curated: {
       title: 'Papan Koleksi Kurasi',
-      countLabel: '36 Koleksi Pilihan',
+      countLabel: '37 Koleksi Pilihan',
       show: 'Tampilkan',
       hide: 'Sembunyikan',
       groups: {
@@ -934,6 +939,11 @@ export const translations: Record<Language, Translations> = {
           label: 'Peta Kuno & Kartografi',
           description: 'Peta lama abad ke-16 sampai ke-19 yang berstatus domain publik.',
           typeLabel: 'Kartografi Kuno',
+        },
+        'visa-policy-maps': {
+          label: 'Peta Kebijakan Visa',
+          description: 'Peta kebijakan visa per negara, dipakai di Wikipedia dan Wikivoyage.',
+          typeLabel: 'Peta',
         },
         'diagrams-science': {
           label: 'Diagram & Infografik',
