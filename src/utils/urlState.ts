@@ -1,3 +1,4 @@
+import { REPORT_LANGUAGES } from '../i18n/reportLanguages';
 import type { CategorySearchMode, CommonsMediaItem, LicenseCategory, MediaType, SortOrder } from '../types/wikimedia';
 
 /**
@@ -7,6 +8,7 @@ import type { CategorySearchMode, CommonsMediaItem, LicenseCategory, MediaType, 
  *   /?q=batik&type=image&license=pd      kata kunci + filter jenis media + lisensi
  *   /?user=Affandy_Murad&view=talk       unggahan atau halaman pembicaraan pengguna
  *   /?mode=categories&q=Batik&cat=subcategories | parents | wikivoyage | wikipedia
+ *   /?mode=categories&q=Batik&cat=wikipedia&lang=de        bahasa/edisi pada tab Wikivoyage dan Wikipedia
  *   /?mode=nearby | live | random | bookmarks
  *   /?mode=nearby&lat=-6.1753924&lon=106.8271528&zoom=14   titik tengah dan zoom peta Sekitar
  *   /file/Waterworks_Museum_(85472)bw.jpg  detail berkas (nama berkas seperti di Commons)
@@ -207,5 +209,24 @@ export function withDetailTab(search: string, tab: DetailTab): string {
   if (tab === DEFAULT_DETAIL_TAB) p.delete('tab');
   else p.set('tab', tab);
   const str = p.toString();
+  return str ? `?${str}` : '';
+}
+
+// ---------------------------------------------------------------------------
+// Bahasa (edisi) pada tab Wikivoyage dan Wikipedia
+// ---------------------------------------------------------------------------
+
+/** Baca ?lang= dan terima hanya kode bahasa yang didukung laporan; null bila tidak ada atau tidak dikenal */
+export function parseReportLang(search: string): string | null {
+  const lang = new URLSearchParams(search).get('lang');
+  return lang && REPORT_LANGUAGES.some((l) => l.code === lang) ? lang : null;
+}
+
+/** Tulis atau hapus ?lang= pada query yang ada */
+export function withReportLang(search: string, lang: string | null): string {
+  const p = new URLSearchParams(search);
+  if (lang) p.set('lang', lang);
+  else p.delete('lang');
+  const str = p.toString().replace(/%2F/gi, '/').replace(/%3A/gi, ':');
   return str ? `?${str}` : '';
 }

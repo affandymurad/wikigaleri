@@ -18,7 +18,7 @@ import { CategoryListSection } from './components/CategoryListSection';
 import { ProjectUsageReportSection } from './components/ProjectUsageReportSection';
 import { CommonsMediaItem, CategorySearchMode } from './types/wikimedia';
 import { CURATED_TOPICS, normalizeCategoryName, fetchMediaDetailByPageId, fetchMediaDetailByTitle } from './services/wikimediaApi';
-import { buildSearch, parseSearch, detailPath, parseDetailPath, parseNearbyView, withNearbyView, type UrlSearchState } from './utils/urlState';
+import { buildSearch, parseSearch, detailPath, parseDetailPath, parseNearbyView, withNearbyView, parseReportLang, withReportLang, type UrlSearchState } from './utils/urlState';
 import { ExternalLink, Search, MapPin, LayoutGrid, FolderTree, FolderRoot, Radio, Bookmark, Shuffle } from 'lucide-react';
 
 export default function App() {
@@ -314,6 +314,10 @@ export default function App() {
     });
     // lat/lon/zoom peta Sekitar ditulis oleh petanya sendiri; jangan dihapus saat URL ditulis ulang
     if (activeMode === 'nearby') search = withNearbyView(search, parseNearbyView(window.location.search));
+    // bahasa tab Wikivoyage/Wikipedia ditulis oleh tabnya sendiri; dibawa saat berpindah antar keduanya
+    if (activeMode === 'categories' && (categorySearchMode === 'wikivoyage' || categorySearchMode === 'wikipedia')) {
+      search = withReportLang(search, parseReportLang(window.location.search));
+    }
     if (search !== window.location.search || window.location.pathname !== '/') {
       const write = fromUrl.current ? window.history.replaceState : window.history.pushState;
       write.call(window.history, null, '', '/' + search);
@@ -565,20 +569,38 @@ export default function App() {
               />
 
               {currentCategoryName.trim() !== '' && (
-                <button
-                  type="button"
-                  onClick={() => toggleCategory(currentCategoryName)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold cursor-pointer transition ${
-                    isCategorySaved(currentCategoryName)
-                      ? 'border-accent-400 bg-accent-50 text-accent-700 dark:border-accent-500 dark:bg-accent-900/30 dark:text-accent-300'
-                      : 'border-stone-300 text-stone-600 hover:bg-stone-50 dark:border-stone-600 dark:text-stone-300 dark:hover:bg-stone-800'
-                  }`}
-                >
-                  <Bookmark className={`h-3.5 w-3.5 ${isCategorySaved(currentCategoryName) ? 'fill-current' : ''}`} />
-                  {isCategorySaved(currentCategoryName)
-                    ? (language === 'id' ? 'Kategori tersimpan' : 'Category saved')
-                    : (language === 'id' ? 'Simpan kategori' : 'Save category')}
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleCategory(currentCategoryName)}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold cursor-pointer transition ${
+                      isCategorySaved(currentCategoryName)
+                        ? 'border-accent-400 bg-accent-50 text-accent-700 dark:border-accent-500 dark:bg-accent-900/30 dark:text-accent-300'
+                        : 'border-stone-300 text-stone-600 hover:bg-stone-50 dark:border-stone-600 dark:text-stone-300 dark:hover:bg-stone-800'
+                    }`}
+                  >
+                    <Bookmark className={`h-3.5 w-3.5 ${isCategorySaved(currentCategoryName) ? 'fill-current' : ''}`} />
+                    {isCategorySaved(currentCategoryName)
+                      ? (language === 'id' ? 'Kategori tersimpan' : 'Category saved')
+                      : (language === 'id' ? 'Simpan kategori' : 'Save category')}
+                  </button>
+                  <a
+                    href={`https://commons.wikimedia.org/wiki/Category:${encodeURIComponent(currentCategoryName.trim().replace(/ /g, '_')).replace(/%3A/g, ':')}?uselang=${language}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 px-3.5 py-1.5 text-xs font-semibold text-stone-600 transition hover:bg-stone-50 cursor-pointer dark:border-stone-600 dark:text-stone-300 dark:hover:bg-stone-800"
+                  >
+                    <img
+                      src="https://commons.wikimedia.org/wiki/Special:FilePath/Commons-logo.svg?width=40"
+                      alt=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="h-3.5 w-3.5 object-contain"
+                    />
+                    {language === 'id' ? 'Buka di Wikimedia Commons' : 'Open on Wikimedia Commons'}
+                    <ExternalLink className="h-3 w-3 opacity-60" />
+                  </a>
+                </div>
               )}
 
               {activeMode === 'categories' && (

@@ -11,6 +11,7 @@ import {
 } from '../services/wikimediaApi';
 
 import { FlagIcon } from './FlagIcon';
+import { parseReportLang, withReportLang } from '../utils/urlState';
 import {
   REPORT_LANGUAGES,
   reportTextFor,
@@ -45,7 +46,20 @@ const pickDescription = (d: Record<string, string>, lang: string) =>
 
 export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps> = ({ currentCategory, project, language = 'id' }) => {
   const category = useMemo(() => normalizeCategoryName(currentCategory) || '', [currentCategory]);
-  const [lang, setLang] = useState<string>(language);
+  // Bahasa/edisi ikut URL (?lang=); tanpa parameter memakai bahasa aplikasi
+  const [lang, setLangState] = useState<string>(() => parseReportLang(window.location.search) ?? language);
+  const setLang = (code: string) => {
+    setLangState(code);
+    try {
+      const next = withReportLang(window.location.search, code);
+      if (next !== window.location.search) window.history.replaceState(window.history.state, '', window.location.pathname + next);
+    } catch { /* abaikan */ }
+  };
+  useEffect(() => {
+    const onPop = () => setLangState(parseReportLang(window.location.search) ?? language);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [language]);
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement | null>(null);
   const [report, setReport] = useState<UsageReport | null>(null);
