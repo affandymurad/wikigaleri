@@ -1630,6 +1630,8 @@ export interface UsageReportRow {
   title: string; // "File:Nama.svg"
   /** Waktu versi berkas terakhir diunggah (ISO), bukan waktu suntingan halaman */
   lastUploaded: string;
+  /** Pengguna yang mengunggah versi terbaru berkas */
+  uploader: string;
   /** Gambar mini (96 px) untuk tampilan web; tidak dipakai di ekspor */
   thumb?: string;
   /** Deskripsi Commons per kode bahasa (kunci "default" bila hanya ada satu tanpa kode bahasa) */
@@ -1717,7 +1719,7 @@ export async function fetchCategoryUsageReport(
   onProgress?.(0, titles.length);
   for (let i = 0; i < titles.length; i += REPORT_BATCH) {
     const batch = titles.slice(i, i + REPORT_BATCH);
-    type Acc = { title: string; lastUploaded: string; thumb?: string; descriptions: Record<string, string>; articles: Map<string, { edition: string; title: string; url: string }> };
+    type Acc = { title: string; lastUploaded: string; uploader: string; thumb?: string; descriptions: Record<string, string>; articles: Map<string, { edition: string; title: string; url: string }> };
     const acc = new Map<number, Acc>();
     let cont: Record<string, string> | undefined;
     do {
@@ -1727,7 +1729,7 @@ export async function fetchCategoryUsageReport(
         origin: '*',
         titles: batch.join('|'),
         prop: 'imageinfo|globalusage',
-        iiprop: 'timestamp|extmetadata|url',
+        iiprop: 'timestamp|user|extmetadata|url',
         iiurlwidth: '96',
         iiextmetadatafilter: 'ImageDescription',
         iiextmetadatamultilang: '1',
@@ -1743,13 +1745,14 @@ export async function fetchCategoryUsageReport(
       const pages = Object.values(data?.query?.pages || {}) as Array<{
         pageid: number;
         title: string;
-        imageinfo?: Array<{ timestamp?: string; thumburl?: string; extmetadata?: { ImageDescription?: { value?: string | Record<string, string> } } }>;
+        imageinfo?: Array<{ timestamp?: string; user?: string; thumburl?: string; extmetadata?: { ImageDescription?: { value?: string | Record<string, string> } } }>;
         globalusage?: Array<{ title: string; wiki: string; url?: string; ns?: string | number }>;
       }>;
       for (const p of pages) {
-        const cur: Acc = acc.get(p.pageid) || { title: p.title, lastUploaded: '', descriptions: {}, articles: new Map() };
+        const cur: Acc = acc.get(p.pageid) || { title: p.title, lastUploaded: '', uploader: '', descriptions: {}, articles: new Map() };
         const info = p.imageinfo?.[0];
         if (info?.timestamp) cur.lastUploaded = info.timestamp;
+        if (info?.user) cur.uploader = info.user;
         if (info?.thumburl) cur.thumb = info.thumburl;
         const desc = info?.extmetadata?.ImageDescription?.value;
         if (typeof desc === 'string') {
@@ -1783,6 +1786,7 @@ export async function fetchCategoryUsageReport(
       rows.push({
         title: a.title,
         lastUploaded: a.lastUploaded,
+        uploader: a.uploader,
         thumb: a.thumb,
         descriptions: a.descriptions,
         articles: [...a.articles.values()],

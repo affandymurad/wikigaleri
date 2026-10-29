@@ -52,6 +52,8 @@ export interface ReportPdfRow {
   date: string;
   /** Tanpa caption (laporan Massal): kolom keterangan tidak dibuat, kolom "articles" dipakai sebagai kolom kedua */
   caption?: string;
+  /** Kolom pengunggah, hanya bila diisi */
+  uploader?: string;
   description: string;
 }
 
@@ -136,6 +138,7 @@ export async function exportUsageReportPdf(input: ReportPdfInput): Promise<void>
   const contentW = pageW - M * 2;
   const rtlDoc = input.rtl;
   const withCaption = input.rows.every((r) => r.caption !== undefined);
+  const withUploader = input.rows.some((r) => r.uploader !== undefined);
   const thumbs = await loadThumbs(input.rows.map((r) => r.thumb));
 
   // Teks bebas (judul/subjudul): vektor bila bisa, kanvas bila ada aksara lain. Mengembalikan tinggi yang terpakai.
@@ -193,13 +196,18 @@ export async function exportUsageReportPdf(input: ReportPdfInput): Promise<void>
     startY: y,
     margin: { top: 14, left: M, right: M, bottom: 14 },
     head: [input.headers],
-    body: input.rows.map((r) => (withCaption ? [r.file, r.articles, r.date, r.caption ?? '', r.description] : [r.file, r.articles, r.date, r.description])),
+    body: input.rows.map((r) => [r.file, r.articles, r.date, ...(withUploader ? [r.uploader || '-'] : []), ...(withCaption ? [r.caption ?? ''] : []), r.description]),
     styles: { font: fontName, fontSize: 8, cellPadding: 2, overflow: 'linebreak', halign: rtlDoc ? 'right' : 'left', textColor: [...C.ink], lineColor: [...C.line], lineWidth: 0.2 },
     headStyles: { fillColor: [...C.head], textColor: [...C.white], fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [...C.bg] },
-    columnStyles: withCaption
-      ? { 0: { cellWidth: 48 }, 1: { cellWidth: 38 }, 2: { cellWidth: 24 }, 3: { cellWidth: 'auto' }, 4: { cellWidth: 'auto' } }
-      : { 0: { cellWidth: 80 }, 1: { cellWidth: 60 }, 2: { cellWidth: 24 }, 3: { cellWidth: 'auto' } },
+    columnStyles: Object.fromEntries(
+      ((withCaption
+        ? withUploader
+          ? [44, 32, 22, 26, 'auto', 'auto']
+          : [48, 38, 24, 'auto', 'auto']
+        : [80, 60, 24, 'auto']
+      ) as (number | 'auto')[]).map((w, k) => [k, { cellWidth: w }])
+    ),
     rowPageBreak: 'avoid',
     didParseCell: (d: any) => {
       d.cell.pdfCanvas = canvasFallback && hasUnsupportedGlyph(d.cell.raw);

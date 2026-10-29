@@ -153,7 +153,7 @@ export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps>
 
   // Pencarian kata kunci (semua kata harus ada) pada nama berkas, artikel, tanggal, keterangan, dan deskripsi
   const rowSearchText = (r: (typeof allRows)[number]) =>
-    [r.title.replace(/^File:/, ''), r.articles.map((a) => a.title).join(' '), r.lastUploaded.slice(0, 10), fmtDate(r.lastUploaded), captionCell(r), pickDescription(r.descriptions, lang)]
+    [r.title.replace(/^File:/, ''), r.articles.map((a) => a.title).join(' '), r.lastUploaded.slice(0, 10), fmtDate(r.lastUploaded), r.uploader, captionCell(r), pickDescription(r.descriptions, lang)]
       .join(' ')
       .toLowerCase();
   const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -254,10 +254,11 @@ export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps>
   }, [curPage, totalPages]);
 
 
-  const headers: [string, string, string, string, string] = [
+  const headers: [string, string, string, string, string, string] = [
     tx.file,
     fillText(tx.usedOn, { edition: edLabel }),
     tx.lastUploaded,
+    tx.uploader,
     fillText(tx.caption, { edition: edLabel }),
     tx.description,
   ];
@@ -266,7 +267,7 @@ export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps>
   const exportCsv = async () => {
     await ensureCaptions(rows);
     const lines = rows.map((r) =>
-      [r.title, r.articles.map((a) => a.title).join('; '), r.lastUploaded, captionCell(r).replace(/\n/g, ' | '), pickDescription(r.descriptions, lang)].map(csvCell).join(',')
+      [r.title, r.articles.map((a) => a.title).join('; '), r.lastUploaded, r.uploader, captionCell(r).replace(/\n/g, ' | '), pickDescription(r.descriptions, lang)].map(csvCell).join(',')
     );
     const blob = new Blob(['﻿' + [headers.map(csvCell).join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -301,6 +302,7 @@ export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps>
         `| [[${r.title}|60px|link=commons:${r.title}]]<br>[[:commons:${r.title}|${name}]]`,
         `| ${articles}`,
         `| ${r.lastUploaded ? r.lastUploaded.slice(0, 10) : '-'}`,
+        `| ${cell(wikiText(r.uploader))}`,
         `| ${cell(captionCell(r).split('\n').map(wikiText).join('<br>'))}`,
         `| ${cell(wikiText(pickDescription(r.descriptions, lang)))}`
       );
@@ -334,6 +336,7 @@ export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps>
           thumb: r.thumb,
           articles: r.articles.map((a) => a.title).join('\n'),
           date: fmtDate(r.lastUploaded),
+          uploader: r.uploader || '-',
           caption: captionCell(r) || '-',
           description: pickDescription(r.descriptions, lang) || '-',
         })),
@@ -523,6 +526,7 @@ export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps>
                     </th>
                     <th className={th}>{headers[3]}</th>
                     <th className={th}>{headers[4]}</th>
+                    <th className={th}>{headers[5]}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 bg-white dark:divide-stone-800 dark:bg-stone-900">
@@ -556,6 +560,15 @@ export const ProjectUsageReportSection: React.FC<ProjectUsageReportSectionProps>
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-stone-600 dark:text-stone-300" title={r.lastUploaded}>
                         {fmtDate(r.lastUploaded)}
+                      </td>
+                      <td className="px-3 py-2 text-stone-600 dark:text-stone-300 break-words" dir="ltr">
+                        {r.uploader ? (
+                          <a href={`https://commons.wikimedia.org/wiki/User:${encodeURIComponent(r.uploader.replace(/ /g, '_'))}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                            {r.uploader}
+                          </a>
+                        ) : (
+                          '-'
+                        )}
                       </td>
                       <td className="px-3 py-2 text-stone-600 dark:text-stone-300 whitespace-pre-line">
                         {captionCell(r) || (captionProgress && r.articles.some((a) => !captionsDone.current.has(`${edition}|${a.title}`)) ? '…' : '-')}
