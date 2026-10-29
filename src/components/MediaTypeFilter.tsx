@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { MediaType } from '../types/wikimedia';
 import { Grid, Image, Music, Video, FileText, Box, Rotate3d, User, FolderTree, ListChecks } from 'lucide-react';
 import { Translations } from '../i18n/translations';
@@ -32,6 +32,13 @@ export const MediaTypeFilter: React.FC<MediaTypeFilterProps> = ({
   bulkLabel = 'Massal',
   t,
 }) => {
+  // Layar sempit: baris ini bisa digeser; chip yang aktif selalu digulirkan ke tampilan (mis. saat pindah dari Massal ke Kategori)
+  const listRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const active = listRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    active?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [mediaType, userMode, categoryMode, bulkMode]);
+
   const options: { id: MediaType; label: string; icon: React.ReactNode }[] = [
     {
       id: 'all',
@@ -73,7 +80,8 @@ export const MediaTypeFilter: React.FC<MediaTypeFilterProps> = ({
   return (
     <div className="w-full flex justify-center sm:justify-start">
       <div
-        className="inline-flex items-center gap-1 p-1.5 bg-stone-100 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-800 rounded-lg max-w-full overflow-x-auto text-xs sm:text-sm font-medium shadow-2xs"
+        ref={listRef}
+        className="inline-flex items-center gap-1 p-1.5 bg-stone-100 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-800 rounded-lg max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible text-xs sm:text-sm font-medium shadow-2xs"
         role="tablist"
         aria-label="Filter Jenis Dokumen"
       >
