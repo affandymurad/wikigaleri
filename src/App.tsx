@@ -89,7 +89,7 @@ export default function App() {
   const [userView, setUserView] = useState<'uploads' | 'talk'>('uploads');
   const [categorySearchMode, setCategorySearchMode] = useState<CategorySearchMode>('media');
   const [currentCategoryName, setCurrentCategoryName] = useState<string>('');
-  // Kategori asal saat tab Massal dibuka lewat tombol Bulk di mode Kategori
+  // Kategori asal saat tab Tabel dibuka lewat tombol Tabel di mode Kategori
   const [bulkSeedCategory, setBulkSeedCategory] = useState<string | null>(null);
 
   // Modals state
@@ -202,7 +202,7 @@ export default function App() {
     }
   };
 
-  // Tombol Bulk di mode Kategori: buka tab Massal berisi semua berkas kategori yang sedang dibuka
+  // Tombol Tabel di mode Kategori: buka tab Tabel berisi semua berkas kategori yang sedang dibuka
   const openBulkForCategory = (catName: string) => {
     const clean = normalizeCategoryName(catName);
     if (!clean) return;
@@ -533,7 +533,7 @@ export default function App() {
                 if (on) handleSwitchMode('bulk');
                 else if (activeMode === 'bulk') handleSwitchMode('keywords');
               }}
-              bulkLabel={language === 'id' ? 'Massal' : 'Bulk'}
+              bulkLabel={language === 'id' ? 'Tabel' : 'Table'}
             />
           )}
 
@@ -639,8 +639,13 @@ export default function App() {
                     className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 px-3.5 py-1.5 text-xs font-semibold text-stone-600 transition hover:bg-stone-50 cursor-pointer dark:border-stone-600 dark:text-stone-300 dark:hover:bg-stone-800"
                   >
                     <ListChecks className="h-3.5 w-3.5" />
-                    {language === 'id' ? 'Massal' : 'Bulk'}
+                    {language === 'id' ? 'Tabel' : 'Table'}
                   </button>
+                  <span className="text-xs text-stone-500 dark:text-stone-400">
+                    {language === 'id'
+                      ? 'Klik Tabel untuk merekap berkas kategori ini beserta penggunaan di Wikipedia/Wikivoyage dan pengunggahnya.'
+                      : 'Click Table to compile this category’s files with their Wikipedia/Wikivoyage usage and uploaders.'}
+                  </span>
                 </div>
               )}
 
@@ -742,7 +747,7 @@ export default function App() {
 
         {/* Mode Massal: daftar nama berkas (satu per baris atau TXT) dicari di Commons */}
         {activeMode === 'bulk' && (
-          <section aria-label="Bulk" className="pt-1">
+          <section aria-label="Table" className="pt-1">
             <BulkFilesSection language={language} seedCategory={bulkSeedCategory} />
           </section>
         )}
@@ -859,7 +864,7 @@ export default function App() {
 
 {activeMode === 'categories' && currentCategoryName.trim() === '' && (
 <div className="text-center text-sm text-stone-500 dark:text-stone-400 py-10">
-{t.categoryModes?.emptyHint || 'Ketik nama kategori di atas atau pilih dari Koleksi Kurasi.'}
+{t.categoryModes.emptyHint}
 </div>
 )}
 

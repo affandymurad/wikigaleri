@@ -9,8 +9,7 @@ import {
 } from '../types/wikimedia';
 import {
   cleanCommonsTitle,
-  categorizeLicense,
-  stripHtml
+  categorizeLicense
 } from '../utils/licenseUtils';
 
 // ---------------------------------------------------------------------------

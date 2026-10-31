@@ -29,7 +29,7 @@ export const MediaTypeFilter: React.FC<MediaTypeFilterProps> = ({
   categoryLabel = 'Kategori',
   bulkMode = false,
   onSetBulkMode,
-  bulkLabel = 'Massal',
+  bulkLabel = 'Tabel',
   t,
 }) => {
   // Layar sempit: baris ini bisa digeser; chip yang aktif selalu digulirkan ke tampilan (mis. saat pindah dari Massal ke Kategori)

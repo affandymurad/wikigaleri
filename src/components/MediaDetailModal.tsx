@@ -289,7 +289,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
   // Id foto yang sudah selesai dimuat (loading tampil selama id ini belum sama dengan item.id)
   const [loadedMediaId, setLoadedMediaId] = useState<string | null>(null);
-  const isMediaLoading = loadedMediaId !== String(item.id);
+  const isMediaLoading = loadedMediaId !== String(item?.id);
   const [aiError, setAiError] = useState<string | null>(null);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>(item?.categories || []);
@@ -352,13 +352,13 @@ const [usagesLoading, setUsagesLoading] = useState<boolean>(false);
   // ===== Mode Baca Dokumen =====
   const [readerOpen, setReaderOpen] = useState(false);
   const [previewFailedId, setPreviewFailedId] = useState<string | null>(null);
-  const previewThumb = item.thumbnailUrl || '';
-  const previewBig = previewThumb && Number((item as any).width || 0) > 1280 ? previewThumb.replace(/\/(\d+)px-/, '/1280px-') : previewThumb;
-  const previewSrc = (previewFailedId === String(item.id) ? previewThumb : previewBig) || item.fileUrl;
+  const previewThumb = item?.thumbnailUrl || '';
+  const previewBig = previewThumb && Number((item as any)?.width || 0) > 1280 ? previewThumb.replace(/\/(\d+)px-/, '/1280px-') : previewThumb;
+  const previewSrc = (previewFailedId === String(item?.id) ? previewThumb : previewBig) || item?.fileUrl || '';
   const ttsSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
   const [speaking, setSpeaking] = useState(false);
-  useEffect(() => { return () => { try { window.speechSynthesis?.cancel(); } catch {} }; }, [item.id]);
-  useEffect(() => { setSpeaking(false); }, [item.id]);
+  useEffect(() => { return () => { try { window.speechSynthesis?.cancel(); } catch {} }; }, [item?.id]);
+  useEffect(() => { setSpeaking(false); }, [item?.id]);
   const toggleSpeak = (text: string) => {
     if (!ttsSupported) return;
     const synth = window.speechSynthesis;

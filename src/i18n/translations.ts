@@ -61,6 +61,7 @@ export interface Translations {
     filterPlaceholder: string;
     totalFound: (count: number) => string;
     currentCategoryLabel: string;
+    emptyHint: string;
   };
   curated: {
     title: string;
@@ -370,6 +371,7 @@ export const translations: Record<Language, Translations> = {
       filterPlaceholder: 'Filter list by name...',
       totalFound: (count: number) => `${count} categories found`,
       currentCategoryLabel: 'Category',
+      emptyHint: 'Type a category name above or pick one from Curated Collections.',
     },
     curated: {
       title: 'Curated Collection Boards',
@@ -893,6 +895,7 @@ export const translations: Record<Language, Translations> = {
       filterPlaceholder: 'Saring daftar berdasarkan nama...',
       totalFound: (count: number) => `${count} kategori ditemukan`,
       currentCategoryLabel: 'Kategori',
+      emptyHint: 'Ketik nama kategori di atas atau pilih dari Koleksi Kurasi.',
     },
     curated: {
       title: 'Papan Koleksi Kurasi',
