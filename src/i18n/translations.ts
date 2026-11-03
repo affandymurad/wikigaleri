@@ -18,6 +18,7 @@ export interface Translations {
   };
   search: {
     placeholder: string;
+    homePlaceholder: (example: string) => string;
     categoryPlaceholder: string;
     searchBtn: string;
     smartAiBtn: string;
@@ -321,6 +322,7 @@ export const translations: Record<Language, Translations> = {
     },
     search: {
       placeholder: 'Search photos, audio, videos, or old documents...',
+      homePlaceholder: (example: string) => `Try “${example}”, or search photos, audio, videos, and old documents…`,
       categoryPlaceholder: 'Category, e.g. Batik, Temples, Traditional dance',
       searchBtn: 'Search',
       smartAiBtn: 'Smart search',
@@ -845,6 +847,7 @@ export const translations: Record<Language, Translations> = {
     },
     search: {
       placeholder: 'Cari foto, audio, video, atau dokumen lama...',
+      homePlaceholder: (example: string) => `Coba “${example}”, atau cari foto, audio, video, dan dokumen lama…`,
       categoryPlaceholder: 'Kategori, misalnya Batik, Candi, Tari tradisional',
       searchBtn: 'Cari',
       smartAiBtn: 'Pencarian pintar',

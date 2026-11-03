@@ -17,7 +17,7 @@ export { DEFAULT_QUERY };
 export const isBrowseOnlyType = (type: string) => type === '3d' || type === 'panorama';
 
 const DEFAULT_FILTER: GalleryFilterState = {
-  query: DEFAULT_QUERY,
+  query: '',
   mediaType: 'all',
   license: 'all',
   sort: 'relevance',

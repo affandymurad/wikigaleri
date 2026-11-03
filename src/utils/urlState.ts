@@ -17,6 +17,7 @@ import type { CategorySearchMode, CommonsMediaItem, LicenseCategory, MediaType, 
  *   /file/Nama.svg?tab=license             tab detail: download | cats | license | history | talk (ai = bawaan)
  */
 
+/** Contoh kata kunci untuk placeholder kolom pencarian beranda (bukan pencarian otomatis) */
 export const DEFAULT_QUERY = 'Wikilokal';
 
 export type UrlMode = 'keywords' | 'nearby' | 'categories' | 'bulk' | 'live' | 'random' | 'bookmarks';
@@ -65,7 +66,7 @@ export function buildSearch(s: UrlSearchState): string {
     } else {
       const others =
         s.mediaType !== 'all' || s.license !== 'all' || s.sort !== 'relevance';
-      if (s.query !== DEFAULT_QUERY || others) p.set('q', s.query);
+      if (s.query || others) p.set('q', s.query);
       if (s.mediaType !== 'all') p.set('type', s.mediaType);
       if (s.license !== 'all') p.set('license', s.license);
       if (s.sort !== 'relevance') p.set('sort', s.sort);
@@ -98,7 +99,7 @@ export function parseSearch(search: string): UrlSearchState {
 
   const base: UrlSearchState = {
     mode,
-    query: DEFAULT_QUERY,
+    query: '',
     mediaType: type && TYPES.includes(type) ? type : 'all',
     license: license && LICENSES.includes(license) ? license : 'all',
     sort: sort === 'newest' ? 'newest' : 'relevance',
@@ -111,7 +112,7 @@ export function parseSearch(search: string): UrlSearchState {
     if (user !== null) {
       return { ...base, query: fromUrlText(user), userMode: true, userView: p.get('view') === 'talk' ? 'talk' : 'uploads', mediaType: 'all' };
     }
-    return { ...base, query: p.has('q') ? (p.get('q') ?? '').trim() : hasOther ? '' : DEFAULT_QUERY };
+    return { ...base, query: p.has('q') ? (p.get('q') ?? '').trim() : '' };
   }
   if (mode === 'categories') {
     return { ...base, query: (p.get('q') ?? '').trim(), mediaType: 'all', categoryView: cat };

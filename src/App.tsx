@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useLanguage } from './hooks/useLanguage';
 import { useGeminiApiKey } from './hooks/useGeminiApiKey';
-import { useCommonsGallery, useBookmarkLists, DEFAULT_QUERY, isBrowseOnlyType } from './hooks/useCommonsGallery';
+import { useCommonsGallery, useBookmarkLists, DEFAULT_QUERY } from './hooks/useCommonsGallery';
 import { Header } from './components/Header';
 import { SearchBar } from './components/SearchBar';
 import { CuratedTopics } from './components/CuratedTopics';
@@ -88,8 +88,6 @@ export default function App() {
   // Mode Nama Pengguna: 'uploads' (unggahan) | 'talk' (halaman pembicaraan pengguna)
   const [userView, setUserView] = useState<'uploads' | 'talk'>('uploads');
   const [categorySearchMode, setCategorySearchMode] = useState<CategorySearchMode>('media');
-  // Kata kunci bawaan beranda ('Wikilokal') hanya tampil sebagai placeholder sampai pengguna mengetik pencarian sendiri
-  const [queryTyped, setQueryTyped] = useState<boolean>(false);
   const [currentCategoryName, setCurrentCategoryName] = useState<string>('');
   // Kategori asal saat tab Tabel dibuka lewat tombol Tabel di mode Kategori
   const [bulkSeedCategory, setBulkSeedCategory] = useState<string | null>(null);
@@ -147,8 +145,7 @@ export default function App() {
     setActiveMode('keywords');
     setCategorySearchMode('media');
     setShowSavedOnly(false);
-    setQuery('Wikilokal');
-    setQueryTyped(false);
+    setQuery('');
     setCurrentCategoryName('');
     setMediaType('all');
     setLicense('all');
@@ -270,7 +267,6 @@ export default function App() {
   // Terapkan state pencarian dari URL (?q=, ?type=, ?mode=, ...)
   const applySearchState = (s: UrlSearchState) => {
     fromUrl.current = true;
-    setQueryTyped(new URLSearchParams(window.location.search).has('q') || new URLSearchParams(window.location.search).has('user'));
     setQuery(s.query);
     setMediaType(s.mediaType);
     setLicense(s.license);
@@ -511,10 +507,6 @@ export default function App() {
               mediaType={filter.mediaType}
               onSelectMediaType={(type) => {
                 if (activeMode === 'categories' || activeMode === 'bulk') handleSwitchMode('keywords');
-                // Kata kunci bawaan beranda ('Wikilokal') tidak cocok dengan model 3D / panorama: kosongkan kolomnya
-                // (kolom kosong = tidak ada data). Pulihkan saat kembali ke filter lain dengan kolom masih kosong.
-                if (isBrowseOnlyType(type) && filter.query === DEFAULT_QUERY) setQuery('');
-                else if (!isBrowseOnlyType(type) && isBrowseOnlyType(filter.mediaType) && !filter.query.trim()) setQuery(DEFAULT_QUERY);
                 setMediaType(type);
               }}
               t={t}
@@ -546,9 +538,9 @@ export default function App() {
         {activeMode === 'keywords' && (
             <div className="space-y-4 pt-1">
               <SearchBar
-                currentQuery={!userMode && !queryTyped && filter.query === DEFAULT_QUERY ? '' : filter.query}
-                onSearch={(q) => { setQueryTyped(true); setQuery(q); }}
-                placeholder={!userMode && !queryTyped && filter.query === DEFAULT_QUERY ? DEFAULT_QUERY : userMode ? (language === 'id' ? 'Ketik nama pengguna Commons untuk melihat unggahannya…' : 'Type a Commons username to see their uploads…') : t.search.placeholder}
+                currentQuery={filter.query}
+                onSearch={setQuery}
+                placeholder={userMode ? (language === 'id' ? 'Ketik nama pengguna Commons untuk melihat unggahannya…' : 'Type a Commons username to see their uploads…') : t.search.homePlaceholder(DEFAULT_QUERY)}
                 t={t}
               />
             {userMode && filter.query.trim() !== '' && (
