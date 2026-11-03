@@ -88,6 +88,8 @@ export default function App() {
   // Mode Nama Pengguna: 'uploads' (unggahan) | 'talk' (halaman pembicaraan pengguna)
   const [userView, setUserView] = useState<'uploads' | 'talk'>('uploads');
   const [categorySearchMode, setCategorySearchMode] = useState<CategorySearchMode>('media');
+  // Kata kunci bawaan beranda ('Wikilokal') hanya tampil sebagai placeholder sampai pengguna mengetik pencarian sendiri
+  const [queryTyped, setQueryTyped] = useState<boolean>(false);
   const [currentCategoryName, setCurrentCategoryName] = useState<string>('');
   // Kategori asal saat tab Tabel dibuka lewat tombol Tabel di mode Kategori
   const [bulkSeedCategory, setBulkSeedCategory] = useState<string | null>(null);
@@ -146,6 +148,7 @@ export default function App() {
     setCategorySearchMode('media');
     setShowSavedOnly(false);
     setQuery('Wikilokal');
+    setQueryTyped(false);
     setCurrentCategoryName('');
     setMediaType('all');
     setLicense('all');
@@ -267,6 +270,7 @@ export default function App() {
   // Terapkan state pencarian dari URL (?q=, ?type=, ?mode=, ...)
   const applySearchState = (s: UrlSearchState) => {
     fromUrl.current = true;
+    setQueryTyped(new URLSearchParams(window.location.search).has('q') || new URLSearchParams(window.location.search).has('user'));
     setQuery(s.query);
     setMediaType(s.mediaType);
     setLicense(s.license);
@@ -542,9 +546,9 @@ export default function App() {
         {activeMode === 'keywords' && (
             <div className="space-y-4 pt-1">
               <SearchBar
-                currentQuery={filter.query}
-                onSearch={setQuery}
-                placeholder={userMode ? (language === 'id' ? 'Ketik nama pengguna Commons untuk melihat unggahannya…' : 'Type a Commons username to see their uploads…') : t.search.placeholder}
+                currentQuery={!userMode && !queryTyped && filter.query === DEFAULT_QUERY ? '' : filter.query}
+                onSearch={(q) => { setQueryTyped(true); setQuery(q); }}
+                placeholder={!userMode && !queryTyped && filter.query === DEFAULT_QUERY ? DEFAULT_QUERY : userMode ? (language === 'id' ? 'Ketik nama pengguna Commons untuk melihat unggahannya…' : 'Type a Commons username to see their uploads…') : t.search.placeholder}
                 t={t}
               />
             {userMode && filter.query.trim() !== '' && (
