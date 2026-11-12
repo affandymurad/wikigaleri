@@ -602,6 +602,19 @@ return () => ro.disconnect();
     };
   }, []);
 
+  // Tautan dengan ?list=categories|nophoto langsung menjalankan pencarian satu kali setelah peta siap
+  const autoSearchedRef = useRef<boolean>(false);
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || autoSearchedRef.current) return;
+    if (parseNearbyList(window.location.search) === 'photos') return;
+    autoSearchedRef.current = true;
+    const run = () => { void handleFindNearbyCommons(); };
+    if (map.loaded()) run();
+    else map.once('load', run);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Spatial clustering algorithm
   const clusterPhotos = useCallback(
     (photos: CommonsMediaItem[], zoomLevel: number): PhotoCluster[] => {
