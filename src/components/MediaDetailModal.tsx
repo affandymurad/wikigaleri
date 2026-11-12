@@ -21,7 +21,7 @@ import { Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { PanoramaViewer } from './PanoramaViewer';
 
 import { Translations, Language } from '../i18n/translations';
-import { parseDetailTab, withDetailTab, type DetailTab } from '../utils/urlState';
+import { parseDetailTab, withDetailTab, categorySearchHref, userSearchHref, type DetailTab } from '../utils/urlState';
 
 interface MediaDetailModalProps {
   item: CommonsMediaItem | null;
@@ -34,8 +34,6 @@ interface MediaDetailModalProps {
   onToggleSave?: (item: CommonsMediaItem) => void;
   t: Translations;
   language?: Language;
-  onSearchUser?: (username: string) => void;
-  onSearchCategory?: (category: string) => void;
   isUserSaved?: (username: string) => boolean;
   isCategorySaved?: (category: string) => boolean;
   onToggleUserSave?: (username: string) => void;
@@ -105,7 +103,7 @@ const formatExifValue = (key: string, value: string, en: boolean): string => {
 };
 
 /** Riwayat versi berkas (unggahan ulang) + riwayat suntingan halaman deskripsi. */
-const FileHistoryPanel: React.FC<{ title: string; onSearchUser?: (u: string) => void; language?: Language }> = ({ title, onSearchUser, language = 'id' }) => {
+const FileHistoryPanel: React.FC<{ title: string; language?: Language }> = ({ title, language = 'id' }) => {
   const [data, setData] = useState<{ versions: FileVersionEntry[]; edits: PageEditEntry[] } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,8 +121,6 @@ const FileHistoryPanel: React.FC<{ title: string; onSearchUser?: (u: string) => 
     return () => { cancelled = true; };
   }, [title]);
 
-  const userLink = (u: string) =>
-    `https://commons.wikimedia.org/wiki/User:${encodeURIComponent(u.replace(/ /g, '_'))}`;
   const historyUrl = `https://commons.wikimedia.org/w/index.php?title=${encodeURIComponent(title.replace(/ /g, '_'))}&action=history`;
 
   const chipCls = (on: boolean) =>
@@ -183,7 +179,7 @@ const FileHistoryPanel: React.FC<{ title: string; onSearchUser?: (u: string) => 
                   )}
                 </div>
                 <div className="text-stone-500 dark:text-stone-400">
-                  <a href={userLink(ver.user)} onClick={(e) => { if (onSearchUser) { e.preventDefault(); onSearchUser(ver.user); } }} title={onSearchUser ? (language === 'en' ? 'Search this username' : 'Cari nama pengguna ini') : undefined} target="_blank" rel="noopener noreferrer" className="text-accent-700 hover:underline dark:text-accent-300">{ver.user}</a>
+                  <a href={userSearchHref(ver.user)} title={language === 'en' ? 'Search this username' : 'Cari nama pengguna ini'} target="_blank" rel="noopener noreferrer" className="text-accent-700 hover:underline dark:text-accent-300">{ver.user}</a>
                   {ver.width > 0 && <span className="font-mono"> · {ver.width}×{ver.height} px</span>}
                   {ver.size > 0 && <span className="font-mono"> · {formatBytes(ver.size)}</span>}
                 </div>
@@ -201,7 +197,7 @@ const FileHistoryPanel: React.FC<{ title: string; onSearchUser?: (u: string) => 
             <li key={ed.revid} className="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-800/50">
               <div className="flex flex-wrap items-center gap-x-2 text-stone-500 dark:text-stone-400">
                 <span className="font-semibold text-stone-900 dark:text-white">{fmtDateTime(ed.timestamp)}</span>
-                <a href={userLink(ed.user)} onClick={(e) => { if (onSearchUser) { e.preventDefault(); onSearchUser(ed.user); } }} title={onSearchUser ? (language === 'en' ? 'Search this username' : 'Cari nama pengguna ini') : undefined} target="_blank" rel="noopener noreferrer" className="text-accent-700 hover:underline dark:text-accent-300">{ed.user}</a>
+                <a href={userSearchHref(ed.user)} title={language === 'en' ? 'Search this username' : 'Cari nama pengguna ini'} target="_blank" rel="noopener noreferrer" className="text-accent-700 hover:underline dark:text-accent-300">{ed.user}</a>
                 {ed.size > 0 && <span className="font-mono">· {ed.size} bytes</span>}
               </div>
               {ed.comment && <div className="mt-0.5 break-words text-stone-600 dark:text-stone-300">{ed.comment}</div>}
@@ -224,8 +220,6 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   onToggleSave,
   t,
   language = 'id',
-  onSearchUser,
-  onSearchCategory,
   isCategorySaved,
   onToggleCategorySave,
 }) => {
@@ -998,14 +992,15 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                           {item.author && item.author !== 'Wikimedia Commons' ? (
                             item.author
                           ) : uploader ? (
-                            <button
-                              type="button"
-                              onClick={() => onSearchUser && onSearchUser(uploader)}
+                            <a
+                              href={userSearchHref(uploader)}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               title={language === 'en' ? 'Search this username' : 'Cari nama pengguna ini'}
                               className="cursor-pointer text-accent-700 hover:underline dark:text-accent-300"
                             >
                               {uploader}
-                            </button>
+                            </a>
                           ) : (
                             item.credit || 'Wikimedia Commons'
                           )}
@@ -1019,14 +1014,15 @@ className={'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 p
                         <div>
                           <dt className="text-stone-400 text-xs">{language === 'en' ? 'Uploader' : 'Pengunggah'}</dt>
                           <dd className="font-medium">
-                            <button
-                              type="button"
-                              onClick={() => onSearchUser && onSearchUser(uploader)}
+                            <a
+                              href={userSearchHref(uploader)}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               title={language === 'en' ? 'Search this username' : 'Cari nama pengguna ini'}
                               className="cursor-pointer text-accent-700 hover:underline dark:text-accent-300"
                             >
                               {uploader}
-                            </button>
+                            </a>
                           </dd>
                         </div>
                       </div>
@@ -1208,25 +1204,15 @@ return (
   key={c}
   className="inline-flex items-stretch overflow-hidden rounded-lg border border-stone-300 text-xs text-stone-700 dark:border-stone-600 dark:text-stone-200"
 >
-  {onSearchCategory ? (
-    <button
-      type="button"
-      onClick={() => onSearchCategory(name)}
-      title={language === 'en' ? 'Search this category' : 'Cari kategori ini'}
-      className="cursor-pointer px-2.5 py-1 hover:bg-stone-50 dark:hover:bg-stone-700"
-    >
-      {name}
-    </button>
-  ) : (
-    <a
-      href={'https://commons.wikimedia.org/wiki/Category:' + encodeURIComponent(name.replace(/ /g, '_'))}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="px-2.5 py-1 hover:bg-stone-50 dark:hover:bg-stone-700"
-    >
-      {name}
-    </a>
-  )}
+  <a
+    href={categorySearchHref(name)}
+    target="_blank"
+    rel="noopener noreferrer"
+    title={language === 'en' ? 'Search this category' : 'Cari kategori ini'}
+    className="cursor-pointer px-2.5 py-1 hover:bg-stone-50 dark:hover:bg-stone-700"
+  >
+    {name}
+  </a>
   {onToggleCategorySave && (
     <button
       type="button"
@@ -1385,7 +1371,7 @@ return (
             {/* Tab: Riwayat Versi Berkas */}
           {activeTab === 'history' && (
             <div className="p-5 space-y-5 flex-1 overflow-y-auto text-xs">
-              <FileHistoryPanel title={item.title} onSearchUser={onSearchUser} language={language} />
+              <FileHistoryPanel title={item.title} language={language} />
             </div>
           )}
 

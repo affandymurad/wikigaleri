@@ -14,12 +14,10 @@ import {
 
 import {
   AreaBounds,
-  AreaFileCategories,
-  AREA_FILE_LIMIT,
-  AREA_MAX_CONTINUE_PAGES,
-  WikidataCategory,
-  WikidataNoPhotoItem,
-  WIKIDATA_MAX_ROWS,
+  WikidataAreaItem,
+  CoordCategory,
+  COORD_CATEGORY_LIMIT,
+  WIKIDATA_ITEMS_LIMIT,
   WIKIDATA_TIMEOUT_MS,
 } from '../utils/areaCategories';
 
@@ -944,132 +942,28 @@ export async function fetchNearbyCommonsMedia(
 }
 
 /**
- * Berkas bergeotag di dalam kotak area beserta kategori tidak tersembunyi (clshow=!hidden).
- * Satu generator geosearch + prop=categories; kategori yang melebihi cllimit dilanjutkan lewat
- * clcontinue (maksimal maxPages permintaan lanjutan). Memakai fetch langsung agar bisa dibatalkan.
+ * Wikidata: semua item bertitik koordinat (P625) di dalam kotak area. Item yang punya gambar (P18)
+ * membawa URL thumbnail; item tanpa gambar dikenali dari image yang kosong. Item tanpa label (hanya Q-id)
+ * dilewati. Item yang terhubung ke kategori Commons (P373 atau sitelink) membawa nama kategorinya.
+ * Urutan: yang belum punya gambar dulu, lalu menurut nama.
  */
-export async function fetchAreaFileCategories(
-  bounds: AreaBounds,
-  signal: AbortSignal,
-  fileLimit = AREA_FILE_LIMIT,
-  maxPages = AREA_MAX_CONTINUE_PAGES
-): Promise<{ files: AreaFileCategories[]; truncated: boolean }> {
-  const base: Record<string, string> = {
-    action: 'query',
-    format: 'json',
-    origin: '*',
-    generator: 'geosearch',
-    // Urutan bbox geosearch: atas|kiri|bawah|kanan
-    ggsbbox: `${bounds.north}|${bounds.west}|${bounds.south}|${bounds.east}`,
-    ggsnamespace: '6',
-    ggslimit: String(fileLimit),
-    prop: 'categories',
-    clshow: '!hidden',
-    cllimit: 'max',
-  };
-
-  const byPage = new Map<number, AreaFileCategories>();
-  let cont: Record<string, string> | null = null;
-  let pages = 0;
-  let truncated = false;
-
-  do {
-    const params = new URLSearchParams({ ...base, ...(cont || {}) });
-    const res = await fetch(`${COMMONS_API_BASE}?${params.toString()}`, { signal });
-    if (!res.ok) throw new Error(`Wikimedia geosearch error: ${res.status}`);
-    const data = await res.json();
-    if (data?.error) throw new Error(data.error.info || data.error.code || 'Wikimedia API error');
-
-    const found = (data?.query?.pages || {}) as Record<string, { pageid: number; title: string; categories?: { title: string }[] }>;
-    for (const p of Object.values(found)) {
-      const entry = byPage.get(p.pageid) || { title: p.title, categories: [] };
-      for (const c of p.categories || []) entry.categories.push(c.title);
-      byPage.set(p.pageid, entry);
-    }
-
-    cont = data?.continue?.clcontinue ? { clcontinue: data.continue.clcontinue, continue: data.continue.continue } : null;
-    pages += 1;
-    if (cont && pages >= maxPages) {
-      truncated = true;
-      break;
-    }
-  } while (cont);
-
-  if (byPage.size >= fileLimit) truncated = true;
-  return { files: Array.from(byPage.values()), truncated };
-}
-
-/**
- * Wikidata: item bertitik koordinat (P625) di dalam kotak area yang punya P373 (nama kategori Commons)
- * atau sitelink commonswiki ke "Category:". Dibatasi waktu (WIKIDATA_TIMEOUT_MS); galat/timeout dilempar
- * sebagai Error agar pemanggil bisa menampilkan hasil foto saja.
- */
-export async function fetchWikidataAreaCategories(bounds: AreaBounds, signal: AbortSignal): Promise<WikidataCategory[]> {
-  const query = `SELECT ?item ?itemLabel ?cat ?slname WHERE {
+export async function fetchWikidataAreaItems(bounds: AreaBounds, signal: AbortSignal): Promise<WikidataAreaItem[]> {
+  const query = `SELECT ?item ?itemLabel ?itemDescription ?loc (SAMPLE(?img) AS ?image) (SAMPLE(?p373) AS ?cat) (SAMPLE(?slname) AS ?slcat) WHERE {
   SERVICE wikibase:box {
     ?item wdt:P625 ?loc .
     bd:serviceParam wikibase:cornerSouthWest "Point(${bounds.west} ${bounds.south})"^^geo:wktLiteral .
     bd:serviceParam wikibase:cornerNorthEast "Point(${bounds.east} ${bounds.north})"^^geo:wktLiteral .
   }
-  OPTIONAL { ?item wdt:P373 ?cat . }
+  OPTIONAL { ?item wdt:P18 ?img . }
+  OPTIONAL { ?item wdt:P373 ?p373 . }
   OPTIONAL {
     ?sl schema:about ?item ; schema:isPartOf <https://commons.wikimedia.org/> ; schema:name ?slname .
     FILTER(STRSTARTS(?slname, "Category:"))
   }
-  FILTER(BOUND(?cat) || BOUND(?slname))
   SERVICE wikibase:label { bd:serviceParam wikibase:language "id,en". }
 }
-LIMIT ${WIKIDATA_MAX_ROWS}`;
-
-  const ctrl = new AbortController();
-  let timedOut = false;
-  const onAbort = () => ctrl.abort();
-  signal.addEventListener('abort', onAbort);
-  const timer = setTimeout(() => {
-    timedOut = true;
-    ctrl.abort();
-  }, WIKIDATA_TIMEOUT_MS);
-
-  try {
-    const url = `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(query)}`;
-    const res = await fetch(url, { signal: ctrl.signal, headers: { Accept: 'application/sparql-results+json' } });
-    if (!res.ok) throw new Error(`Wikidata SPARQL error: ${res.status}`);
-    const data = await res.json();
-    const rows = (data?.results?.bindings || []) as Array<{
-      cat?: { value: string };
-      slname?: { value: string };
-      itemLabel?: { value: string };
-    }>;
-    const out: WikidataCategory[] = [];
-    for (const r of rows) {
-      const raw = r.cat?.value || (r.slname?.value || '').replace(/^Category:/i, '');
-      if (raw) out.push({ name: raw, label: r.itemLabel?.value });
-    }
-    return out;
-  } catch (e) {
-    if (timedOut) throw new Error('Wikidata SPARQL timeout');
-    throw e;
-  } finally {
-    clearTimeout(timer);
-    signal.removeEventListener('abort', onAbort);
-  }
-}
-
-/**
- * Wikidata: item bertitik koordinat (P625) di dalam kotak area yang belum punya gambar (P18).
- * Dipakai untuk menemukan tempat yang belum punya foto. Item tanpa label (hanya Q-id) dilewati.
- */
-export async function fetchWikidataNoPhoto(bounds: AreaBounds, signal: AbortSignal): Promise<WikidataNoPhotoItem[]> {
-  const query = `SELECT ?item ?itemLabel ?itemDescription ?loc WHERE {
-  SERVICE wikibase:box {
-    ?item wdt:P625 ?loc .
-    bd:serviceParam wikibase:cornerSouthWest "Point(${bounds.west} ${bounds.south})"^^geo:wktLiteral .
-    bd:serviceParam wikibase:cornerNorthEast "Point(${bounds.east} ${bounds.north})"^^geo:wktLiteral .
-  }
-  FILTER NOT EXISTS { ?item wdt:P18 ?img . }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "id,en". }
-}
-LIMIT ${WIKIDATA_MAX_ROWS}`;
+GROUP BY ?item ?itemLabel ?itemDescription ?loc
+LIMIT ${WIKIDATA_ITEMS_LIMIT}`;
 
   const ctrl = new AbortController();
   let timedOut = false;
@@ -1090,18 +984,25 @@ LIMIT ${WIKIDATA_MAX_ROWS}`;
       itemLabel?: { value: string };
       itemDescription?: { value: string };
       loc?: { value: string };
+      image?: { value: string };
+      cat?: { value: string };
+      slcat?: { value: string };
     }>;
     const seen = new Set<string>();
-    const out: WikidataNoPhotoItem[] = [];
+    const out: WikidataAreaItem[] = [];
     for (const r of rows) {
       const qid = (r.item?.value || '').split('/').pop() || '';
       const label = r.itemLabel?.value || '';
       const m = /Point\(([-\d.eE+]+) ([-\d.eE+]+)\)/.exec(r.loc?.value || '');
       if (!qid || !label || label === qid || !m || seen.has(qid)) continue;
       seen.add(qid);
-      out.push({ qid, label, description: r.itemDescription?.value, lat: Number(m[2]), lng: Number(m[1]) });
+      // P18 berupa URL Special:FilePath; minta thumbnail lebar 240 px lewat https
+      const image = r.image?.value ? r.image.value.replace(/^http:/, 'https:') + '?width=240' : undefined;
+      // Kategori Commons: P373 lebih dulu, lalu sitelink commonswiki "Category:..."
+      const category = (r.cat?.value || (r.slcat?.value || '').replace(/^Category:/i, '')).replace(/_/g, ' ').trim() || undefined;
+      out.push({ qid, label, description: r.itemDescription?.value, lat: Number(m[2]), lng: Number(m[1]), image, category });
     }
-    return out.sort((a, b) => a.label.localeCompare(b.label));
+    return out.sort((x, y) => Number(!!x.image) - Number(!!y.image) || x.label.localeCompare(y.label));
   } catch (e) {
     if (timedOut) throw new Error('Wikidata SPARQL timeout');
     throw e;
@@ -1109,6 +1010,42 @@ LIMIT ${WIKIDATA_MAX_ROWS}`;
     clearTimeout(timer);
     signal.removeEventListener('abort', onAbort);
   }
+}
+
+/**
+ * Kategori Commons yang punya koordinat di dalam kotak area. Memakai geosearch namespace Category, yang
+ * mengindeks koordinat dari template di halaman kategori ({{Object location}}, {{Coord}}) maupun dari
+ * infobox Wikidata. Hasil diurutkan dari yang terdekat ke titik tengah kotak; duplikat judul dibuang.
+ */
+export async function fetchCoordinateCategories(
+  bounds: AreaBounds,
+  signal: AbortSignal,
+  limit = COORD_CATEGORY_LIMIT
+): Promise<CoordCategory[]> {
+  const params = new URLSearchParams({
+    action: 'query',
+    format: 'json',
+    origin: '*',
+    list: 'geosearch',
+    gsbbox: `${bounds.north}|${bounds.west}|${bounds.south}|${bounds.east}`,
+    gsnamespace: '14',
+    gslimit: String(limit),
+    gsprimary: 'all',
+  });
+  const res = await fetch(`${COMMONS_API_BASE}?${params.toString()}`, { signal });
+  if (!res.ok) throw new Error(`Wikimedia geosearch error: ${res.status}`);
+  const data = await res.json();
+  if (data?.error) throw new Error(data.error.info || data.error.code || 'Wikimedia API error');
+  const rows = (data?.query?.geosearch || []) as Array<{ title: string; lat: number; lon: number }>;
+  const seen = new Set<string>();
+  const out: CoordCategory[] = [];
+  for (const r of rows) {
+    const name = (r.title || '').replace(/^Category:/i, '').trim();
+    if (!name || seen.has(name) || !Number.isFinite(r.lat) || !Number.isFinite(r.lon)) continue;
+    seen.add(name);
+    out.push({ name, lat: r.lat, lng: r.lon });
+  }
+  return out;
 }
 
 /**

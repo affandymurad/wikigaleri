@@ -87,23 +87,13 @@ export interface Translations {
     previewPrev: string;
     previewNext: string;
     sideEmptyHint: string;
-    areaCatBtn: string;
-    areaCatTitle: string;
-    areaCatNote: string;
     areaCatLoading: string;
-    areaCatEmpty: string;
     areaCatError: string;
     areaCatRetry: string;
     areaCatTooWide: (maxKm: number) => string;
-    areaCatPhotos: (count: number) => string;
-    areaCatBasedOn: (files: number) => string;
-    areaCatTruncated: string;
     areaCatWikidataFailed: string;
-    areaCatWikidataSkipped: string;
     areaCatSearchIn: string;
-    areaCatRange: (start: number, end: number, total: number) => string;
     tabPhotos: string;
-    tabCategories: string;
     tabNoPhoto: string;
     noPhotoTitle: string;
     noPhotoNote: string;
@@ -112,6 +102,18 @@ export interface Translations {
     noPhotoRange: (start: number, end: number, total: number) => string;
     noPhotoOpen: string;
     noPhotoCardHint: string;
+    wdNoPhotoBadge: string;
+    wdSummary: (noPhoto: number, total: number) => string;
+    wdTruncated: string;
+    tabCoordCats: string;
+    coordCatsTitle: string;
+    coordCatsNote: string;
+    coordCatsEmpty: string;
+    coordCatsRange: (start: number, end: number, total: number) => string;
+    coordCatsFailed: string;
+    coordCatsTruncated: string;
+    coordCatsCardHint: string;
+    coordCatsOpenCommons: string;
   };
   filters: {
     allMedia: string;
@@ -520,31 +522,33 @@ export const translations: Record<Language, Translations> = {
       previewPrev: 'Previous',
       previewNext: 'Next',
       sideEmptyHint: 'Click "Find Nearby Commons" to search this map area. Photos, categories, and Wikidata places without a photo will appear here.',
-      areaCatBtn: 'Find categories in this area',
-      areaCatTitle: 'Categories in this area',
-      areaCatNote: 'Categories are inferred from geotagged photos in this area, not from category coordinates.',
       areaCatLoading: 'Collecting categories…',
-      areaCatEmpty: 'No categories found for this area. Try zooming out a little or moving the map.',
       areaCatError: 'Could not load categories. Check your connection and try again.',
       areaCatRetry: 'Try again',
       areaCatTooWide: (maxKm: number) => `This area is too wide. Zoom in until the map is under about ${maxKm} km across.`,
-      areaCatPhotos: (count: number) => `${count} ${count === 1 ? 'photo' : 'photos'}`,
-      areaCatBasedOn: (files: number) => `Based on ${files} geotagged files`,
-      areaCatTruncated: 'The area has more files than can be loaded, so counts are partial. Zoom in for fuller results.',
       areaCatWikidataFailed: 'Wikidata could not be loaded (timeout or error), showing photo results only.',
       areaCatSearchIn: 'Search in category',
-      areaCatRange: (start: number, end: number, total: number) => `Showing ${start}–${end} of ${total} categories`,
       tabPhotos: 'Photos',
-      tabCategories: 'Categories',
-      tabNoPhoto: 'Wikidata without photo',
-      noPhotoTitle: 'Places on Wikidata without a photo (P18)',
-      noPhotoNote: 'Wikidata items with coordinates in this area that have no image (P18). Good candidates for new photos.',
-      noPhotoEmpty: 'No Wikidata items without a photo were found in this area.',
-      noPhotoSkipped: 'Wikidata is only checked for small areas; zoom in to see items without a photo.',
+      tabNoPhoto: 'Wikidata',
+      noPhotoTitle: 'Places on Wikidata',
+      noPhotoNote: 'Wikidata items with coordinates in this area. Items with an image (P18) show a thumbnail; items without one are marked "No photo" and are good candidates for new photos.',
+      noPhotoEmpty: 'No Wikidata items with coordinates were found in this area.',
+      noPhotoSkipped: 'Wikidata is only checked for small areas; zoom in to see Wikidata items.',
+      wdNoPhotoBadge: 'No photo',
+      wdSummary: (noPhoto: number, total: number) => `${noPhoto} of ${total} items have no photo`,
+      wdTruncated: 'The area holds more Wikidata items than can be loaded, so the list is partial. Zoom in for fuller results.',
       noPhotoRange: (start: number, end: number, total: number) => `Showing ${start}–${end} of ${total} items`,
       noPhotoOpen: 'Open in Wikidata',
+      tabCoordCats: 'Categories with coordinates',
+      coordCatsTitle: 'Commons categories with coordinates',
+      coordCatsNote: 'Categories whose own page has coordinates, set by a template ({{Object location}}, {{Coord}}) or taken from the linked Wikidata item. These are not inferred from photos.',
+      coordCatsEmpty: 'No Commons categories with coordinates were found in this area.',
+      coordCatsRange: (start: number, end: number, total: number) => `Showing ${start}–${end} of ${total} categories`,
+      coordCatsFailed: 'Categories with coordinates could not be loaded. Try searching again.',
+      coordCatsTruncated: 'The area holds more categories than can be loaded, so the list is partial. Zoom in for fuller results.',
+      coordCatsCardHint: 'This Commons category has coordinates on its own page.',
+      coordCatsOpenCommons: 'Open on Commons',
       noPhotoCardHint: 'This item has coordinates but no image (P18) on Wikidata. A good place for a new photo.',
-      areaCatWikidataSkipped: 'Wikidata is only checked for small areas; zoom in to include it.',
     },
     filters: {
       allMedia: 'All Media',
@@ -964,31 +968,33 @@ export const translations: Record<Language, Translations> = {
       previewPrev: 'Sebelumnya',
       previewNext: 'Berikutnya',
       sideEmptyHint: 'Klik "Cari Commons Terdekat" untuk mencari di area peta ini. Foto, kategori, dan tempat Wikidata tanpa foto akan tampil di sini.',
-      areaCatBtn: 'Cari kategori di area ini',
-      areaCatTitle: 'Kategori di area ini',
-      areaCatNote: 'Kategori disimpulkan dari foto bergeotag di area ini, bukan dari koordinat kategori.',
       areaCatLoading: 'Mengumpulkan kategori…',
-      areaCatEmpty: 'Tidak ada kategori ditemukan di area ini. Coba perkecil zoom sedikit atau geser peta.',
       areaCatError: 'Kategori tidak dapat dimuat. Periksa koneksi lalu coba lagi.',
       areaCatRetry: 'Coba lagi',
       areaCatTooWide: (maxKm: number) => `Area terlalu luas. Perbesar peta sampai lebarnya kurang dari sekitar ${maxKm} km.`,
-      areaCatPhotos: (count: number) => `${count} foto`,
-      areaCatBasedOn: (files: number) => `Berdasarkan ${files} berkas bergeotag`,
-      areaCatTruncated: 'Berkas di area ini lebih banyak daripada yang bisa dimuat, jadi hitungan tidak lengkap. Perbesar peta untuk hasil yang lebih lengkap.',
       areaCatWikidataFailed: 'Wikidata tidak dapat dimuat (waktu habis atau galat), hanya menampilkan hasil dari foto.',
       areaCatSearchIn: 'Cari di kategori',
-      areaCatRange: (start: number, end: number, total: number) => `Menampilkan ${start}–${end} dari ${total} kategori`,
       tabPhotos: 'Foto',
-      tabCategories: 'Kategori',
-      tabNoPhoto: 'Wikidata tanpa foto',
-      noPhotoTitle: 'Tempat di Wikidata tanpa foto (P18)',
-      noPhotoNote: 'Item Wikidata bertitik koordinat di area ini yang belum punya gambar (P18). Calon sasaran foto baru.',
-      noPhotoEmpty: 'Tidak ada item Wikidata tanpa foto di area ini.',
-      noPhotoSkipped: 'Wikidata hanya diperiksa untuk area kecil; perbesar peta untuk melihat item tanpa foto.',
+      tabNoPhoto: 'Wikidata',
+      noPhotoTitle: 'Tempat di Wikidata',
+      noPhotoNote: 'Item Wikidata bertitik koordinat di area ini. Item yang punya gambar (P18) menampilkan thumbnail; item tanpa gambar diberi tanda "Tanpa foto" dan cocok jadi sasaran foto baru.',
+      noPhotoEmpty: 'Tidak ada item Wikidata bertitik koordinat di area ini.',
+      noPhotoSkipped: 'Wikidata hanya diperiksa untuk area kecil; perbesar peta untuk melihat item Wikidata.',
+      wdNoPhotoBadge: 'Tanpa foto',
+      wdSummary: (noPhoto: number, total: number) => `${noPhoto} dari ${total} item belum punya foto`,
+      wdTruncated: 'Item Wikidata di area ini lebih banyak daripada yang bisa dimuat, jadi daftarnya tidak lengkap. Perbesar peta untuk hasil yang lebih lengkap.',
       noPhotoRange: (start: number, end: number, total: number) => `Menampilkan ${start}–${end} dari ${total} item`,
       noPhotoOpen: 'Buka di Wikidata',
+      tabCoordCats: 'Kategori ber-koordinat',
+      coordCatsTitle: 'Kategori Commons ber-koordinat',
+      coordCatsNote: 'Kategori yang halamannya sendiri punya koordinat, dari template ({{Object location}}, {{Coord}}) atau dari item Wikidata yang terhubung. Daftar ini tidak disimpulkan dari foto.',
+      coordCatsEmpty: 'Tidak ada kategori Commons ber-koordinat di area ini.',
+      coordCatsRange: (start: number, end: number, total: number) => `Menampilkan ${start}–${end} dari ${total} kategori`,
+      coordCatsFailed: 'Kategori ber-koordinat tidak dapat dimuat. Coba cari lagi.',
+      coordCatsTruncated: 'Kategori di area ini lebih banyak daripada yang bisa dimuat, jadi daftarnya tidak lengkap. Perbesar peta untuk hasil yang lebih lengkap.',
+      coordCatsCardHint: 'Kategori Commons ini punya koordinat di halamannya sendiri.',
+      coordCatsOpenCommons: 'Buka di Commons',
       noPhotoCardHint: 'Item ini punya koordinat tetapi belum punya gambar (P18) di Wikidata. Tempat yang cocok untuk foto baru.',
-      areaCatWikidataSkipped: 'Wikidata hanya diperiksa untuk area kecil; perbesar peta agar ikut disertakan.',
     },
     filters: {
       allMedia: 'Semua Media',

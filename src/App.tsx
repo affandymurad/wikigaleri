@@ -16,7 +16,7 @@ import { ProjectUsageReportSection } from './components/ProjectUsageReportSectio
 import { BulkFilesSection } from './components/BulkFilesSection';
 import { CommonsMediaItem, CategorySearchMode } from './types/wikimedia';
 import { CURATED_TOPICS, normalizeCategoryName, fetchMediaDetailByPageId, fetchMediaDetailByTitle } from './services/wikimediaApi';
-import { buildSearch, parseSearch, detailPath, parseDetailPath, parseNearbyView, withNearbyView, parseNearbyList, withNearbyList, parseReportLang, withReportLang, parseBulkFiles, withBulkFiles, parseBulkCategory, withBulkCategory, type UrlSearchState } from './utils/urlState';
+import { buildSearch, parseSearch, detailPath, parseDetailPath, parseNearbyView, withNearbyView, parseNearbyList, withNearbyList, parseReportLang, withReportLang, parseBulkFiles, withBulkFiles, parseBulkCategory, withBulkCategory, bulkCategoryHref, type UrlSearchState } from './utils/urlState';
 import { ExternalLink, Search, MapPin, LayoutGrid, FolderTree, FolderRoot, Radio, Bookmark, Shuffle, ListChecks } from 'lucide-react';
 
 export default function App() {
@@ -186,46 +186,6 @@ export default function App() {
     }
   };
 
-  // Tombol Tabel di mode Kategori: buka tab Tabel berisi semua berkas kategori yang sedang dibuka
-  const openBulkForCategory = (catName: string) => {
-    const clean = normalizeCategoryName(catName);
-    if (!clean) return;
-    handleSwitchMode('bulk');
-    setBulkSeedCategory(clean);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Buka pencarian username (mode Kata Kunci > Nama Pengguna)
-  const openUserSearch = (username: string) => {
-    const clean = username.replace(/^(User|Pengguna):/i, '').trim();
-    if (!clean) return;
-    clearDetail();
-    setShowSavedOnly(false);
-    setLiveFeed(false);
-    setActiveMode('keywords');
-    setUserView('uploads');
-    setUserMode(true);
-    setQuery(clean);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Buka pencarian kategori (mode Kategori > Media)
-  const openCategorySearch = (catName: string) => {
-    const clean = normalizeCategoryName(catName);
-    if (!clean) return;
-    clearDetail();
-    setShowSavedOnly(false);
-    setLiveFeed(false);
-    setUserMode(false);
-    setUserView('uploads');
-    setActiveMode('categories');
-    setMediaType('all');
-    setCategorySearchMode('media');
-    setCurrentCategoryName(clean);
-    setQuery(clean);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   // Next / Prev detail item navigation
   const currentDetailIndex = selectedDetailItem
     ? items.findIndex((i) => i.id === selectedDetailItem.id)
@@ -379,8 +339,6 @@ export default function App() {
             hasPrev={hasPrevDetail}
             isSaved={isItemSaved(selectedDetailItem.id)}
             onToggleSave={toggleSaveItem}
-            onSearchUser={openUserSearch}
-            onSearchCategory={openCategorySearch}
             isUserSaved={isUserSaved}
             isCategorySaved={(c) => isCategorySaved(normalizeCategoryName(c))}
             onToggleUserSave={toggleUser}
@@ -608,14 +566,15 @@ export default function App() {
                     {language === 'id' ? 'Buka di Wikimedia Commons' : 'Open on Wikimedia Commons'}
                     <ExternalLink className="h-3 w-3 opacity-60" />
                   </a>
-                  <button
-                    type="button"
-                    onClick={() => openBulkForCategory(currentCategoryName)}
+                  <a
+                    href={bulkCategoryHref(currentCategoryName)}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 px-3.5 py-1.5 text-xs font-semibold text-stone-600 transition hover:bg-stone-50 cursor-pointer dark:border-stone-600 dark:text-stone-300 dark:hover:bg-stone-800"
                   >
                     <ListChecks className="h-3.5 w-3.5" />
                     {language === 'id' ? 'Tabel' : 'Table'}
-                  </button>
+                  </a>
                   <span className="text-xs text-stone-500 dark:text-stone-400">
                     {language === 'id'
                       ? 'Klik Tabel untuk merekap berkas kategori ini beserta penggunaan di Wikipedia/Wikivoyage dan pengunggahnya.'
@@ -731,8 +690,6 @@ export default function App() {
         {activeMode === 'nearby' && (
           <section aria-label="Foto Terdekat" className="space-y-6">
             <NearbyPhotosSection
-              onOpenDetail={openDetail}
-              onOpenCategory={openCategorySearch}
               language={language}
               t={t}
             />
@@ -762,8 +719,6 @@ export default function App() {
           <BookmarksPanel
             savedUsers={savedUsers}
             savedCategories={savedCategories}
-            onOpenUser={openUserSearch}
-            onOpenCategory={openCategorySearch}
             onRemoveUser={toggleUser}
             onRemoveCategory={toggleCategory}
             language={language}

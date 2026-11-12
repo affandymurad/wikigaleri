@@ -13,7 +13,7 @@ import type { CategorySearchMode, CommonsMediaItem, LicenseCategory, MediaType, 
  *   /?mode=bulk&category=Wikilokal                         tab Massal berisi semua berkas sebuah kategori Commons
  *   /?mode=bulk&files=Nama_A.jpg|Nama_B.png               tab Massal (Bulk): daftar nama berkas dipisah "|" (diperiksa otomatis)
  *   /?mode=nearby&lat=-6.1753924&lon=106.8271528&zoom=14   titik tengah dan zoom peta Sekitar
- *   /?mode=nearby&list=categories                          daftar samping Sekitar: photos (bawaan) | categories | nophoto
+ *   /?mode=nearby&list=categories                          daftar samping Sekitar: photos (bawaan) | catcoords | wikidata
  *   /file/Waterworks_Museum_(85472)bw.jpg  detail berkas (nama berkas seperti di Commons)
  *   /file/Nama.svg?tab=license             tab detail: download | cats | license | history | talk (download = bawaan)
  */
@@ -193,12 +193,14 @@ export function withNearbyView(search: string, view: NearbyView | null): string 
   return str ? `?${str}` : '';
 }
 
-export type NearbyList = 'photos' | 'categories' | 'nophoto';
-const NEARBY_LISTS: NearbyList[] = ['photos', 'categories', 'nophoto'];
+export type NearbyList = 'photos' | 'catcoords' | 'wikidata';
+const NEARBY_LISTS: NearbyList[] = ['photos', 'catcoords', 'wikidata'];
 
 /** Baca ?list= daftar samping peta Sekitar; nilai tidak dikenal menjadi 'photos' */
 export function parseNearbyList(search: string): NearbyList {
-  const v = new URLSearchParams(search).get('list') as NearbyList | null;
+  const raw = new URLSearchParams(search).get('list');
+  // Nama lama dari tautan yang sudah beredar: 'nophoto' (daftar Wikidata) dan 'categories' (daftar dari foto, sudah dihapus)
+  const v = (raw === 'nophoto' ? 'wikidata' : raw === 'categories' ? 'catcoords' : raw) as NearbyList | null;
   return v && NEARBY_LISTS.includes(v) ? v : 'photos';
 }
 
@@ -209,6 +211,39 @@ export function withNearbyList(search: string, list: NearbyList): string {
   else p.set('list', list);
   const str = p.toString().replace(/%2F/gi, '/').replace(/%3A/gi, ':');
   return str ? `?${str}` : '';
+}
+
+// ---------------------------------------------------------------------------
+// Tautan ke mode lain di situs ini (aksi yang dibuka di tab baru)
+// ---------------------------------------------------------------------------
+
+const cleanCategory = (s: string) => s.replace(/^(Category|Kategori)\s*:\s*/i, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+
+const baseState: UrlSearchState = {
+  mode: 'keywords',
+  query: '',
+  mediaType: 'all',
+  license: 'all',
+  sort: 'relevance',
+  userMode: false,
+  userView: 'uploads',
+  categoryView: 'media',
+};
+
+/** /?mode=categories&q=<kategori>: galeri sebuah kategori Commons */
+export function categorySearchHref(name: string): string {
+  return '/' + buildSearch({ ...baseState, mode: 'categories', query: cleanCategory(name) });
+}
+
+/** /?user=<nama>: unggahan seorang pengguna Commons */
+export function userSearchHref(username: string): string {
+  const clean = username.replace(/^(User|Pengguna):/i, '').trim();
+  return '/' + buildSearch({ ...baseState, userMode: true, query: clean });
+}
+
+/** /?mode=bulk&category=<kategori>: tab Tabel berisi semua berkas sebuah kategori */
+export function bulkCategoryHref(category: string): string {
+  return '/' + withBulkCategory('?mode=bulk', cleanCategory(category));
 }
 
 /** Daftar nama berkas tab Massal dari ?files= (dipisah "|", garis bawah = spasi); null bila tidak ada */

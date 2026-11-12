@@ -24,21 +24,21 @@ function getContourDemSource() {
   return contourDemSource;
 }
 import { CommonsMediaItem } from '../types/wikimedia';
-import { fetchNearbyCommonsMedia, fetchAreaFileCategories, fetchWikidataAreaCategories, fetchWikidataNoPhoto } from '../services/wikimediaApi';
+import { fetchNearbyCommonsMedia, fetchWikidataAreaItems, fetchCoordinateCategories } from '../services/wikimediaApi';
 import {
   AREA_MAX_SPAN_M,
   WIKIDATA_MAX_SPAN_M,
   AreaBounds,
-  AreaCategoryEntry,
-  WikidataNoPhotoItem,
+  WikidataAreaItem,
+  WIKIDATA_ITEMS_LIMIT,
+  CoordCategory,
+  COORD_CATEGORY_LIMIT,
   areaCacheKey,
   areaSpanMeters,
-  inferAreaCategories,
-  mergeAreaCategories,
 } from '../utils/areaCategories';
 import { getFileExtension } from '../utils/licenseUtils';
 import { Translations, Language } from '../i18n/translations';
-import { DEFAULT_NEARBY_VIEW, parseNearbyView, withNearbyView, parseNearbyList, withNearbyList, type NearbyList } from '../utils/urlState';
+import { DEFAULT_NEARBY_VIEW, parseNearbyView, withNearbyView, parseNearbyList, withNearbyList, categorySearchHref, detailPath, type NearbyList } from '../utils/urlState';
 import {
   MapPin,
   LocateFixed,
@@ -64,8 +64,6 @@ import {
 } from 'lucide-react';
 
 interface NearbyPhotosSectionProps {
-  onOpenDetail: (item: CommonsMediaItem) => void;
-  onOpenCategory: (categoryName: string) => void;
   language: Language;
   t: Translations;
 }
@@ -79,8 +77,8 @@ interface PhotoCluster {
 }
 
 const PREVIEW_PAGE_SIZE = 18;
-const AREA_CAT_PAGE_SIZE = 12;
-const NOPHOTO_PAGE_SIZE = 12;
+const WD_PAGE_SIZE = 12;
+const COORD_PAGE_SIZE = 12;
 
 // Gaya peta Sekitar disamakan dengan WikiAbstrak: palet krem hangat dengan pil bulat dan kartu membulat.
 // Mode gelap memakai nilai HSL dari palet gelap WikiAbstrak.
@@ -138,9 +136,11 @@ const distanceMeters = (a: LatLng, b: LatLng): number => {
 };
 const fmtCoord = (c: LatLng) => `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;
 
+// Aksi ke mode lain di situs yang sama (galeri kategori, detail berkas) dibuka di tab baru,
+// supaya hasil pencarian dan posisi peta Sekitar tidak hilang.
+const NEW_TAB = { target: '_blank', rel: 'noopener noreferrer' } as const;
+
 export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
-  onOpenDetail,
-  onOpenCategory,
   language = 'id',
   t,
 }) => {
@@ -256,14 +256,11 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   // Kategori di area ini: hasil di-cache per area/zoom selama sesi; permintaan lama dibatalkan saat area berubah
   const [areaCat, setAreaCat] = useState<{
     status: 'idle' | 'loading' | 'ok' | 'toowide' | 'error';
-    items: AreaCategoryEntry[];
-    fileCount: number;
-    truncated: boolean;
     /** 'ok' = Wikidata ikut dimuat, 'skipped' = area terlalu luas untuk Wikidata, 'failed' = galat/timeout */
     wikidata: 'ok' | 'skipped' | 'failed';
-  }>({ status: 'idle', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' });
+  }>({ status: 'idle', wikidata: 'skipped' });
   // Daftar kategori di panel samping: halaman dan pilihan seperti daftar foto
-  // Daftar samping aktif disimpan di URL (?list=photos|categories|nophoto)
+  // Daftar samping aktif disimpan di URL (?list=photos|categories|catcoords|wikidata)
   const [sideTab, setSideTab] = useState<NearbyList>(() => parseNearbyList(window.location.search));
   const changeSideTab = (id: NearbyList) => {
     setSideTab(id);
@@ -274,20 +271,23 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
       }
     } catch { /* abaikan */ }
   };
-  const [areaNoPhoto, setAreaNoPhoto] = useState<WikidataNoPhotoItem[]>([]);
-  const [noPhotoPage, setNoPhotoPage] = useState<number>(1);
-  const [selectedNoPhoto, setSelectedNoPhoto] = useState<string | null>(null);
+  const [areaWdItems, setAreaWdItems] = useState<WikidataAreaItem[]>([]);
+  const [wdPage, setWdPage] = useState<number>(1);
+  const [selectedWdItem, setSelectedWdItem] = useState<string | null>(null);
   useEffect(() => {
-    setNoPhotoPage(1);
-    setSelectedNoPhoto(null);
-  }, [areaNoPhoto]);
-  const [areaCatPage, setAreaCatPage] = useState<number>(1);
-  const [selectedAreaCat, setSelectedAreaCat] = useState<string | null>(null);
+    setWdPage(1);
+    setSelectedWdItem(null);
+  }, [areaWdItems]);
+  // Kategori Commons ber-koordinat (geosearch namespace Category)
+  const [areaCoordCats, setAreaCoordCats] = useState<CoordCategory[]>([]);
+  const [coordFailed, setCoordFailed] = useState<boolean>(false);
+  const [coordPage, setCoordPage] = useState<number>(1);
+  const [selectedCoordCat, setSelectedCoordCat] = useState<string | null>(null);
   useEffect(() => {
-    setAreaCatPage(1);
-    setSelectedAreaCat(null);
-  }, [areaCat.items]);
-  const areaCatCacheRef = useRef(new Map<string, { items: AreaCategoryEntry[]; fileCount: number; truncated: boolean; wikidata: 'ok' | 'skipped'; noPhoto: WikidataNoPhotoItem[] }>());
+    setCoordPage(1);
+    setSelectedCoordCat(null);
+  }, [areaCoordCats]);
+  const areaCatCacheRef = useRef(new Map<string, { wikidata: 'ok' | 'skipped'; noPhoto: WikidataAreaItem[]; coordCats: CoordCategory[] }>());
   const areaCatAbortRef = useRef<AbortController | null>(null);
   useEffect(() => () => areaCatAbortRef.current?.abort(), []);
 
@@ -299,49 +299,53 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
     const span = areaSpanMeters(bounds);
     if (span > AREA_MAX_SPAN_M) {
       areaCatAbortRef.current?.abort();
-      setAreaNoPhoto([]);
-      setAreaCat({ status: 'toowide', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' });
+      setAreaWdItems([]);
+      setAreaCoordCats([]);
+      setCoordFailed(false);
+      setAreaCat({ status: 'toowide', wikidata: 'skipped' });
       return;
     }
     const key = areaCacheKey(bounds, map.getZoom());
     const cached = areaCatCacheRef.current.get(key);
     if (cached) {
-      const { noPhoto, ...rest } = cached;
-      setAreaNoPhoto(noPhoto);
+      const { noPhoto, coordCats, ...rest } = cached;
+      setAreaWdItems(noPhoto);
+      setAreaCoordCats(coordCats);
+      setCoordFailed(false);
       setAreaCat({ status: 'ok', ...rest });
       return;
     }
     areaCatAbortRef.current?.abort();
     const ctrl = new AbortController();
     areaCatAbortRef.current = ctrl;
-    setAreaNoPhoto([]);
-    setAreaCat({ status: 'loading', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' });
+    setAreaWdItems([]);
+    setAreaCoordCats([]);
+    setCoordFailed(false);
+    setAreaCat({ status: 'loading', wikidata: 'skipped' });
     const useWikidata = span <= WIKIDATA_MAX_SPAN_M;
     try {
-      // Foto dan Wikidata diminta bersamaan; kegagalan Wikidata tidak membatalkan hasil foto
-      const [photoRes, wdRes, npRes] = await Promise.allSettled([
-        fetchAreaFileCategories(bounds, ctrl.signal),
-        useWikidata ? fetchWikidataAreaCategories(bounds, ctrl.signal) : Promise.resolve([]),
-        useWikidata ? fetchWikidataNoPhoto(bounds, ctrl.signal) : Promise.resolve([]),
+      // Kategori ber-koordinat dan item Wikidata diminta bersamaan; kegagalan satu tidak membatalkan yang lain
+      const [npRes, ccRes] = await Promise.allSettled([
+        useWikidata ? fetchWikidataAreaItems(bounds, ctrl.signal) : Promise.resolve([]),
+        fetchCoordinateCategories(bounds, ctrl.signal),
       ]);
       if (ctrl.signal.aborted) return;
-      if (photoRes.status === 'rejected') throw photoRes.reason;
-      const { files, truncated } = photoRes.value;
-      const wikidata: 'ok' | 'skipped' | 'failed' =
-        !useWikidata ? 'skipped' : wdRes.status === 'fulfilled' && npRes.status === 'fulfilled' ? 'ok' : 'failed';
-      if (wdRes.status === 'rejected') console.warn('Wikidata area categories failed:', wdRes.reason);
-      if (npRes.status === 'rejected') console.warn('Wikidata items without photo failed:', npRes.reason);
-      const items = mergeAreaCategories(inferAreaCategories(files), wdRes.status === 'fulfilled' ? wdRes.value : []);
+      if (npRes.status === 'rejected' && ccRes.status === 'rejected') throw ccRes.reason;
+      const wikidata: 'ok' | 'skipped' | 'failed' = !useWikidata ? 'skipped' : npRes.status === 'fulfilled' ? 'ok' : 'failed';
+      if (npRes.status === 'rejected') console.warn('Wikidata items failed:', npRes.reason);
+      if (ccRes.status === 'rejected') console.warn('Categories with coordinates failed:', ccRes.reason);
       const noPhoto = npRes.status === 'fulfilled' ? npRes.value : [];
-      const result = { items, fileCount: files.length, truncated, wikidata };
-      // Hasil dengan Wikidata gagal tidak di-cache supaya percobaan berikutnya mencoba lagi
-      if (wikidata !== 'failed') areaCatCacheRef.current.set(key, { ...result, wikidata, noPhoto });
-      setAreaNoPhoto(noPhoto);
-      setAreaCat({ status: 'ok', ...result });
+      const coordCats = ccRes.status === 'fulfilled' ? ccRes.value : [];
+      // Hasil dengan Wikidata atau kategori ber-koordinat gagal tidak di-cache supaya percobaan berikutnya mencoba lagi
+      if (wikidata !== 'failed' && ccRes.status === 'fulfilled') areaCatCacheRef.current.set(key, { wikidata, noPhoto, coordCats });
+      setAreaWdItems(noPhoto);
+      setAreaCoordCats(coordCats);
+      setCoordFailed(ccRes.status === 'rejected');
+      setAreaCat({ status: 'ok', wikidata });
     } catch (e) {
       if (ctrl.signal.aborted || (e as { name?: string })?.name === 'AbortError') return;
       console.error('Failed to load area categories:', e);
-      setAreaCat({ status: 'error', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' });
+      setAreaCat({ status: 'error', wikidata: 'skipped' });
     }
   };
 
@@ -576,7 +580,7 @@ return () => ro.disconnect();
       // Gerakan otomatis (muat awal, ubah ukuran, terbang ke foto) tidak membatalkan.
       if (byUser && areaCatAbortRef.current && !areaCatAbortRef.current.signal.aborted) {
         areaCatAbortRef.current.abort();
-        setAreaCat((cur) => (cur.status === 'loading' ? { status: 'idle', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' } : cur));
+        setAreaCat((cur) => (cur.status === 'loading' ? { status: 'idle', wikidata: 'skipped' } : cur));
       }
       if (byUser && emptyNoticeRef.current) {
         emptyNoticeRef.current = false;
@@ -886,12 +890,14 @@ setSelectedPhoto(activeItem);
     // Cari ulang: kosongkan semua hasil lama (foto, kategori, Wikidata, pilihan) agar hanya hasil baru yang tampil
     areaCatAbortRef.current?.abort();
     setNearbyPhotos([]);
-    setAreaNoPhoto([]);
-    setAreaCat({ status: 'idle', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' });
-    setSelectedNoPhoto(null);
-    setNoPhotoPage(1);
-    setAreaCatPage(1);
-    setSelectedAreaCat(null);
+    setAreaWdItems([]);
+    setAreaCoordCats([]);
+    setCoordFailed(false);
+    setSelectedCoordCat(null);
+    setCoordPage(1);
+    setAreaCat({ status: 'idle', wikidata: 'skipped' });
+    setSelectedWdItem(null);
+    setWdPage(1);
     setSelectedPhoto(null);
     setSelectedCluster(null);
     setSelectedClusterItemIndex(0);
@@ -1080,31 +1086,88 @@ setSelectedPhoto(activeItem);
     previewPage * PREVIEW_PAGE_SIZE
   );
   const sideHasContent = hasSearched || nearbyPhotos.length > 0 || areaCat.status !== 'idle';
-  const sideTabActive: NearbyList = sideHasContent && !isLoadingNearby && sideTab === 'photos' && nearbyPhotos.length === 0 ? 'categories' : sideTab;
-  const totalNoPhotoPages = Math.max(1, Math.ceil(areaNoPhoto.length / NOPHOTO_PAGE_SIZE));
-  const currentNoPhotoSlice = areaNoPhoto.slice((noPhotoPage - 1) * NOPHOTO_PAGE_SIZE, noPhotoPage * NOPHOTO_PAGE_SIZE);
-  const noPhotoStart = (noPhotoPage - 1) * NOPHOTO_PAGE_SIZE + 1;
-  const noPhotoEnd = Math.min(noPhotoPage * NOPHOTO_PAGE_SIZE, areaNoPhoto.length);
+  const sideTabActive: NearbyList = sideHasContent && !isLoadingNearby && sideTab === 'photos' && nearbyPhotos.length === 0 ? 'catcoords' : sideTab;
+  const totalWdPages = Math.max(1, Math.ceil(areaWdItems.length / WD_PAGE_SIZE));
+  const currentWdSlice = areaWdItems.slice((wdPage - 1) * WD_PAGE_SIZE, wdPage * WD_PAGE_SIZE);
+  const wdStart = (wdPage - 1) * WD_PAGE_SIZE + 1;
+  const wdEnd = Math.min(wdPage * WD_PAGE_SIZE, areaWdItems.length);
   // Pilih item Wikidata tanpa foto: tandai di daftar dan peta, tutup kartu foto Commons, lalu terbang ke titiknya
-  const selectNoPhotoItem = (it: WikidataNoPhotoItem, toggle: boolean) => {
-    if (toggle && selectedNoPhoto === it.qid) {
-      setSelectedNoPhoto(null);
+  const selectWdItem = (it: WikidataAreaItem, toggle: boolean) => {
+    if (toggle && selectedWdItem === it.qid) {
+      setSelectedWdItem(null);
       return;
     }
-    setSelectedNoPhoto(it.qid);
+    setSelectedWdItem(it.qid);
+    setSelectedCoordCat(null);
     setSelectedPhoto(null);
     setSelectedCluster(null);
     setSelectedClusterItemIndex(0);
-    const idx = areaNoPhoto.findIndex((x) => x.qid === it.qid);
-    if (idx >= 0) setNoPhotoPage(Math.floor(idx / NOPHOTO_PAGE_SIZE) + 1);
+    const idx = areaWdItems.findIndex((x) => x.qid === it.qid);
+    if (idx >= 0) setWdPage(Math.floor(idx / WD_PAGE_SIZE) + 1);
     const map = mapInstanceRef.current;
     if (!map) return;
     if (window.innerWidth < 768) mapContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     ignoreMoveRef.current = true;
     map.flyTo({ center: [it.lng, it.lat], zoom: Math.max(map.getZoom(), 17), speed: 1.4, essential: true });
   };
-  const focusNoPhotoItem = (it: WikidataNoPhotoItem) => selectNoPhotoItem(it, true);
-  const activeNoPhoto = selectedNoPhoto ? areaNoPhoto.find((x) => x.qid === selectedNoPhoto) ?? null : null;
+  const focusWdItem = (it: WikidataAreaItem) => selectWdItem(it, true);
+
+  // Pilih kategori ber-koordinat: tandai di daftar dan peta, tutup kartu lain, lalu terbang ke titiknya
+  const selectCoordCat = (it: CoordCategory, toggle: boolean) => {
+    if (toggle && selectedCoordCat === it.name) {
+      setSelectedCoordCat(null);
+      return;
+    }
+    setSelectedCoordCat(it.name);
+    setSelectedWdItem(null);
+    setSelectedPhoto(null);
+    setSelectedCluster(null);
+    setSelectedClusterItemIndex(0);
+    const idx = areaCoordCats.findIndex((x) => x.name === it.name);
+    if (idx >= 0) setCoordPage(Math.floor(idx / COORD_PAGE_SIZE) + 1);
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (window.innerWidth < 768) mapContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    ignoreMoveRef.current = true;
+    map.flyTo({ center: [it.lng, it.lat], zoom: Math.max(map.getZoom(), 17), speed: 1.4, essential: true });
+  };
+  const activeCoordCat = selectedCoordCat ? areaCoordCats.find((x) => x.name === selectedCoordCat) ?? null : null;
+  const totalCoordPages = Math.max(1, Math.ceil(areaCoordCats.length / COORD_PAGE_SIZE));
+  const currentCoordSlice = areaCoordCats.slice((coordPage - 1) * COORD_PAGE_SIZE, coordPage * COORD_PAGE_SIZE);
+  const coordStart = (coordPage - 1) * COORD_PAGE_SIZE + 1;
+  const coordEnd = Math.min(coordPage * COORD_PAGE_SIZE, areaCoordCats.length);
+
+  // Pin kategori ber-koordinat (ungu, terpilih jingga). Hanya tampil saat daftar ini aktif.
+  const coordMarkersRef = useRef<maplibregl.Marker[]>([]);
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    coordMarkersRef.current.forEach((m) => m.remove());
+    coordMarkersRef.current = [];
+    if (!map || sideTabActive !== 'catcoords') return;
+    areaCoordCats.forEach((it) => {
+      const isSel = it.name === selectedCoordCat;
+      const el = document.createElement('div');
+      el.className = 'maplibre-catcoord-marker';
+      el.style.cursor = 'pointer';
+      el.style.width = isSel ? '20px' : '12px';
+      el.style.height = isSel ? '20px' : '12px';
+      el.style.borderRadius = '50%';
+      el.style.backgroundColor = isSel ? '#E08A00' : '#7B4FBF';
+      el.style.border = '2px solid #FFFDF9';
+      el.style.zIndex = isSel ? '60' : '40';
+      el.title = it.name;
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        selectCoordCat(it, false);
+      });
+      coordMarkersRef.current.push(
+        new maplibregl.Marker({ element: el, pitchAlignment: 'viewport', anchor: 'center' }).setLngLat([it.lng, it.lat]).addTo(map)
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [areaCoordCats, selectedCoordCat, sideTabActive]);
+  useEffect(() => () => { coordMarkersRef.current.forEach((m) => m.remove()); coordMarkersRef.current = []; }, []);
+  const activeWdItem = selectedWdItem ? areaWdItems.find((x) => x.qid === selectedWdItem) ?? null : null;
 
   // Pin item Wikidata tanpa foto di peta (warna beda dari foto Commons): hijau, terpilih jingga dan lebih besar.
   // Hanya tampil saat daftar "Wikidata tanpa foto" aktif.
@@ -1113,39 +1176,38 @@ setSelectedPhoto(activeItem);
     const map = mapInstanceRef.current;
     wdMarkersRef.current.forEach((m) => m.remove());
     wdMarkersRef.current = [];
-    if (!map || sideTabActive !== 'nophoto') return;
-    areaNoPhoto.forEach((it) => {
-      const isSel = it.qid === selectedNoPhoto;
+    if (!map || sideTabActive !== 'wikidata') return;
+    areaWdItems.forEach((it) => {
+      const isSel = it.qid === selectedWdItem;
       const el = document.createElement('div');
       el.className = 'maplibre-wikidata-marker';
       el.style.cursor = 'pointer';
       el.style.width = isSel ? '20px' : '12px';
       el.style.height = isSel ? '20px' : '12px';
       el.style.borderRadius = '50%';
-      el.style.backgroundColor = isSel ? '#E08A00' : '#2E8B57';
+      el.style.backgroundColor = isSel ? '#E08A00' : it.image ? '#4B7BA8' : '#2E8B57';
       el.style.border = '2px solid #FFFDF9';
       el.style.zIndex = isSel ? '60' : '40';
-      el.title = it.label;
+      el.title = it.image ? it.label : `${it.label} (${t.nearby.wdNoPhotoBadge})`;
       el.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        selectNoPhotoItem(it, false);
+        selectWdItem(it, false);
       });
       wdMarkersRef.current.push(
         new maplibregl.Marker({ element: el, pitchAlignment: 'viewport', anchor: 'center' }).setLngLat([it.lng, it.lat]).addTo(map)
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [areaNoPhoto, selectedNoPhoto, sideTabActive]);
+  }, [areaWdItems, selectedWdItem, sideTabActive]);
   useEffect(() => () => { wdMarkersRef.current.forEach((m) => m.remove()); wdMarkersRef.current = []; }, []);
 
   // Memilih foto Commons membatalkan pilihan item Wikidata (hanya satu kartu di peta)
   useEffect(() => {
-    if (selectedPhoto) setSelectedNoPhoto(null);
+    if (selectedPhoto) {
+      setSelectedWdItem(null);
+      setSelectedCoordCat(null);
+    }
   }, [selectedPhoto]);
-  const totalAreaCatPages = Math.max(1, Math.ceil(areaCat.items.length / AREA_CAT_PAGE_SIZE));
-  const currentAreaCatSlice = areaCat.items.slice((areaCatPage - 1) * AREA_CAT_PAGE_SIZE, areaCatPage * AREA_CAT_PAGE_SIZE);
-  const areaCatStart = (areaCatPage - 1) * AREA_CAT_PAGE_SIZE + 1;
-  const areaCatEnd = Math.min(areaCatPage * AREA_CAT_PAGE_SIZE, areaCat.items.length);
   const previewStart = (previewPage - 1) * PREVIEW_PAGE_SIZE + 1;
   const previewEnd = Math.min(previewPage * PREVIEW_PAGE_SIZE, nearbyPhotos.length);
 
@@ -1453,14 +1515,14 @@ setSelectedPhoto(activeItem);
             </p>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => onOpenDetail(activeClusterPhoto)}
+              <a
+                href={detailPath(activeClusterPhoto)}
+                {...NEW_TAB}
                 className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${MAP_DARK_BTN}`}
               >
                 <span>{t.nearby.viewInModal}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              </a>
               <a
                 href={activeClusterPhoto.pageUrl}
                 target="_blank"
@@ -1474,12 +1536,12 @@ setSelectedPhoto(activeItem);
           </div>
         )}
 
-        {/* Kartu item Wikidata tanpa foto (kiri bawah/kanan bawah, seperti kartu foto Commons) */}
-        {activeNoPhoto && !activeClusterPhoto && (
+        {/* Kartu item Wikidata (kiri bawah/kanan bawah, seperti kartu foto Commons) */}
+        {activeWdItem && !activeClusterPhoto && (
           <div className={`absolute left-3 right-3 ${isScaleOn ? 'bottom-16' : 'bottom-8'} sm:left-auto sm:right-14 sm:bottom-3 sm:w-80 z-30 p-3 rounded-xl bg-[#FFFDF9] dark:bg-[hsl(40_7%_12.5%)] border border-[#E8E2D6] dark:border-[hsl(40_17%_24%)] shadow-lg space-y-2 text-xs animate-fadeIn`}>
             <button
               type="button"
-              onClick={() => setSelectedNoPhoto(null)}
+              onClick={() => setSelectedWdItem(null)}
               aria-label={t.nearby.dismiss}
               title={t.nearby.dismiss}
               className={`absolute top-2 right-2 z-10 p-1 rounded-full cursor-pointer text-[#7A7060] dark:text-[hsl(37_10%_63%)] ${MAP_HOVER}`}
@@ -1490,27 +1552,107 @@ setSelectedPhoto(activeItem);
               <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#2E8B57]">
                 <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#E08A00] border border-[#FFFDF9]" />
                 {t.nearby.tabNoPhoto}
+                {!activeWdItem.image && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 text-[10px] font-semibold">
+                    {t.nearby.wdNoPhotoBadge}
+                  </span>
+                )}
               </div>
               <div className="font-display text-base font-semibold text-[#29241E] dark:text-[hsl(33_12%_84%)] leading-snug">
-                {activeNoPhoto.label}
+                {activeWdItem.label}
               </div>
-              {activeNoPhoto.description && (
-                <div className="text-[#695F4F] dark:text-[hsl(37_11%_68%)]">{activeNoPhoto.description}</div>
+              {activeWdItem.description && (
+                <div className="text-[#695F4F] dark:text-[hsl(37_11%_68%)]">{activeWdItem.description}</div>
               )}
               <div className="text-[11px] font-mono text-[#7A7060] dark:text-[hsl(37_10%_63%)]">
-                {activeNoPhoto.qid} • {activeNoPhoto.lat.toFixed(5)}, {activeNoPhoto.lng.toFixed(5)}
+                {activeWdItem.qid} • {activeWdItem.lat.toFixed(5)}, {activeWdItem.lng.toFixed(5)}
               </div>
             </div>
-            <p className="text-[#695F4F] dark:text-[hsl(37_11%_68%)]">{t.nearby.noPhotoCardHint}</p>
-            <a
-              href={`https://www.wikidata.org/wiki/${activeNoPhoto.qid}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${MAP_DARK_BTN}`}
+            {activeWdItem.image ? (
+              <img
+                src={activeWdItem.image}
+                alt={activeWdItem.label}
+                loading="lazy"
+                className="w-full h-28 sm:h-36 rounded-lg object-cover bg-[#F2EDE2] dark:bg-[hsl(41_7%_17%)]"
+              />
+            ) : (
+              <p className="text-[#695F4F] dark:text-[hsl(37_11%_68%)]">{t.nearby.noPhotoCardHint}</p>
+            )}
+            <div className="flex items-center gap-2">
+              {activeWdItem.category && (
+                <a
+                  href={categorySearchHref(activeWdItem.category)}
+                  {...NEW_TAB}
+                  title={activeWdItem.category}
+                  className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${MAP_DARK_BTN}`}
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>{t.nearby.areaCatSearchIn}</span>
+                </a>
+              )}
+              <a
+                href={`https://www.wikidata.org/wiki/${activeWdItem.qid}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={
+                  activeWdItem.category
+                    ? `p-2 rounded-lg border border-[#E8E2D6] dark:border-[hsl(40_17%_24%)] text-[#4A4338] dark:text-[hsl(37_11%_75.6%)] transition-colors ${MAP_HOVER}`
+                    : `w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${MAP_DARK_BTN}`
+                }
+                title={t.nearby.noPhotoOpen}
+                aria-label={t.nearby.noPhotoOpen}
+              >
+                {!activeWdItem.category && <span>{t.nearby.noPhotoOpen}</span>}
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Kartu kategori ber-koordinat */}
+        {activeCoordCat && !activeClusterPhoto && (
+          <div className={`absolute left-3 right-3 ${isScaleOn ? 'bottom-16' : 'bottom-8'} sm:left-auto sm:right-14 sm:bottom-3 sm:w-80 z-30 p-3 rounded-xl bg-[#FFFDF9] dark:bg-[hsl(40_7%_12.5%)] border border-[#E8E2D6] dark:border-[hsl(40_17%_24%)] shadow-lg space-y-2 text-xs animate-fadeIn`}>
+            <button
+              type="button"
+              onClick={() => setSelectedCoordCat(null)}
+              aria-label={t.nearby.dismiss}
+              title={t.nearby.dismiss}
+              className={`absolute top-2 right-2 z-10 p-1 rounded-full cursor-pointer text-[#7A7060] dark:text-[hsl(37_10%_63%)] ${MAP_HOVER}`}
             >
-              <span>{t.nearby.noPhotoOpen}</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+              <X className="w-3.5 h-3.5" />
+            </button>
+            <div className="pr-6 space-y-0.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#7B4FBF]">
+                <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#E08A00] border border-[#FFFDF9]" />
+                {t.nearby.tabCoordCats}
+              </div>
+              <div className="font-display text-base font-semibold text-[#29241E] dark:text-[hsl(33_12%_84%)] leading-snug break-words">
+                {activeCoordCat.name}
+              </div>
+              <div className="text-[11px] font-mono text-[#7A7060] dark:text-[hsl(37_10%_63%)]">
+                {fmtCoord({ lat: activeCoordCat.lat, lng: activeCoordCat.lng })}
+              </div>
+            </div>
+            <p className="text-[#695F4F] dark:text-[hsl(37_11%_68%)]">{t.nearby.coordCatsCardHint}</p>
+            <div className="flex items-center gap-2">
+              <a
+                href={categorySearchHref(activeCoordCat.name)}
+                {...NEW_TAB}
+                className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${MAP_DARK_BTN}`}
+              >
+                <span>{t.nearby.areaCatSearchIn}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+              <a
+                href={`https://commons.wikimedia.org/wiki/Category:${encodeURIComponent(activeCoordCat.name.replace(/ /g, '_'))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`p-2 rounded-lg border border-[#E8E2D6] dark:border-[hsl(40_17%_24%)] text-[#4A4338] dark:text-[hsl(37_11%_75.6%)] transition-colors ${MAP_HOVER}`}
+                title={t.nearby.coordCatsOpenCommons}
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
           </div>
         )}
 
@@ -1588,8 +1730,8 @@ setSelectedPhoto(activeItem);
           <div role="tablist" className="flex flex-wrap gap-1.5 lg:pt-3">
             {([
               ['photos', t.nearby.tabPhotos, hasSearched ? nearbyPhotos.length : null],
-              ['categories', t.nearby.tabCategories, areaCat.status === 'ok' ? areaCat.items.length : null],
-              ['nophoto', t.nearby.tabNoPhoto, areaCat.status === 'ok' && areaCat.wikidata !== 'skipped' ? areaNoPhoto.length : null],
+              ['catcoords', t.nearby.tabCoordCats, areaCat.status === 'ok' && !coordFailed ? areaCoordCats.length : null],
+              ['wikidata', t.nearby.tabNoPhoto, areaCat.status === 'ok' && areaCat.wikidata !== 'skipped' ? areaWdItems.length : null],
             ] as const).map(([id, label, n]) => (
               <button
                 key={id}
@@ -1601,7 +1743,7 @@ setSelectedPhoto(activeItem);
                   sideTabActive === id ? MAP_DARK_BTN : `${MAP_CARD} ${MAP_HOVER}`
                 }`}
               >
-                {id === 'categories' && areaCat.status === 'loading' ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                {id !== 'photos' && areaCat.status === 'loading' ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                 <span>{label}</span>
                 {n !== null && <span className="font-mono tabular-nums opacity-80">{n}</span>}
               </button>
@@ -1626,12 +1768,11 @@ setSelectedPhoto(activeItem);
               <p className="text-xs text-stone-600 dark:text-stone-400">{t.nearby.noPhotosFound}</p>
             )
           )}
-          {sideTabActive === 'categories' && (
+          {sideTabActive === 'catcoords' && (
             <div className="space-y-3">
-              {/* Catatan perkiraan selalu terlihat */}
               <p className="flex items-start gap-2 text-xs sm:text-sm leading-snug text-stone-600 dark:text-stone-400">
                 <Info className="w-4 h-4 shrink-0 mt-px" />
-                <span>{t.nearby.areaCatNote}</span>
+                <span>{t.nearby.coordCatsNote}</span>
               </p>
 
               {areaCat.status === 'loading' && (
@@ -1655,36 +1796,39 @@ setSelectedPhoto(activeItem);
                   </button>
                 </div>
               )}
-              {areaCat.status === 'ok' && areaCat.items.length === 0 && (
-                <p className="text-xs text-stone-600 dark:text-stone-400">{t.nearby.areaCatEmpty}</p>
+              {areaCat.status === 'ok' && coordFailed && (
+                <p className="text-xs text-amber-900 dark:text-amber-200">{t.nearby.coordCatsFailed}</p>
               )}
-              {areaCat.status === 'ok' && areaCat.items.length > 0 && (
+              {areaCat.status === 'ok' && !coordFailed && areaCoordCats.length === 0 && (
+                <p className="text-xs text-stone-600 dark:text-stone-400">{t.nearby.coordCatsEmpty}</p>
+              )}
+              {areaCat.status === 'ok' && areaCoordCats.length > 0 && (
                 <>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch text-xs text-stone-600 dark:text-stone-400 px-1">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch lg:sticky lg:top-0 lg:z-20 lg:-mx-3 lg:px-4 lg:pt-3 lg:pb-3 lg:bg-white dark:lg:bg-stone-900 lg:border-b lg:border-stone-200 dark:lg:border-stone-800 lg:shadow-[0_6px_10px_-8px_rgba(24,30,41,0.25)] lg:rounded-t-lg text-xs text-stone-600 dark:text-stone-400 px-1">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
-                      <span className="font-semibold text-stone-800 dark:text-stone-200">{t.nearby.areaCatTitle}</span>
+                      <span className="font-semibold text-stone-800 dark:text-stone-200">{t.nearby.coordCatsTitle}</span>
                       <span className="font-mono text-xs text-stone-500 dark:text-stone-400">
-                        ({t.nearby.areaCatRange(areaCatStart, areaCatEnd, areaCat.items.length)})
+                        ({t.nearby.coordCatsRange(coordStart, coordEnd, areaCoordCats.length)})
                       </span>
                     </div>
-                    {totalAreaCatPages > 1 && (
+                    {totalCoordPages > 1 && (
                       <div className="flex items-center gap-1.5 shrink-0 lg:self-end">
                         <button
                           type="button"
-                          onClick={() => setAreaCatPage((p) => Math.max(1, p - 1))}
-                          disabled={areaCatPage === 1}
+                          onClick={() => setCoordPage((p) => Math.max(1, p - 1))}
+                          disabled={coordPage === 1}
                           className="p-2 rounded-lg border border-stone-300 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
                           title={t.nearby.previewPrev}
                         >
                           <ChevronLeft className="w-3.5 h-3.5" />
                         </button>
                         <span className="text-xs font-mono px-1.5 tabular-nums whitespace-nowrap">
-                          {areaCatPage} / {totalAreaCatPages}
+                          {coordPage} / {totalCoordPages}
                         </span>
                         <button
                           type="button"
-                          onClick={() => setAreaCatPage((p) => Math.min(totalAreaCatPages, p + 1))}
-                          disabled={areaCatPage === totalAreaCatPages}
+                          onClick={() => setCoordPage((p) => Math.min(totalCoordPages, p + 1))}
+                          disabled={coordPage === totalCoordPages}
                           className="p-2 rounded-lg border border-stone-300 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
                           title={t.nearby.previewNext}
                         >
@@ -1693,20 +1837,17 @@ setSelectedPhoto(activeItem);
                       </div>
                     )}
                   </div>
-
-                  <div className="text-xs text-stone-500 dark:text-stone-400 px-1">
-                    {t.nearby.areaCatBasedOn(areaCat.fileCount)}
-                    {areaCat.wikidata === 'failed' ? ` — ${t.nearby.areaCatWikidataFailed}` : areaCat.wikidata === 'skipped' ? ` — ${t.nearby.areaCatWikidataSkipped}` : ''}
-                    {areaCat.truncated ? ` — ${t.nearby.areaCatTruncated}` : ''}
-                  </div>
+                  {areaCoordCats.length >= COORD_CATEGORY_LIMIT && (
+                    <div className="text-xs text-stone-500 dark:text-stone-400 px-1">{t.nearby.coordCatsTruncated}</div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
-                    {currentAreaCatSlice.map((c) => {
-                      const isSelected = selectedAreaCat === c.name;
+                    {currentCoordSlice.map((it) => {
+                      const isSelected = selectedCoordCat === it.name;
                       return (
                         <div
-                          key={c.name}
-                          onClick={() => setSelectedAreaCat(isSelected ? null : c.name)}
+                          key={it.name}
+                          onClick={() => selectCoordCat(it, true)}
                           className={`relative rounded-lg border bg-white dark:bg-stone-900 cursor-pointer transition-colors p-2.5 space-y-2 ${
                             isSelected
                               ? 'border-accent-600 dark:border-accent-400 ring-2 ring-accent-600/40 dark:ring-accent-400/40'
@@ -1714,8 +1855,8 @@ setSelectedPhoto(activeItem);
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-medium leading-snug text-stone-900 dark:text-white break-words" title={c.name}>
-                              {c.name}
+                            <p className="text-sm font-medium leading-snug text-stone-900 dark:text-white break-words" title={it.name}>
+                              {it.name}
                             </p>
                             {isSelected && (
                               <div className="w-5 h-5 shrink-0 rounded-full bg-accent-600 text-white flex items-center justify-center">
@@ -1724,21 +1865,17 @@ setSelectedPhoto(activeItem);
                             )}
                           </div>
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs text-stone-500 dark:text-stone-400">
-                              {c.count > 0 ? t.nearby.areaCatPhotos(c.count) : ''}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onOpenCategory(c.name);
-                              }}
+                            <span className="text-xs font-mono text-stone-500 dark:text-stone-400">{fmtCoord({ lat: it.lat, lng: it.lng })}</span>
+                            <a
+                              href={categorySearchHref(it.name)}
+                              {...NEW_TAB}
+                              onClick={(e) => e.stopPropagation()}
                               title={t.nearby.areaCatSearchIn}
                               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-stone-300 dark:border-stone-700 text-[11px] font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
                             >
                               <Search className="w-3 h-3" />
                               {t.nearby.areaCatSearchIn}
-                            </button>
+                            </a>
                           </div>
                         </div>
                       );
@@ -1749,7 +1886,7 @@ setSelectedPhoto(activeItem);
             </div>
           )}
 
-          {sideTabActive === 'nophoto' && (
+          {sideTabActive === 'wikidata' && (
             <div className="space-y-3">
               <p className="flex items-start gap-2 text-xs sm:text-sm leading-snug text-stone-600 dark:text-stone-400">
                 <Info className="w-4 h-4 shrink-0 mt-px" />
@@ -1780,39 +1917,39 @@ setSelectedPhoto(activeItem);
               {areaCat.status === 'ok' && areaCat.wikidata === 'skipped' && (
                 <p className="text-xs text-stone-600 dark:text-stone-400">{t.nearby.noPhotoSkipped}</p>
               )}
-              {areaCat.status === 'ok' && areaCat.wikidata === 'failed' && areaNoPhoto.length === 0 && (
+              {areaCat.status === 'ok' && areaCat.wikidata === 'failed' && areaWdItems.length === 0 && (
                 <p className="text-xs text-amber-900 dark:text-amber-200">{t.nearby.areaCatWikidataFailed}</p>
               )}
-              {areaCat.status === 'ok' && areaCat.wikidata === 'ok' && areaNoPhoto.length === 0 && (
+              {areaCat.status === 'ok' && areaCat.wikidata === 'ok' && areaWdItems.length === 0 && (
                 <p className="text-xs text-stone-600 dark:text-stone-400">{t.nearby.noPhotoEmpty}</p>
               )}
-              {areaCat.status === 'ok' && areaNoPhoto.length > 0 && (
+              {areaCat.status === 'ok' && areaWdItems.length > 0 && (
                 <>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch text-xs text-stone-600 dark:text-stone-400 px-1">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch lg:sticky lg:top-0 lg:z-20 lg:-mx-3 lg:px-4 lg:pt-3 lg:pb-3 lg:bg-white dark:lg:bg-stone-900 lg:border-b lg:border-stone-200 dark:lg:border-stone-800 lg:shadow-[0_6px_10px_-8px_rgba(24,30,41,0.25)] lg:rounded-t-lg text-xs text-stone-600 dark:text-stone-400 px-1">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
                       <span className="font-semibold text-stone-800 dark:text-stone-200">{t.nearby.noPhotoTitle}</span>
                       <span className="font-mono text-xs text-stone-500 dark:text-stone-400">
-                        ({t.nearby.noPhotoRange(noPhotoStart, noPhotoEnd, areaNoPhoto.length)})
+                        ({t.nearby.noPhotoRange(wdStart, wdEnd, areaWdItems.length)})
                       </span>
                     </div>
-                    {totalNoPhotoPages > 1 && (
+                    {totalWdPages > 1 && (
                       <div className="flex items-center gap-1.5 shrink-0 lg:self-end">
                         <button
                           type="button"
-                          onClick={() => setNoPhotoPage((p) => Math.max(1, p - 1))}
-                          disabled={noPhotoPage === 1}
+                          onClick={() => setWdPage((p) => Math.max(1, p - 1))}
+                          disabled={wdPage === 1}
                           className="p-2 rounded-lg border border-stone-300 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
                           title={t.nearby.previewPrev}
                         >
                           <ChevronLeft className="w-3.5 h-3.5" />
                         </button>
                         <span className="text-xs font-mono px-1.5 tabular-nums whitespace-nowrap">
-                          {noPhotoPage} / {totalNoPhotoPages}
+                          {wdPage} / {totalWdPages}
                         </span>
                         <button
                           type="button"
-                          onClick={() => setNoPhotoPage((p) => Math.min(totalNoPhotoPages, p + 1))}
-                          disabled={noPhotoPage === totalNoPhotoPages}
+                          onClick={() => setWdPage((p) => Math.min(totalWdPages, p + 1))}
+                          disabled={wdPage === totalWdPages}
                           className="p-2 rounded-lg border border-stone-300 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
                           title={t.nearby.previewNext}
                         >
@@ -1822,47 +1959,84 @@ setSelectedPhoto(activeItem);
                     )}
                   </div>
 
+                  <div className="text-xs text-stone-500 dark:text-stone-400 px-1">
+                    {t.nearby.wdSummary(areaWdItems.filter((x) => !x.image).length, areaWdItems.length)}
+                    {areaWdItems.length >= WIKIDATA_ITEMS_LIMIT ? ` — ${t.nearby.wdTruncated}` : ''}
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
-                    {currentNoPhotoSlice.map((it) => {
-                      const isSelected = selectedNoPhoto === it.qid;
+                    {currentWdSlice.map((it) => {
+                      const isSelected = selectedWdItem === it.qid;
                       return (
                         <div
                           key={it.qid}
-                          onClick={() => focusNoPhotoItem(it)}
+                          onClick={() => focusWdItem(it)}
                           className={`relative rounded-lg border bg-white dark:bg-stone-900 cursor-pointer transition-colors p-2.5 space-y-2 ${
                             isSelected
                               ? 'border-accent-600 dark:border-accent-400 ring-2 ring-accent-600/40 dark:ring-accent-400/40'
                               : 'border-stone-300 dark:border-stone-800 hover:border-accent-600 dark:hover:border-accent-400'
                           }`}
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium leading-snug text-stone-900 dark:text-white break-words" title={it.label}>
-                                {it.label}
-                              </p>
+                          <div className="flex items-start gap-2.5">
+                            {it.image && (
+                              <img
+                                src={it.image}
+                                alt=""
+                                loading="lazy"
+                                className="w-16 h-16 shrink-0 rounded-md object-cover bg-stone-100 dark:bg-stone-800"
+                              />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-sm font-medium leading-snug text-stone-900 dark:text-white break-words" title={it.label}>
+                                  {it.label}
+                                </p>
+                                {isSelected && (
+                                  <div className="w-5 h-5 shrink-0 rounded-full bg-accent-600 text-white flex items-center justify-center">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                  </div>
+                                )}
+                              </div>
                               {it.description && (
                                 <p className="text-xs text-stone-500 dark:text-stone-400 line-clamp-2">{it.description}</p>
                               )}
                             </div>
-                            {isSelected && (
-                              <div className="w-5 h-5 shrink-0 rounded-full bg-accent-600 text-white flex items-center justify-center">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                              </div>
-                            )}
                           </div>
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-mono text-stone-500 dark:text-stone-400">{it.qid}</span>
-                            <a
-                              href={`https://www.wikidata.org/wiki/${it.qid}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              title={t.nearby.noPhotoOpen}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-stone-300 dark:border-stone-700 text-[11px] font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              {t.nearby.noPhotoOpen}
-                            </a>
+                            <span className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-xs font-mono text-stone-500 dark:text-stone-400">{it.qid}</span>
+                              {!it.image && (
+                                <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 text-[10px] font-semibold whitespace-nowrap">
+                                  {t.nearby.wdNoPhotoBadge}
+                                </span>
+                              )}
+                            </span>
+                            <span className="flex items-center gap-1.5 shrink-0">
+                              {it.category && (
+                                <a
+                                  href={categorySearchHref(it.category)}
+                                  {...NEW_TAB}
+                                  onClick={(e) => e.stopPropagation()}
+                                  title={`${t.nearby.areaCatSearchIn}: ${it.category}`}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-stone-300 dark:border-stone-700 text-[11px] font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
+                                >
+                                  <Search className="w-3 h-3" />
+                                  {t.nearby.areaCatSearchIn}
+                                </a>
+                              )}
+                              <a
+                                href={`https://www.wikidata.org/wiki/${it.qid}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                title={t.nearby.noPhotoOpen}
+                                aria-label={t.nearby.noPhotoOpen}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-stone-300 dark:border-stone-700 text-[11px] font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                {it.category ? '' : t.nearby.noPhotoOpen}
+                              </a>
+                            </span>
                           </div>
                         </div>
                       );

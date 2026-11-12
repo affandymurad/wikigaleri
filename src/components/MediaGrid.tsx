@@ -4,6 +4,7 @@ import { MediaCard } from './MediaCard';
 import { AlertCircle, RefreshCw, Layers, ChevronLeft, ChevronRight, LayoutGrid, Columns, Bookmark, Loader2, ExternalLink, MessageSquare } from 'lucide-react';
 import { fetchTalkPage, TalkPageResult } from '../services/wikimediaApi';
 import { Translations } from '../i18n/translations';
+import { categorySearchHref, userSearchHref } from '../utils/urlState';
 import { User as UserIcon, Tag as TagIcon, X as XIcon, Download as DownloadIcon, Upload as UploadIcon } from 'lucide-react';
 
 interface MediaGridProps {
@@ -425,8 +426,6 @@ export const TalkPageView: React.FC<{ title: string; emptyHint?: string; languag
 interface BookmarksPanelProps {
   savedUsers: string[];
   savedCategories: string[];
-  onOpenUser: (name: string) => void;
-  onOpenCategory: (name: string) => void;
   onRemoveUser: (name: string) => void;
   onRemoveCategory: (name: string) => void;
   language: 'id' | 'en';
@@ -435,8 +434,6 @@ interface BookmarksPanelProps {
 export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
   savedUsers,
   savedCategories,
-  onOpenUser,
-  onOpenCategory,
   onRemoveUser,
   onRemoveCategory,
   language,
@@ -447,7 +444,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
     title: string,
     icon: React.ReactNode,
     names: string[],
-    onOpen: (n: string) => void,
+    hrefFor: (n: string) => string,
     onRemove: (n: string) => void,
     emptyText: string
   ) => (
@@ -463,10 +460,10 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {names.map((n) => (
             <div key={n} className="group relative flex items-center rounded-lg border border-stone-200 bg-white shadow-xs transition hover:border-accent-400 dark:border-stone-700 dark:bg-stone-900 dark:hover:border-accent-500">
-              <button type="button" onClick={() => onOpen(n)} className="min-w-0 flex-1 cursor-pointer px-3 py-3 text-left" title={n}>
+              <a href={hrefFor(n)} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 cursor-pointer px-3 py-3 text-left" title={n}>
                 <span className="block truncate text-xs font-semibold text-stone-800 dark:text-stone-100">{n}</span>
                 <span className="block text-xs text-stone-400">{en ? 'Open search' : 'Buka pencarian'}</span>
-              </button>
+              </a>
               <button type="button" onClick={() => onRemove(n)} aria-label={en ? 'Remove bookmark' : 'Hapus bookmark'} className="mr-1.5 shrink-0 cursor-pointer rounded-md p-1 text-stone-400 hover:bg-stone-100 hover:text-red-600 dark:hover:bg-stone-800">
                 <XIcon className="h-3.5 w-3.5" />
               </button>
@@ -483,7 +480,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
         en ? 'Saved usernames' : 'Nama pengguna tersimpan',
         <UserIcon className="h-4 w-4 text-accent-600 dark:text-accent-400" />,
         savedUsers,
-        onOpenUser,
+        userSearchHref,
         onRemoveUser,
         en ? 'No saved usernames yet. Search a username and tap Save.' : 'Belum ada nama pengguna tersimpan. Cari nama pengguna lalu tekan Simpan.'
       )}
@@ -491,7 +488,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
         en ? 'Saved categories' : 'Kategori tersimpan',
         <TagIcon className="h-4 w-4 text-accent-600 dark:text-accent-400" />,
         savedCategories,
-        onOpenCategory,
+        categorySearchHref,
         onRemoveCategory,
         en ? 'No saved categories yet. Search a category and tap Save.' : 'Belum ada kategori tersimpan. Cari kategori lalu tekan Simpan.'
       )}
