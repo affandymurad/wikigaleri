@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useLanguage } from './hooks/useLanguage';
-import { useGeminiApiKey } from './hooks/useGeminiApiKey';
 import { useCommonsGallery, useBookmarkLists, DEFAULT_QUERY } from './hooks/useCommonsGallery';
 import { Header } from './components/Header';
 import { SearchBar } from './components/SearchBar';
@@ -10,8 +9,6 @@ import { NearbyPhotosSection } from './components/NearbyPhotosSection';
 import { MediaTypeFilter } from './components/MediaTypeFilter';
 import { MediaGrid, TalkPageView, BookmarksPanel, BookmarkBackupBar } from './components/MediaGrid';
 import { MediaDetailModal } from './components/MediaDetailModal';
-import { GeminiKeyModal } from './components/GeminiKeyModal';
-import { AI_NEEDS_KEY } from './services/geminiClient';
 import { LicenseGuideModal, WikimediaTermsModal, DisclaimerModal } from './components/LicenseGuideModal';
 import { AttributionQuickCopyModal } from './components/AttributionQuickCopyModal';
 import { CategoryListSection } from './components/CategoryListSection';
@@ -19,24 +16,12 @@ import { ProjectUsageReportSection } from './components/ProjectUsageReportSectio
 import { BulkFilesSection } from './components/BulkFilesSection';
 import { CommonsMediaItem, CategorySearchMode } from './types/wikimedia';
 import { CURATED_TOPICS, normalizeCategoryName, fetchMediaDetailByPageId, fetchMediaDetailByTitle } from './services/wikimediaApi';
-import { buildSearch, parseSearch, detailPath, parseDetailPath, parseNearbyView, withNearbyView, parseReportLang, withReportLang, parseBulkFiles, withBulkFiles, parseBulkCategory, withBulkCategory, type UrlSearchState } from './utils/urlState';
+import { buildSearch, parseSearch, detailPath, parseDetailPath, parseNearbyView, withNearbyView, parseNearbyList, withNearbyList, parseReportLang, withReportLang, parseBulkFiles, withBulkFiles, parseBulkCategory, withBulkCategory, type UrlSearchState } from './utils/urlState';
 import { ExternalLink, Search, MapPin, LayoutGrid, FolderTree, FolderRoot, Radio, Bookmark, Shuffle, ListChecks } from 'lucide-react';
 
 export default function App() {
   const { isDark, toggleDarkMode } = useDarkMode();
   const { language, setLanguage, t } = useLanguage();
-  const {
-    apiKey: storedGeminiKey,
-    hasKey: hasStoredGeminiKey,
-    saveKey: saveGeminiKey,
-    removeKey: removeGeminiKey,
-    lastError: geminiLastError,
-  } = useGeminiApiKey();
-  // In "firebase" and "api" modes the key lives on the server side, so the rest of the UI sees a key as
-  // already set. The placeholder is never sent anywhere.
-  const geminiApiKey = AI_NEEDS_KEY ? storedGeminiKey : 'managed-by-server';
-  const hasGeminiKey = AI_NEEDS_KEY ? hasStoredGeminiKey : true;
-
   const {
     filter,
     activeTopicId,
@@ -95,7 +80,6 @@ export default function App() {
   // Modals state
   const [selectedDetailItem, setSelectedDetailItem] = useState<CommonsMediaItem | null>(null);
   const [quickAttributionItem, setQuickAttributionItem] = useState<CommonsMediaItem | null>(null);
-  const [isGeminiModalOpen, setIsGeminiModalOpen] = useState<boolean>(false);
   const [isLicenseGuideOpen, setIsLicenseGuideOpen] = useState<boolean>(false);
   const [isTermsOpen, setIsTermsOpen] = useState<boolean>(false);
   const [isDisclaimerOpen, setIsDisclaimerOpen] = useState<boolean>(false);
@@ -335,7 +319,10 @@ export default function App() {
       categoryView: categorySearchMode,
     });
     // lat/lon/zoom peta Sekitar ditulis oleh petanya sendiri; jangan dihapus saat URL ditulis ulang
-    if (activeMode === 'nearby') search = withNearbyView(search, parseNearbyView(window.location.search));
+    if (activeMode === 'nearby') {
+      search = withNearbyView(search, parseNearbyView(window.location.search));
+      search = withNearbyList(search, parseNearbyList(window.location.search));
+    }
     // daftar berkas tab Massal ditulis oleh tabnya sendiri
     if (activeMode === 'bulk') {
       search = withBulkFiles(search, parseBulkFiles(window.location.search));
@@ -372,9 +359,6 @@ export default function App() {
       <Header
         isDark={isDark}
         onToggleDark={toggleDarkMode}
-        hasGeminiKey={hasGeminiKey}
-        keyless={!AI_NEEDS_KEY}
-        onOpenGeminiModal={() => setIsGeminiModalOpen(true)}
         onOpenLicenseGuide={() => setIsLicenseGuideOpen(true)}
         onOpenTerms={() => setIsTermsOpen(true)}
         onOpenDisclaimer={() => setIsDisclaimerOpen(true)}
@@ -389,11 +373,6 @@ export default function App() {
           <MediaDetailModal
             item={selectedDetailItem}
             onClose={closeDetail}
-            geminiApiKey={geminiApiKey}
-            onOpenGeminiModal={() => {
-              clearDetail();
-              setIsGeminiModalOpen(true);
-            }}
             onNext={currentDetailIndex >= 0 ? handleNextDetail : undefined}
             onPrev={currentDetailIndex >= 0 ? handlePrevDetail : undefined}
             hasNext={hasNextDetail}
@@ -753,8 +732,7 @@ export default function App() {
           <section aria-label="Foto Terdekat" className="space-y-6">
             <NearbyPhotosSection
               onOpenDetail={openDetail}
-              geminiApiKey={geminiApiKey}
-              onOpenGeminiModal={() => setIsGeminiModalOpen(true)}
+              onOpenCategory={openCategorySearch}
               language={language}
               t={t}
             />
@@ -956,18 +934,6 @@ export default function App() {
           onClose={() => setQuickAttributionItem(null)}
           t={t}
           language={language}
-        />
-      )}
-
-      {isGeminiModalOpen && (
-        <GeminiKeyModal
-          isOpen={isGeminiModalOpen}
-          onClose={() => setIsGeminiModalOpen(false)}
-          currentKey={geminiApiKey}
-          onSaveKey={saveGeminiKey}
-          onRemoveKey={removeGeminiKey}
-          t={t}
-          lastError={geminiLastError}
         />
       )}
 

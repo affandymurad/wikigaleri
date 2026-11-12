@@ -101,17 +101,6 @@ export const LicenseGuideModal: React.FC<LicenseGuideModalProps> = ({
               ))}
             </ul>
           </div>
-
-          {/* Section 3: Ethical AI notice */}
-          <div className="p-4 rounded-lg bg-stone-100 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-800 space-y-2">
-            <div className="flex items-center gap-1.5 font-semibold text-stone-900 dark:text-white">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <span>{t.guideModal.aiPolicyTitle}</span>
-            </div>
-            <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-              {t.guideModal.aiPolicyDesc}
-            </p>
-          </div>
         </div>
 
         {/* Footer */}
@@ -245,7 +234,7 @@ export const WikimediaTermsModal: React.FC<WikimediaTermsModalProps> = ({ isOpen
 
 
 // ---------------------------------------------------------------------------
-// Modal Penafian: rumusan masalah, peran AI, dan batasan WikiGaleri
+// Modal Penafian: rumusan masalah dan batasan WikiGaleri
 // ---------------------------------------------------------------------------
 interface DisclaimerModalProps {
   isOpen: boolean;
@@ -261,19 +250,17 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ isOpen, onClos
     ? [
       { icon: 'help', title: 'Masalah yang kami jawab', body: 'Wikimedia Commons punya jutaan berkas gratis, tapi sulit dicari dan sulit dipahami orang awam. Aturan lisensi dan cara mencantumkan kredit juga sering membingungkan, jadi berkas dipakai tanpa kredit yang benar.' },
       { icon: 'bulb', title: 'Kenapa ini penting', body: 'Media terbuka dipakai untuk belajar, mengajar, dan jurnalisme. Mencantumkan kredit dengan benar menghargai pembuatnya dan menjaga kepercayaan pada pengetahuan terbuka.' },
-      { icon: 'check', title: 'Cara WikiGaleri membantu', body: 'Cari lewat kata kunci, nama pengguna, kategori, Live Feed, tab Acak, atau peta Terdekat, lalu saring menurut jenis media, termasuk model 3D (STL) dan panorama 360°. Pahami isinya lewat penjelasan Gemini yang berjalan otomatis saat berkas dibuka. Lihat data kamera (EXIF) yang sudah dirapikan di tab Unduh & Info. Pakai dengan benar lewat teks kredit TASL, panduan lisensi CC, dan ringkasan Ketentuan Wikimedia. Setiap pencarian dan berkas punya tautan sendiri yang bisa dibagikan. Simpan berkas, nama pengguna, dan kategori sebagai markah, lalu cadangkan sebagai berkas JSON.' },
+      { icon: 'check', title: 'Cara WikiGaleri membantu', body: 'Cari lewat kata kunci, nama pengguna, kategori, Live Feed, tab Acak, atau peta Terdekat, lalu saring menurut jenis media, termasuk model 3D (STL) dan panorama 360°. Lihat data kamera (EXIF) yang sudah dirapikan di tab Unduh & Info. Pakai dengan benar lewat teks kredit TASL, panduan lisensi CC, dan ringkasan Ketentuan Wikimedia. Setiap pencarian dan berkas punya tautan sendiri yang bisa dibagikan. Simpan berkas, nama pengguna, dan kategori sebagai markah, lalu cadangkan sebagai berkas JSON.' },
       { icon: 'cube', title: 'Lihat langsung di preview', body: 'Foto, model 3D, dan panorama 360° punya tombol layar penuh. Foto bisa diperbesar dengan mencubit, menggulir roda mouse, mengetuk dua kali, atau tombol +/-, lalu digeser. Model 3D dan panorama bisa diputar dengan menyeret (mouse atau sentuh) dan diperbesar dengan menggulir atau mencubit. Model 3D yang besar (di atas 12 MB) menunggu klik Anda lebih dulu agar hemat data, dan panorama 360° bisa dimuat dalam resolusi penuh di desktop.' },
-      { icon: 'spark', title: 'Peran Gemini', body: 'Gemini membaca metadata resmi dari Commons (judul, deskripsi, kategori, lisensi, lokasi), lalu menulis penjelasan berkas, ringkasan lisensi, dan ringkasan area sekitar. Anda tidak perlu memasukkan kunci sendiri. Bila Gemini tidak bisa menjawab, WikiGaleri menampilkan ringkasan berlabel jelas yang dibuat dari metadata, bukan oleh Gemini. Penjelasan ini tidak menggantikan halaman aslinya di Commons.' },
-      { icon: 'warn', title: 'Batasan', body: 'Gemini bisa salah atau melewatkan konteks. Kalau metadatanya kosong, penjelasannya ikut terbatas. Ringkasan lisensi hanya penuntun, bukan nasihat hukum. Cek halaman berkas di Commons sebelum memakainya.' },
+      { icon: 'warn', title: 'Batasan', body: 'Informasi yang tampil berasal dari metadata Commons dan bisa tidak lengkap atau keliru. Info lisensi hanya penuntun, bukan nasihat hukum. Cek halaman berkas di Commons sebelum memakainya.' },
       { icon: 'scale', title: 'Penafian', body: 'WikiGaleri adalah proyek independen. Aplikasi ini tidak dibuat, didukung, atau dikelola oleh Wikimedia Foundation. Setiap berkas tetap tunduk pada lisensinya masing-masing.' },
       ]
     : [
       { icon: 'help', title: 'Problem we solve', body: 'Wikimedia Commons holds millions of free files, but they are hard to find and hard for most people to understand. License rules and credit lines are confusing too, so files end up reused without proper credit.' },
       { icon: 'bulb', title: 'Why it matters', body: 'Open media is used for learning, teaching, and journalism. Crediting it properly respects the people who made it and keeps open knowledge trustworthy.' },
-      { icon: 'check', title: 'How WikiGaleri helps', body: 'Search by keyword, username, category, Live Feed, the Random tab, or the Nearby map, then narrow by media type, including 3D models (STL) and 360° panoramas. Understand a file through the Gemini explanation that starts automatically when you open it. Check the camera (EXIF) data, neatly formatted, in the Download & Info tab. Reuse it correctly with TASL credit text, the CC license guide, and the Wikimedia Terms summary. Every search and every file has its own shareable link. Save files, usernames, and categories as bookmarks and back them up as a JSON file.' },
+      { icon: 'check', title: 'How WikiGaleri helps', body: 'Search by keyword, username, category, Live Feed, the Random tab, or the Nearby map, then narrow by media type, including 3D models (STL) and 360° panoramas. Check the camera (EXIF) data, neatly formatted, in the Download & Info tab. Reuse it correctly with TASL credit text, the CC license guide, and the Wikimedia Terms summary. Every search and every file has its own shareable link. Save files, usernames, and categories as bookmarks and back them up as a JSON file.' },
       { icon: 'cube', title: 'See it right in the preview', body: 'Photos, 3D models, and 360° panoramas all have a fullscreen button. Photos can be zoomed by pinching, scrolling the mouse wheel, double-tapping, or the +/- buttons, then panned. 3D models and panoramas can be rotated by dragging (mouse or touch) and zoomed by scrolling or pinching. Large 3D models (over 12 MB) wait for your click first to save data, and 360° panoramas can load at full resolution on desktop.' },
-      { icon: 'spark', title: 'Role of Gemini', body: 'Gemini reads the official Commons metadata (title, description, categories, license, location) and writes a file explanation, a license summary, and a nearby-area summary. You do not need to enter a key of your own. When Gemini cannot answer, WikiGaleri shows a clearly labelled summary built from the metadata, not written by Gemini. It does not replace the original Commons page.' },
-      { icon: 'warn', title: 'Limitations', body: 'Gemini can be wrong or miss context. When the metadata is empty, the explanation is limited too. The license summary is a guide, not legal advice. Check the file page on Commons before you reuse anything.' },
+      { icon: 'warn', title: 'Limitations', body: 'What you see comes from Commons metadata, which can be incomplete or wrong. License information is a guide, not legal advice. Check the file page on Commons before you reuse anything.' },
       { icon: 'scale', title: 'Disclaimer', body: 'WikiGaleri is an independent project. It is not made, endorsed, or run by the Wikimedia Foundation. Every file stays under its own license.' },
       ];
 
@@ -284,8 +271,6 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ isOpen, onClos
     : k === 'bulb' ? <Lightbulb className="w-4 h-4" />
     : k === 'user' ? <User className="w-4 h-4" />
     : k === 'cube' ? <Box className="w-4 h-4" />
-    : k === 'spark' ? <Sparkles className="w-4 h-4" />
-    : k === 'ai' ? <ShieldCheck className="w-4 h-4" />
     : <AlertTriangle className="w-4 h-4" />;
 
   return (
@@ -307,7 +292,7 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ isOpen, onClos
                 {id ? 'Apa itu WikiGaleri' : 'What is WikiGaleri'}
               </h3>
               <p className="text-xs text-stone-500 dark:text-stone-400">
-                {id ? 'Masalah yang dijawab, peran Gemini, batasannya, dan pembuatnya' : 'The problem it solves, what Gemini does, its limits, and who made it'}
+                {id ? 'Masalah yang dijawab, batasannya, dan pembuatnya' : 'The problem it solves, its limits, and who made it'}
               </p>
             </div>
           </div>

@@ -13,8 +13,9 @@ import type { CategorySearchMode, CommonsMediaItem, LicenseCategory, MediaType, 
  *   /?mode=bulk&category=Wikilokal                         tab Massal berisi semua berkas sebuah kategori Commons
  *   /?mode=bulk&files=Nama_A.jpg|Nama_B.png               tab Massal (Bulk): daftar nama berkas dipisah "|" (diperiksa otomatis)
  *   /?mode=nearby&lat=-6.1753924&lon=106.8271528&zoom=14   titik tengah dan zoom peta Sekitar
+ *   /?mode=nearby&list=categories                          daftar samping Sekitar: photos (bawaan) | categories | nophoto
  *   /file/Waterworks_Museum_(85472)bw.jpg  detail berkas (nama berkas seperti di Commons)
- *   /file/Nama.svg?tab=license             tab detail: download | cats | license | history | talk (ai = bawaan)
+ *   /file/Nama.svg?tab=license             tab detail: download | cats | license | history | talk (download = bawaan)
  */
 
 /** Contoh kata kunci untuk placeholder kolom pencarian beranda (bukan pencarian otomatis) */
@@ -192,6 +193,24 @@ export function withNearbyView(search: string, view: NearbyView | null): string 
   return str ? `?${str}` : '';
 }
 
+export type NearbyList = 'photos' | 'categories' | 'nophoto';
+const NEARBY_LISTS: NearbyList[] = ['photos', 'categories', 'nophoto'];
+
+/** Baca ?list= daftar samping peta Sekitar; nilai tidak dikenal menjadi 'photos' */
+export function parseNearbyList(search: string): NearbyList {
+  const v = new URLSearchParams(search).get('list') as NearbyList | null;
+  return v && NEARBY_LISTS.includes(v) ? v : 'photos';
+}
+
+/** Tulis ?list= ke query yang ada; 'photos' (bawaan) tidak ditulis agar URL tetap bersih */
+export function withNearbyList(search: string, list: NearbyList): string {
+  const p = new URLSearchParams(search);
+  if (list === 'photos') p.delete('list');
+  else p.set('list', list);
+  const str = p.toString().replace(/%2F/gi, '/').replace(/%3A/gi, ':');
+  return str ? `?${str}` : '';
+}
+
 /** Daftar nama berkas tab Massal dari ?files= (dipisah "|", garis bawah = spasi); null bila tidak ada */
 export function parseBulkFiles(search: string): string[] | null {
   const raw = new URLSearchParams(search).get('files');
@@ -231,9 +250,9 @@ export function withBulkFiles(search: string, names: string[] | null): string {
 // Tab pada halaman detail berkas
 // ---------------------------------------------------------------------------
 
-export type DetailTab = 'download' | 'cats' | 'license' | 'history' | 'talk' | 'ai';
-export const DEFAULT_DETAIL_TAB: DetailTab = 'ai';
-const DETAIL_TABS: DetailTab[] = ['ai', 'download', 'cats', 'license', 'history', 'talk'];
+export type DetailTab = 'download' | 'cats' | 'license' | 'history' | 'talk';
+export const DEFAULT_DETAIL_TAB: DetailTab = 'download';
+const DETAIL_TABS: DetailTab[] = ['download', 'cats', 'license', 'history', 'talk'];
 
 /** Baca ?tab= pada URL detail; nilai tidak dikenal atau kosong menjadi tab bawaan */
 export function parseDetailTab(search: string): DetailTab {

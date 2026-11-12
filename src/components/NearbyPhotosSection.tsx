@@ -24,37 +24,36 @@ function getContourDemSource() {
   return contourDemSource;
 }
 import { CommonsMediaItem } from '../types/wikimedia';
-import { fetchNearbyCommonsMedia, fetchRelatedWikimediaLinks, RelatedWikiLink } from '../services/wikimediaApi';
-import { RelatedWikimediaLinks } from './MediaDetailModal';
+import { fetchNearbyCommonsMedia, fetchAreaFileCategories, fetchWikidataAreaCategories, fetchWikidataNoPhoto } from '../services/wikimediaApi';
 import {
-  generateNearbyAreaAnalysis,
-  NearbyAreaAiAnalysis,
-  GEMINI_ASSISTANT_NAME,
-  GEMINI_MODEL_VERSION,
-  AI_DISCLAIMER_TEXT_ID,
-  AI_DISCLAIMER_TEXT_EN,
-} from '../services/geminiClient';
+  AREA_MAX_SPAN_M,
+  WIKIDATA_MAX_SPAN_M,
+  AreaBounds,
+  AreaCategoryEntry,
+  WikidataNoPhotoItem,
+  areaCacheKey,
+  areaSpanMeters,
+  inferAreaCategories,
+  mergeAreaCategories,
+} from '../utils/areaCategories';
 import { getFileExtension } from '../utils/licenseUtils';
 import { Translations, Language } from '../i18n/translations';
-import { DEFAULT_NEARBY_VIEW, parseNearbyView, withNearbyView } from '../utils/urlState';
+import { DEFAULT_NEARBY_VIEW, parseNearbyView, withNearbyView, parseNearbyList, withNearbyList, type NearbyList } from '../utils/urlState';
 import {
   MapPin,
   LocateFixed,
   Search,
   ExternalLink,
-  Sparkles,
   AlertCircle,
   Eye,
   X,
   CheckCircle2,
   Navigation,
-  Globe,
   Tag,
   Image as ImageIcon,
   Info,
   ChevronLeft,
   ChevronRight,
-  Landmark,
   Box,
   Ruler,
   Mountain,
@@ -66,8 +65,7 @@ import {
 
 interface NearbyPhotosSectionProps {
   onOpenDetail: (item: CommonsMediaItem) => void;
-  geminiApiKey: string;
-  onOpenGeminiModal: () => void;
+  onOpenCategory: (categoryName: string) => void;
   language: Language;
   t: Translations;
 }
@@ -81,6 +79,8 @@ interface PhotoCluster {
 }
 
 const PREVIEW_PAGE_SIZE = 18;
+const AREA_CAT_PAGE_SIZE = 12;
+const NOPHOTO_PAGE_SIZE = 12;
 
 // Gaya peta Sekitar disamakan dengan WikiAbstrak: palet krem hangat dengan pil bulat dan kartu membulat.
 // Mode gelap memakai nilai HSL dari palet gelap WikiAbstrak.
@@ -140,8 +140,7 @@ const fmtCoord = (c: LatLng) => `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;
 
 export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   onOpenDetail,
-  geminiApiKey,
-  onOpenGeminiModal,
+  onOpenCategory,
   language = 'id',
   t,
 }) => {
@@ -150,7 +149,6 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const centerPinRef = useRef<maplibregl.Marker | null>(null);
-  const analysisResultRef = useRef<HTMLDivElement | null>(null);
 
   // States
   // Titik awal dan zoom bisa diatur lewat URL (?lat=&lon=&zoom=); bawaannya Monumen Nasional (Monas), Jakarta
@@ -180,19 +178,6 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   // Pagination state for preview strip
   const [previewPage, setPreviewPage] = useState<number>(1);
 
-  // Gemini Area Analysis States
-  const [isAnalyzingArea, setIsAnalyzingArea] = useState<boolean>(false);
-  const analysisLoadingRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (isAnalyzingArea) {
-      const id = window.setTimeout(() => analysisLoadingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
-      return () => window.clearTimeout(id);
-    }
-  }, [isAnalyzingArea]);
-  const [areaAnalysis, setAreaAnalysis] = useState<NearbyAreaAiAnalysis | null>(null);
-  const [areaAnalysisError, setAreaAnalysisError] = useState<string | null>(null);
-  const [areaRelatedLinks, setAreaRelatedLinks] = useState<RelatedWikiLink[]>([]);
-  const [areaRelatedLoading, setAreaRelatedLoading] = useState<boolean>(false);
 
   // 3D Map Mode State (Kemiringan kamera + Gedung 3D fill-extrusion)
   const [is3DMode, setIs3DMode] = useState<boolean>(false);
@@ -268,8 +253,108 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
     window.setTimeout(() => setCopied((c) => (c === kind ? null : c)), 1500);
   };
 
-// Race guard analisis Gemini + state placeholder foto preview
-const analysisRequestIdRef = useRef<number>(0);
+  // Kategori di area ini: hasil di-cache per area/zoom selama sesi; permintaan lama dibatalkan saat area berubah
+  const [areaCat, setAreaCat] = useState<{
+    status: 'idle' | 'loading' | 'ok' | 'toowide' | 'error';
+    items: AreaCategoryEntry[];
+    fileCount: number;
+    truncated: boolean;
+    /** 'ok' = Wikidata ikut dimuat, 'skipped' = area terlalu luas untuk Wikidata, 'failed' = galat/timeout */
+    wikidata: 'ok' | 'skipped' | 'failed';
+  }>({ status: 'idle', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' });
+  // Daftar kategori di panel samping: halaman dan pilihan seperti daftar foto
+  // Daftar samping aktif disimpan di URL (?list=photos|categories|nophoto)
+  const [sideTab, setSideTab] = useState<NearbyList>(() => parseNearbyList(window.location.search));
+  const changeSideTab = (id: NearbyList) => {
+    setSideTab(id);
+    try {
+      const next = withNearbyList(window.location.search, id);
+      if (window.location.pathname === '/' && next !== window.location.search) {
+        window.history.replaceState(window.history.state, '', '/' + next);
+      }
+    } catch { /* abaikan */ }
+  };
+  const [areaNoPhoto, setAreaNoPhoto] = useState<WikidataNoPhotoItem[]>([]);
+  const [noPhotoPage, setNoPhotoPage] = useState<number>(1);
+  const [selectedNoPhoto, setSelectedNoPhoto] = useState<string | null>(null);
+  useEffect(() => {
+    setNoPhotoPage(1);
+    setSelectedNoPhoto(null);
+  }, [areaNoPhoto]);
+  const [areaCatPage, setAreaCatPage] = useState<number>(1);
+  const [selectedAreaCat, setSelectedAreaCat] = useState<string | null>(null);
+  useEffect(() => {
+    setAreaCatPage(1);
+    setSelectedAreaCat(null);
+  }, [areaCat.items]);
+  const areaCatCacheRef = useRef(new Map<string, { items: AreaCategoryEntry[]; fileCount: number; truncated: boolean; wikidata: 'ok' | 'skipped'; noPhoto: WikidataNoPhotoItem[] }>());
+  const areaCatAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => areaCatAbortRef.current?.abort(), []);
+
+  // Peta digeser/di-zoom saat memuat: batalkan permintaan karena areanya sudah berbeda
+  useEffect(() => {
+    if (areaCatAbortRef.current && !areaCatAbortRef.current.signal.aborted) {
+      areaCatAbortRef.current.abort();
+      setAreaCat((s) => (s.status === 'loading' ? { status: 'idle', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' } : s));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewCenter.lat, viewCenter.lng, mapSpanM]);
+
+  const findAreaCategories = async () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const b = map.getBounds();
+    const bounds: AreaBounds = { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() };
+    const span = areaSpanMeters(bounds);
+    if (span > AREA_MAX_SPAN_M) {
+      areaCatAbortRef.current?.abort();
+      setAreaNoPhoto([]);
+      setAreaCat({ status: 'toowide', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' });
+      return;
+    }
+    const key = areaCacheKey(bounds, map.getZoom());
+    const cached = areaCatCacheRef.current.get(key);
+    if (cached) {
+      const { noPhoto, ...rest } = cached;
+      setAreaNoPhoto(noPhoto);
+      setAreaCat({ status: 'ok', ...rest });
+      return;
+    }
+    areaCatAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    areaCatAbortRef.current = ctrl;
+    setAreaNoPhoto([]);
+    setAreaCat({ status: 'loading', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' });
+    const useWikidata = span <= WIKIDATA_MAX_SPAN_M;
+    try {
+      // Foto dan Wikidata diminta bersamaan; kegagalan Wikidata tidak membatalkan hasil foto
+      const [photoRes, wdRes, npRes] = await Promise.allSettled([
+        fetchAreaFileCategories(bounds, ctrl.signal),
+        useWikidata ? fetchWikidataAreaCategories(bounds, ctrl.signal) : Promise.resolve([]),
+        useWikidata ? fetchWikidataNoPhoto(bounds, ctrl.signal) : Promise.resolve([]),
+      ]);
+      if (ctrl.signal.aborted) return;
+      if (photoRes.status === 'rejected') throw photoRes.reason;
+      const { files, truncated } = photoRes.value;
+      const wikidata: 'ok' | 'skipped' | 'failed' =
+        !useWikidata ? 'skipped' : wdRes.status === 'fulfilled' && npRes.status === 'fulfilled' ? 'ok' : 'failed';
+      if (wdRes.status === 'rejected') console.warn('Wikidata area categories failed:', wdRes.reason);
+      if (npRes.status === 'rejected') console.warn('Wikidata items without photo failed:', npRes.reason);
+      const items = mergeAreaCategories(inferAreaCategories(files), wdRes.status === 'fulfilled' ? wdRes.value : []);
+      const noPhoto = npRes.status === 'fulfilled' ? npRes.value : [];
+      const result = { items, fileCount: files.length, truncated, wikidata };
+      // Hasil dengan Wikidata gagal tidak di-cache supaya percobaan berikutnya mencoba lagi
+      if (wikidata !== 'failed') areaCatCacheRef.current.set(key, { ...result, wikidata, noPhoto });
+      setAreaNoPhoto(noPhoto);
+      setAreaCat({ status: 'ok', ...result });
+    } catch (e) {
+      if (ctrl.signal.aborted || (e as { name?: string })?.name === 'AbortError') return;
+      console.error('Failed to load area categories:', e);
+      setAreaCat({ status: 'error', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' });
+    }
+  };
+
+// State placeholder foto preview
 const [loadedPreviewId, setLoadedPreviewId] = useState<string | number | null>(null);
 const [failedPreviewId, setFailedPreviewId] = useState<string | number | null>(null);
 const [previewRetry, setPreviewRetry] = useState<number>(0);
@@ -761,83 +846,6 @@ setSelectedPhoto(activeItem);
     );
   };
 
-  // Helper to execute Area AI Analysis
-  const executeAreaAiAnalysis = async (
-    lat: number,
-    lng: number,
-    photosList: CommonsMediaItem[],
-    shouldScroll = false
-  ) => {
-    if (!photosList || photosList.length === 0) return;
-
-const reqId = ++analysisRequestIdRef.current;
-    setIsAnalyzingArea(true);
-    setAreaAnalysisError(null);
-
-    // Step A: Fetch reverse address from Nominatim (OpenStreetMap)
-    let resolvedAddress = '';
-    try {
-      const nomRes = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
-        {
-          headers: {
-            'Accept-Language': language === 'en' ? 'en' : 'id',
-          },
-        }
-      );
-      if (nomRes.ok) {
-        const nomData = await nomRes.json();
-        resolvedAddress = nomData.display_name || '';
-      }
-    } catch (err) {
-      console.warn('Nominatim reverse lookup error:', err);
-    }
-
-    if (!resolvedAddress) {
-      resolvedAddress = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-    }
-
-    // Step B: Call Gemini Area Curatorial Analysis
-    try {
-      const analysis = await generateNearbyAreaAnalysis(
-        geminiApiKey,
-        lat,
-        lng,
-        resolvedAddress,
-        photosList,
-        language,
-shouldScroll
-      );
-if (reqId !== analysisRequestIdRef.current) return;
-      setAreaAnalysis(analysis);
-      // Cari link proyek Wikimedia terkait area (Wikipedia/Wikivoyage sekitar titik tengah)
-      if (reqId === analysisRequestIdRef.current) {
-        const addrParts = resolvedAddress.split(',').map((p: string) => p.trim()).filter(Boolean);
-        const areaTerm = /^-?\d/.test(addrParts[0] || '') ? '' : (addrParts[1] || addrParts[0] || '');
-        setAreaRelatedLoading(true);
-        fetchRelatedWikimediaLinks({ terms: [areaTerm], lat, lon: lng, radius: 4000 })
-          .then((l) => { if (reqId === analysisRequestIdRef.current) setAreaRelatedLinks(l); })
-          .catch(() => {})
-          .finally(() => setAreaRelatedLoading(false));
-      }
-
-      // Smooth scroll if requested
-      if (shouldScroll) {
-        setTimeout(() => {
-          analysisResultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 150);
-      }
-    } catch (err) {
-      console.error('Gemini area analysis error:', err);
-if (reqId !== analysisRequestIdRef.current) return;
-      setAreaAnalysisError(
-        err instanceof Error ? err.message : (language === 'en' ? 'Failed to generate the Gemini area analysis.' : 'Gagal menghasilkan analisis area Gemini.')
-      );
-    } finally {
-if (reqId === analysisRequestIdRef.current) setIsAnalyzingArea(false);
-    }
-  };
-
   // Peta dianggap bergeser bila pusat tampilan menjauh dari titik pencarian lebih dari 20% lebar peta (minimal 250 m)
   const shiftMeters = searchOrigin ? distanceMeters(shiftCenter, searchOrigin) : 0;
   const isShifted = hasSearched && !!searchOrigin && shiftMeters > Math.max(250, mapSpanM * 0.2);
@@ -855,11 +863,9 @@ if (reqId === analysisRequestIdRef.current) setIsAnalyzingArea(false);
     if (map && searchOrigin) map.flyTo({ center: [searchOrigin.lng, searchOrigin.lat], duration: 900 });
   };
 
-  // 2. Find Nearby Commons Button Click Handler (Tidak otomatis memilih foto atau menjalankan Gemini)
+  // 2. Find Nearby Commons Button Click Handler (foto bergeotag + kategori di area ini)
   const handleFindNearbyCommons = async () => {
     setIsLoadingNearby(true);
-analysisRequestIdRef.current += 1;
-setIsAnalyzingArea(false);
     setLocationError(null);
     emptyNoticeRef.current = false;
     setHasSearched(true);
@@ -867,8 +873,6 @@ setIsAnalyzingArea(false);
     setSelectedCluster(null);
     setSelectedClusterItemIndex(0);
     setPreviewPage(1);
-    setAreaAnalysis(null);
-    setAreaAnalysisError(null);
 
     const map = mapInstanceRef.current;
     // Pencarian selalu memakai titik tengah peta (garis silang), sama dengan koordinat di kartu Map Center
@@ -876,13 +880,14 @@ setIsAnalyzingArea(false);
     setSearchOrigin({ lat: currentCenter.lat, lng: currentCenter.lng });
     setShiftCenter({ lat: currentCenter.lat, lng: currentCenter.lng });
 
+    // Kategori di area ini dicari bersamaan dengan foto (satu tombol)
+    void findAreaCategories();
+
     try {
       const results = await fetchNearbyCommonsMedia(currentCenter.lat, currentCenter.lng, 10000, 50);
       setNearbyPhotos(results);
       setPreviewPage(1);
       setHasSearched(true);
-      setAreaAnalysis(null);
-      setAreaAnalysisError(null);
       setSelectedPhoto(null);
       setSelectedCluster(null);
       setSelectedClusterItemIndex(0);
@@ -890,9 +895,6 @@ setIsAnalyzingArea(false);
       if (results.length === 0) {
         setLocationError(t.nearby.noPhotosFound);
         emptyNoticeRef.current = true;
-      } else {
-        // Analisis area Gemini otomatis di belakang layar (tidak memilih foto / membuka popup)
-        void executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, results, false);
       }
     } catch (err) {
       console.error('Failed to search nearby commons:', err);
@@ -900,30 +902,6 @@ setIsAnalyzingArea(false);
     } finally {
       setIsLoadingNearby(false);
     }
-  };
-
-  // 3. Gemini Assistant Button Click Handler
-  const handleRunAreaGeminiAssistant = async () => {
-    setLocationError(null);
-    setAreaAnalysisError(null);
-
-    // Validation 1: Must have nearby photos already searched and available
-    if (!hasSearched || nearbyPhotos.length === 0) {
-      setLocationError(t.nearby.geminiNeedsPhotos);
-      return;
-    }
-
-    // Validation 2: Suggest Gemini API key if empty, but proceed with smart synthesis
-    if (!geminiApiKey || geminiApiKey.trim().length === 0) {
-      onOpenGeminiModal();
-    }
-
-    const map = mapInstanceRef.current;
-    // Analisis harus mengikuti titik asal hasil pencarian, bukan posisi peta yang mungkin sudah bergeser
-    const currentCenter = searchOrigin
-      ? { lat: searchOrigin.lat, lng: searchOrigin.lng }
-      : centerPinRef.current?.getLngLat() ?? (map ? map.getCenter() : { lng: mapCenter[1], lat: mapCenter[0] });
-    await executeAreaAiAnalysis(currentCenter.lat, currentCenter.lng, nearbyPhotos, true);
   };
 
   // 4. Combined Mode 3D + Gedung 3D (fill-extrusion) Handler
@@ -1067,6 +1045,23 @@ setIsAnalyzingArea(false);
     (previewPage - 1) * PREVIEW_PAGE_SIZE,
     previewPage * PREVIEW_PAGE_SIZE
   );
+  const sideTabActive: NearbyList = sideTab === 'photos' && nearbyPhotos.length === 0 ? 'categories' : sideTab;
+  const totalNoPhotoPages = Math.max(1, Math.ceil(areaNoPhoto.length / NOPHOTO_PAGE_SIZE));
+  const currentNoPhotoSlice = areaNoPhoto.slice((noPhotoPage - 1) * NOPHOTO_PAGE_SIZE, noPhotoPage * NOPHOTO_PAGE_SIZE);
+  const noPhotoStart = (noPhotoPage - 1) * NOPHOTO_PAGE_SIZE + 1;
+  const noPhotoEnd = Math.min(noPhotoPage * NOPHOTO_PAGE_SIZE, areaNoPhoto.length);
+  const focusNoPhotoItem = (it: WikidataNoPhotoItem) => {
+    setSelectedNoPhoto((cur) => (cur === it.qid ? null : it.qid));
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (window.innerWidth < 768) mapContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    ignoreMoveRef.current = true;
+    map.flyTo({ center: [it.lng, it.lat], zoom: Math.max(map.getZoom(), 17), speed: 1.4, essential: true });
+  };
+  const totalAreaCatPages = Math.max(1, Math.ceil(areaCat.items.length / AREA_CAT_PAGE_SIZE));
+  const currentAreaCatSlice = areaCat.items.slice((areaCatPage - 1) * AREA_CAT_PAGE_SIZE, areaCatPage * AREA_CAT_PAGE_SIZE);
+  const areaCatStart = (areaCatPage - 1) * AREA_CAT_PAGE_SIZE + 1;
+  const areaCatEnd = Math.min(areaCatPage * AREA_CAT_PAGE_SIZE, areaCat.items.length);
   const previewStart = (previewPage - 1) * PREVIEW_PAGE_SIZE + 1;
   const previewEnd = Math.min(previewPage * PREVIEW_PAGE_SIZE, nearbyPhotos.length);
 
@@ -1165,18 +1160,6 @@ setIsAnalyzingArea(false);
             >
               <Search className="w-3.5 h-3.5" />
               <span>{t.nearby.findCommonsBtn}</span>
-            </button>
-
-            {/* Asisten Gemini */}
-            <button
-              type="button"
-              onClick={handleRunAreaGeminiAssistant}
-              disabled={isAnalyzingArea}
-              title={t.nearby.geminiAssistantBtn}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer ${MAP_CARD} ${MAP_HOVER}`}
-            >
-              <Sparkles className={`w-3.5 h-3.5 ${isAnalyzingArea ? 'animate-spin' : ''}`} />
-              <span>{isAnalyzingArea ? t.nearby.geminiAnalyzing : t.nearby.geminiAssistantBtn}</span>
             </button>
           </div>
 
@@ -1473,9 +1456,281 @@ setIsAnalyzingArea(false);
 </div>
 
       {/* Horizontal Strip of Found Photos with Pagination */}
-      {nearbyPhotos.length > 0 && (
+      {(nearbyPhotos.length > 0 || areaCat.status !== 'idle') && (
 <div className="relative w-full lg:w-[340px] xl:w-[380px] lg:shrink-0 lg:min-h-[320px]">
 <div className="space-y-3 pt-2 lg:pt-0 lg:px-3 lg:pb-3 lg:absolute lg:inset-0 lg:overflow-y-auto lg:rounded-lg lg:border lg:border-stone-200 dark:lg:border-stone-800 lg:bg-white dark:lg:bg-stone-900/60">
+          {/* Tab daftar samping: Foto | Kategori */}
+          <div role="tablist" className="flex flex-wrap gap-1.5 lg:pt-3">
+            {([
+              ['photos', t.nearby.tabPhotos, nearbyPhotos.length],
+              ['categories', t.nearby.tabCategories, areaCat.status === 'ok' ? areaCat.items.length : null],
+              ['nophoto', t.nearby.tabNoPhoto, areaCat.status === 'ok' && areaCat.wikidata !== 'skipped' ? areaNoPhoto.length : null],
+            ] as const).map(([id, label, n]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={sideTabActive === id}
+                onClick={() => changeSideTab(id)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-colors ${
+                  sideTabActive === id ? MAP_DARK_BTN : `${MAP_CARD} ${MAP_HOVER}`
+                }`}
+              >
+                {id === 'categories' && areaCat.status === 'loading' ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                <span>{label}</span>
+                {n !== null && <span className="font-mono tabular-nums opacity-80">{n}</span>}
+              </button>
+            ))}
+          </div>
+
+          {sideTabActive === 'categories' && (
+            <div className="space-y-3">
+              {/* Catatan perkiraan selalu terlihat */}
+              <p className="flex items-start gap-2 text-xs sm:text-sm leading-snug text-stone-600 dark:text-stone-400">
+                <Info className="w-4 h-4 shrink-0 mt-px" />
+                <span>{t.nearby.areaCatNote}</span>
+              </p>
+
+              {areaCat.status === 'loading' && (
+                <div role="status" aria-live="polite" className="flex items-center gap-2 text-xs text-stone-600 dark:text-stone-400">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  {t.nearby.areaCatLoading}
+                </div>
+              )}
+              {areaCat.status === 'toowide' && (
+                <div role="status" className="flex items-start gap-2 text-xs text-amber-900 dark:text-amber-200">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                  <span>{t.nearby.areaCatTooWide(AREA_MAX_SPAN_M / 1000)}</span>
+                </div>
+              )}
+              {areaCat.status === 'error' && (
+                <div role="alert" className="flex flex-wrap items-center gap-2 text-xs text-amber-900 dark:text-amber-200">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                  <span>{t.nearby.areaCatError}</span>
+                  <button type="button" onClick={findAreaCategories} className="underline font-medium cursor-pointer">
+                    {t.nearby.areaCatRetry}
+                  </button>
+                </div>
+              )}
+              {areaCat.status === 'ok' && areaCat.items.length === 0 && (
+                <p className="text-xs text-stone-600 dark:text-stone-400">{t.nearby.areaCatEmpty}</p>
+              )}
+              {areaCat.status === 'ok' && areaCat.items.length > 0 && (
+                <>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch text-xs text-stone-600 dark:text-stone-400 px-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+                      <span className="font-semibold text-stone-800 dark:text-stone-200">{t.nearby.areaCatTitle}</span>
+                      <span className="font-mono text-xs text-stone-500 dark:text-stone-400">
+                        ({t.nearby.areaCatRange(areaCatStart, areaCatEnd, areaCat.items.length)})
+                      </span>
+                    </div>
+                    {totalAreaCatPages > 1 && (
+                      <div className="flex items-center gap-1.5 shrink-0 lg:self-end">
+                        <button
+                          type="button"
+                          onClick={() => setAreaCatPage((p) => Math.max(1, p - 1))}
+                          disabled={areaCatPage === 1}
+                          className="p-2 rounded-lg border border-stone-300 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
+                          title={t.nearby.previewPrev}
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-xs font-mono px-1.5 tabular-nums whitespace-nowrap">
+                          {areaCatPage} / {totalAreaCatPages}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setAreaCatPage((p) => Math.min(totalAreaCatPages, p + 1))}
+                          disabled={areaCatPage === totalAreaCatPages}
+                          className="p-2 rounded-lg border border-stone-300 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
+                          title={t.nearby.previewNext}
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-xs text-stone-500 dark:text-stone-400 px-1">
+                    {t.nearby.areaCatBasedOn(areaCat.fileCount)}
+                    {areaCat.wikidata === 'failed' ? ` — ${t.nearby.areaCatWikidataFailed}` : areaCat.wikidata === 'skipped' ? ` — ${t.nearby.areaCatWikidataSkipped}` : ''}
+                    {areaCat.truncated ? ` — ${t.nearby.areaCatTruncated}` : ''}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+                    {currentAreaCatSlice.map((c) => {
+                      const isSelected = selectedAreaCat === c.name;
+                      return (
+                        <div
+                          key={c.name}
+                          onClick={() => setSelectedAreaCat(isSelected ? null : c.name)}
+                          className={`relative rounded-lg border bg-white dark:bg-stone-900 cursor-pointer transition-colors p-2.5 space-y-2 ${
+                            isSelected
+                              ? 'border-accent-600 dark:border-accent-400 ring-2 ring-accent-600/40 dark:ring-accent-400/40'
+                              : 'border-stone-300 dark:border-stone-800 hover:border-accent-600 dark:hover:border-accent-400'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-medium leading-snug text-stone-900 dark:text-white break-words" title={c.name}>
+                              {c.name}
+                            </p>
+                            {isSelected && (
+                              <div className="w-5 h-5 shrink-0 rounded-full bg-accent-600 text-white flex items-center justify-center">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs text-stone-500 dark:text-stone-400">
+                              {c.count > 0 ? t.nearby.areaCatPhotos(c.count) : ''}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenCategory(c.name);
+                              }}
+                              title={t.nearby.areaCatSearchIn}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-stone-300 dark:border-stone-700 text-[11px] font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
+                            >
+                              <Search className="w-3 h-3" />
+                              {t.nearby.areaCatSearchIn}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {sideTabActive === 'nophoto' && (
+            <div className="space-y-3">
+              <p className="flex items-start gap-2 text-xs sm:text-sm leading-snug text-stone-600 dark:text-stone-400">
+                <Info className="w-4 h-4 shrink-0 mt-px" />
+                <span>{t.nearby.noPhotoNote}</span>
+              </p>
+
+              {areaCat.status === 'loading' && (
+                <div role="status" aria-live="polite" className="flex items-center gap-2 text-xs text-stone-600 dark:text-stone-400">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  {t.nearby.areaCatLoading}
+                </div>
+              )}
+              {areaCat.status === 'toowide' && (
+                <div role="status" className="flex items-start gap-2 text-xs text-amber-900 dark:text-amber-200">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                  <span>{t.nearby.areaCatTooWide(AREA_MAX_SPAN_M / 1000)}</span>
+                </div>
+              )}
+              {areaCat.status === 'error' && (
+                <div role="alert" className="flex flex-wrap items-center gap-2 text-xs text-amber-900 dark:text-amber-200">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                  <span>{t.nearby.areaCatError}</span>
+                  <button type="button" onClick={findAreaCategories} className="underline font-medium cursor-pointer">
+                    {t.nearby.areaCatRetry}
+                  </button>
+                </div>
+              )}
+              {areaCat.status === 'ok' && areaCat.wikidata === 'skipped' && (
+                <p className="text-xs text-stone-600 dark:text-stone-400">{t.nearby.noPhotoSkipped}</p>
+              )}
+              {areaCat.status === 'ok' && areaCat.wikidata === 'failed' && areaNoPhoto.length === 0 && (
+                <p className="text-xs text-amber-900 dark:text-amber-200">{t.nearby.areaCatWikidataFailed}</p>
+              )}
+              {areaCat.status === 'ok' && areaCat.wikidata === 'ok' && areaNoPhoto.length === 0 && (
+                <p className="text-xs text-stone-600 dark:text-stone-400">{t.nearby.noPhotoEmpty}</p>
+              )}
+              {areaCat.status === 'ok' && areaNoPhoto.length > 0 && (
+                <>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch text-xs text-stone-600 dark:text-stone-400 px-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+                      <span className="font-semibold text-stone-800 dark:text-stone-200">{t.nearby.noPhotoTitle}</span>
+                      <span className="font-mono text-xs text-stone-500 dark:text-stone-400">
+                        ({t.nearby.noPhotoRange(noPhotoStart, noPhotoEnd, areaNoPhoto.length)})
+                      </span>
+                    </div>
+                    {totalNoPhotoPages > 1 && (
+                      <div className="flex items-center gap-1.5 shrink-0 lg:self-end">
+                        <button
+                          type="button"
+                          onClick={() => setNoPhotoPage((p) => Math.max(1, p - 1))}
+                          disabled={noPhotoPage === 1}
+                          className="p-2 rounded-lg border border-stone-300 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
+                          title={t.nearby.previewPrev}
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-xs font-mono px-1.5 tabular-nums whitespace-nowrap">
+                          {noPhotoPage} / {totalNoPhotoPages}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setNoPhotoPage((p) => Math.min(totalNoPhotoPages, p + 1))}
+                          disabled={noPhotoPage === totalNoPhotoPages}
+                          className="p-2 rounded-lg border border-stone-300 dark:border-stone-800 bg-white dark:bg-stone-800 disabled:opacity-40 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors cursor-pointer"
+                          title={t.nearby.previewNext}
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+                    {currentNoPhotoSlice.map((it) => {
+                      const isSelected = selectedNoPhoto === it.qid;
+                      return (
+                        <div
+                          key={it.qid}
+                          onClick={() => focusNoPhotoItem(it)}
+                          className={`relative rounded-lg border bg-white dark:bg-stone-900 cursor-pointer transition-colors p-2.5 space-y-2 ${
+                            isSelected
+                              ? 'border-accent-600 dark:border-accent-400 ring-2 ring-accent-600/40 dark:ring-accent-400/40'
+                              : 'border-stone-300 dark:border-stone-800 hover:border-accent-600 dark:hover:border-accent-400'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium leading-snug text-stone-900 dark:text-white break-words" title={it.label}>
+                                {it.label}
+                              </p>
+                              {it.description && (
+                                <p className="text-xs text-stone-500 dark:text-stone-400 line-clamp-2">{it.description}</p>
+                              )}
+                            </div>
+                            {isSelected && (
+                              <div className="w-5 h-5 shrink-0 rounded-full bg-accent-600 text-white flex items-center justify-center">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-mono text-stone-500 dark:text-stone-400">{it.qid}</span>
+                            <a
+                              href={`https://www.wikidata.org/wiki/${it.qid}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title={t.nearby.noPhotoOpen}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-stone-300 dark:border-stone-700 text-[11px] font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              {t.nearby.noPhotoOpen}
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {sideTabActive === 'photos' && (<>
           {/* Baris Kontrol Strip: Jumlah foto & Navigasi Pagination */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch lg:sticky lg:top-0 lg:z-20 lg:-mx-3 lg:px-4 lg:pt-3 lg:pb-3 lg:bg-white dark:lg:bg-stone-900 lg:border-b lg:border-stone-200 dark:lg:border-stone-800 lg:shadow-[0_6px_10px_-8px_rgba(24,30,41,0.25)] lg:rounded-t-lg text-xs text-stone-600 dark:text-stone-400 px-1">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
@@ -1576,168 +1831,12 @@ setIsAnalyzingArea(false);
               );
             })}
           </div>
+          </>)}
         </div>
 </div>
       )}
 </div>
 
-      {/* GEMINI AREA CURATORIAL ANALYSIS RESULT SECTION */}
-      {isAnalyzingArea && (
-        <div
-          ref={analysisLoadingRef}
-          role="status"
-          aria-live="polite"
-          className="p-4 sm:p-5 bg-accent-50/60 dark:bg-stone-900 border border-accent-200/80 dark:border-accent-900/50 rounded-lg shadow-sm space-y-4 animate-fadeIn"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-accent-600 text-white flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4 animate-spin" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-sm font-bold text-stone-900 dark:text-white">
-                {language === 'en' ? 'Gemini is analyzing this area…' : 'Gemini sedang menganalisis area ini…'}
-              </div>
-              <div className="text-xs text-stone-500 dark:text-stone-400">
-                {language === 'en'
-                  ? 'Reading nearby Commons metadata and finding related Wikimedia projects. This can take a few seconds.'
-                  : 'Membaca metadata Commons terdekat dan mencari proyek Wikimedia terkait. Ini bisa memakan beberapa detik.'}
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-pulse">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="rounded-lg border border-stone-200/70 dark:border-stone-800 bg-white/70 dark:bg-stone-900/60 p-3 space-y-2">
-                <div className="h-3 w-1/2 rounded bg-stone-200 dark:bg-stone-700" />
-                <div className="h-2.5 w-full rounded bg-stone-200 dark:bg-stone-700" />
-                <div className="h-2.5 w-5/6 rounded bg-stone-200 dark:bg-stone-700" />
-                <div className="h-2.5 w-2/3 rounded bg-stone-200 dark:bg-stone-700" />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-
-      {areaAnalysis && !isAnalyzingArea && (
-        <div
-          ref={analysisResultRef}
-          className="p-4 sm:p-5 bg-accent-50/60 dark:bg-stone-900 border border-accent-200/80 dark:border-accent-900/50 rounded-lg shadow-sm space-y-4 animate-fadeIn"
-        >
-          {/* Header of AI Analysis */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-accent-100 dark:border-accent-900/40 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-accent-600 text-white flex items-center justify-center shadow-2xs">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-sm sm:text-base text-stone-900 dark:text-white">
-                  {areaAnalysis.modelMeta?.source === 'local'
-                    ? (language === 'en' ? 'About this area' : 'Tentang area ini')
-                    : t.nearby.geminiAreaAnalysisTitle}
-                </h3>
-                <div className="flex items-center gap-2 text-xs text-accent-700 dark:text-accent-300 font-mono">
-                  <span>{areaAnalysis.modelMeta?.assistantName || GEMINI_ASSISTANT_NAME}</span>
-                  <span>•</span>
-                  <span>{areaAnalysis.modelMeta?.modelVersion || GEMINI_MODEL_VERSION}</span>
-                </div>
-              </div>
-            </div>
-
-            <span className="text-xs px-2.5 py-1 rounded-full bg-accent-100 dark:bg-accent-900/60 text-accent-800 dark:text-accent-200 font-medium self-start sm:self-auto">
-              {areaAnalysis.modelMeta?.source === 'local'
-                ? (language === 'en' ? 'Local summary (not Gemini)' : 'Ringkasan lokal (bukan Gemini)')
-                : (language === 'en' ? 'Gemini summary' : 'Ringkasan Gemini')}
-            </span>
-          </div>
-
-          {/* Location Context Line */}
-          {areaAnalysis.address && (
-            <div className="flex items-center gap-2 text-xs text-stone-600 dark:text-stone-300 font-medium">
-              <MapPin className="w-3.5 h-3.5 text-accent-600 shrink-0" />
-              <span>{areaAnalysis.address}</span>
-            </div>
-          )}
-
-          {/* Narrative Summary / Area Overview */}
-          <p className="text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed">
-            {areaAnalysis.areaOverview}
-          </p>
-
-          {/* Detailed Points Grid: Photos Summary, Identified Landmarks, Curator Insight */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-            {/* 1. Photos Summary */}
-            {areaAnalysis.photosSummary && (
-              <div className="p-3 bg-white/80 dark:bg-stone-800/60 rounded-lg border border-accent-100/60 dark:border-stone-800 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-800 dark:text-stone-200">
-                  <ImageIcon className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400" />
-                  <span>{t.nearby.photosSummaryTitle}</span>
-                </div>
-                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                  {areaAnalysis.photosSummary}
-                </p>
-              </div>
-            )}
-
-            {/* 2. Key Identified Landmarks */}
-            {areaAnalysis.identifiedLandmarks && areaAnalysis.identifiedLandmarks.length > 0 && (
-              <div className="p-3 bg-white/80 dark:bg-stone-800/60 rounded-lg border border-accent-100/60 dark:border-stone-800 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-800 dark:text-stone-200">
-                  <Landmark className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400" />
-                  <span>{t.nearby.keyLandmarks}</span>
-                </div>
-                <ul className="text-xs text-stone-600 dark:text-stone-400 space-y-1">
-                  {areaAnalysis.identifiedLandmarks.slice(0, 4).map((landmark, idx) => (
-                    <li key={idx} className="flex items-start gap-1.5">
-                      <span className="text-accent-500 font-bold">•</span>
-                      <span>{landmark}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* 3. Curator Insight */}
-            {areaAnalysis.curatorInsight && (
-              <div className="p-3 bg-white/80 dark:bg-stone-800/60 rounded-lg border border-accent-100/60 dark:border-stone-800 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-800 dark:text-stone-200">
-                  <Globe className="w-3.5 h-3.5 text-moss-600 dark:text-moss-400" />
-                  <span>{t.nearby.curatorInsight}</span>
-                </div>
-                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                  {areaAnalysis.curatorInsight}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Link proyek Wikimedia terkait area */}
-          <RelatedWikimediaLinks links={areaRelatedLinks} loading={areaRelatedLoading} language={language} />
-
-          {/* AI Model Disclaimer */}
-          <div className="flex items-center justify-between pt-2 border-t border-accent-100/60 dark:border-accent-900/30 text-xs text-stone-400 dark:text-stone-500">
-            <span>
-              {areaAnalysis.modelMeta?.disclaimer || (language === 'en' ? AI_DISCLAIMER_TEXT_EN : AI_DISCLAIMER_TEXT_ID)}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Area Analysis Error notice */}
-      {areaAnalysisError && (
-        <div role="alert" className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg text-red-900 dark:text-red-200 text-xs flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
-            <span>{areaAnalysisError}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setAreaAnalysisError(null)}
-            className="text-accent-700 hover:text-accent-900 dark:text-accent-400 p-1"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
     </section>
   );
 };

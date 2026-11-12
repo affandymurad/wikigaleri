@@ -1,6 +1,6 @@
 {
   "name": "WikiGaleri - Galeri Multimedia Wikimedia Commons",
-  "description": "Galeri multimedia Wikimedia Commons responsif untuk mencari, melihat lisensi, dan mengunduh berkas media terbuka, dengan ringkasan Gemini lewat Cloud Run dan cache Firestore.",
+  "description": "Galeri multimedia Wikimedia Commons responsif untuk mencari, melihat lisensi, dan mengunduh berkas media terbuka.",
   "requestFramePermissions": [
     "geolocation"
   ]

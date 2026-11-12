@@ -6,8 +6,6 @@ export interface Translations {
     gallery: string;
     licenseGuide: string;
     wikimediaTerms: string;
-    geminiActive: string;
-    inputGemini: string;
     toggleDark: string;
     toggleLight: string;
     language: string;
@@ -21,21 +19,6 @@ export interface Translations {
     homePlaceholder: (example: string) => string;
     categoryPlaceholder: string;
     searchBtn: string;
-    smartAiBtn: string;
-    smartAiShort: string;
-    smartAiDisabled: string;
-    inputKeyNow: string;
-    smartModalTitle: string;
-    smartModalDesc: string;
-    smartPromptLabel: string;
-    smartPromptPlaceholder: string;
-    smartInspirations: string;
-    generateBtn: string;
-    generating: string;
-    recommendedQuery: string;
-    relatedCategories: string;
-    applySearchBtn: string;
-    samplePrompts: string[];
   };
   tabs: {
     keywords: string;
@@ -97,26 +80,36 @@ export interface Translations {
     coordinates: string;
     author: string;
     license: string;
-    geminiAssistantBtn: string;
-    geminiAnalyzing: string;
-    geminiNeedsPhotos: string;
-    geminiAreaAnalysisTitle: string;
-    geminiAreaSubtitle: string;
-    nominatimAddress: string;
-    centerCoordinates: string;
-    photosSummaryTitle: string;
-    keyLandmarks: string;
-    curatorInsight: string;
-    loadingAddress: string;
-    noKeyAlert: string;
-    regenerateBtn: string;
-    unlockGeminiAiKey: string;
     ipLocationFallbackNotice: (city?: string) => string;
     clickMapHint: string;
     previewTitle: string;
     previewRange: (start: number, end: number, total: number) => string;
     previewPrev: string;
     previewNext: string;
+    areaCatBtn: string;
+    areaCatTitle: string;
+    areaCatNote: string;
+    areaCatLoading: string;
+    areaCatEmpty: string;
+    areaCatError: string;
+    areaCatRetry: string;
+    areaCatTooWide: (maxKm: number) => string;
+    areaCatPhotos: (count: number) => string;
+    areaCatBasedOn: (files: number) => string;
+    areaCatTruncated: string;
+    areaCatWikidataFailed: string;
+    areaCatWikidataSkipped: string;
+    areaCatSearchIn: string;
+    areaCatRange: (start: number, end: number, total: number) => string;
+    tabPhotos: string;
+    tabCategories: string;
+    tabNoPhoto: string;
+    noPhotoTitle: string;
+    noPhotoNote: string;
+    noPhotoEmpty: string;
+    noPhotoSkipped: string;
+    noPhotoRange: (start: number, end: number, total: number) => string;
+    noPhotoOpen: string;
   };
   filters: {
     allMedia: string;
@@ -177,7 +170,6 @@ export interface Translations {
   modal: {
     downloadTab: string;
     licenseTab: string;
-    aiTab: string;
     downloadTitle: string;
     downloadOriginal: string;
     copyDirectLink: string;
@@ -201,69 +193,8 @@ export interface Translations {
     shareAlikeDesc: string;
     taslTitle: string;
     copyAttributionBtn: string;
-    noKeyTitle: string;
-    noKeyDesc: string;
-    inputKeyBtn: string;
-    aiSubTabs: {
-      compliance: string;
-      context: string;
-      accessibility: string;
-    };
-    analyzeComplianceBtn: string;
-    analyzeContextBtn: string;
-    analyzeAccessBtn: string;
-    aiLoading: string;
-    aiLoadingDesc: string;
-    aiCallErrorTitle: string;
-    retryAiBtn: string;
-    aiHeroTitle: string;
-    aiHeroSubtitle: string;
-    runAiFullBtn: string;
-    jsonBadge: string;
-    savePdfBtn: string;
-    savingPdfBtn: string;
-    pdfSavedBtn: string;
-    rerunAiBtn: string;
-    aiDisclaimerTitle: string;
-    aiDisclaimerLink: string;
-    sec1Title: string;
-    sec1Subtitle: string;
-    sec1HighlightsTitle: string;
-    sec1UsageTitle: string;
-    sec3Title: string;
-    sec3Subtitle: string;
-    sec3AltLabel: string;
-    sec3AltOnlyCopy: string;
-    sec3AltOnlyCopied: string;
-    sec3NarrativeLabel: string;
-    sec4Title: string;
-    sec4Subtitle: string;
-    sec4CatsLabel: (count: number) => string;
-    sec4ArticlesLabel: (count: number) => string;
-    sec4ArticlesAction: string;
-    sec4RolesLabel: string;
-    sec4RolesAction: string;
-    copySection: string;
-    copiedSection: string;
-    ethicalNotice: string;
     prevTooltip: string;
     nextTooltip: string;
-  };
-  geminiModal: {
-    title: string;
-    subtitle: string;
-    keyLabel: string;
-    placeholder: string;
-    privacyTitle: string;
-    privacyDesc: string;
-    getKeyLink: string;
-    removeKey: string;
-    cancel: string;
-    saveVerify: string;
-    verifying: string;
-    successMsg: string;
-    errorMsg: string;
-    emptyKeyMsg: string;
   };
   guideModal: {
     title: string;
@@ -280,8 +211,6 @@ export interface Translations {
     taslTitle: string;
     taslDesc: string;
     taslItems: string[];
-    aiPolicyTitle: string;
-    aiPolicyDesc: string;
     docsLink: string;
     closeBtn: string;
   };
@@ -297,7 +226,6 @@ export interface Translations {
   footer: {
     tagline: string;
     attributionGuide: string;
-    apiKeySettings: string;
     commonsLink: string;
   };
 }
@@ -309,8 +237,6 @@ export const translations: Record<Language, Translations> = {
       gallery: 'Open Gallery',
       licenseGuide: 'CC License Guide',
       wikimediaTerms: 'Wikimedia Terms',
-      geminiActive: 'Gemini is on',
-      inputGemini: 'Add Gemini key',
       toggleDark: 'Switch to Dark Mode',
       toggleLight: 'Switch to Light Mode',
       language: 'Language',
@@ -318,35 +244,13 @@ export const translations: Record<Language, Translations> = {
     hero: {
       title: 'Wikimedia Commons Multimedia Gallery',
       subtitle:
-        'Search the open media on Wikimedia Commons, narrow it down by media type, check the license of each file, and download files with the credit line already written for you. Gemini can explain what you find.',
+        'Search the open media on Wikimedia Commons, narrow it down by media type, check the license of each file, and download files with the credit line already written for you.',
     },
     search: {
       placeholder: 'Search photos, audio, videos, or old documents...',
       homePlaceholder: (example: string) => `Try “${example}”, or search photos, audio, videos, and old documents…`,
       categoryPlaceholder: 'Category, e.g. Batik, Temples, Traditional dance',
       searchBtn: 'Search',
-      smartAiBtn: 'Smart search',
-      smartAiShort: 'Smart',
-      smartAiDisabled: 'Smart search is off. Add your Gemini key in the top bar to turn it on.',
-      inputKeyNow: 'Add key',
-      smartModalTitle: 'Gemini AI Smart Search',
-      smartModalDesc:
-        'Describe what you need in natural language, Gemini will formulate optimal Wikimedia syntax and categories.',
-      smartPromptLabel: 'What are you looking for in Wikimedia Commons?',
-      smartPromptPlaceholder:
-        'E.g., 18th century historical treaty manuscripts in PDF format, Javanese gamelan music, or Hubble space photos...',
-      smartInspirations: 'Inspiration Ideas:',
-      generateBtn: 'Formulate Query with Gemini',
-      generating: 'Formulating Optimal Query...',
-      recommendedQuery: 'Recommended Wikimedia Commons Query',
-      relatedCategories: 'Related Commons Categories:',
-      applySearchBtn: 'Apply & Search Now',
-      samplePrompts: [
-        'Ancient historical manuscript charters in PDF format',
-        'High quality tropical nature audio and bird calls',
-        '8th century Central Java temple architecture photos',
-        '17th century vintage world atlas maps',
-      ],
     },
     tabs: {
       keywords: 'Keywords',
@@ -606,20 +510,6 @@ export const translations: Record<Language, Translations> = {
       coordinates: 'Coordinates',
       author: 'Author',
       license: 'License',
-      geminiAssistantBtn: 'Gemini Assistant',
-      geminiAnalyzing: 'Analyzing Area with Gemini...',
-      geminiNeedsPhotos: 'Click "Find Nearby Commons" first, then ask Gemini about the area.',
-      geminiAreaAnalysisTitle: 'What Gemini says about this area',
-      geminiAreaSubtitle: 'Address, area highlights, and a summary of the nearby photos',
-      nominatimAddress: 'Reverse Geocoded Address (OpenStreetMap Nominatim)',
-      centerCoordinates: 'Center Map Coordinates',
-      photosSummaryTitle: 'Nearby Photos Collection Summary',
-      keyLandmarks: 'Identified Landmarks & Topics',
-      curatorInsight: 'Notes on this area',
-      loadingAddress: 'Fetching reverse geocoding address...',
-      noKeyAlert: 'Add your Gemini key in the top bar to use the assistant.',
-      regenerateBtn: 'Regenerate Analysis with Gemini',
-      unlockGeminiAiKey: 'Tip: add your Gemini key in the top bar to get fuller explanations from Gemini.',
       ipLocationFallbackNotice: (city?: string) =>
         `GPS permission restricted by browser/iframe. Switched to network approximate location${city ? ` (${city})` : ''}.`,
       clickMapHint: 'Click the map to set a location',
@@ -627,6 +517,30 @@ export const translations: Record<Language, Translations> = {
       previewRange: (start: number, end: number, total: number) => `Showing ${start}–${end} of ${total} files`,
       previewPrev: 'Previous',
       previewNext: 'Next',
+      areaCatBtn: 'Find categories in this area',
+      areaCatTitle: 'Categories in this area',
+      areaCatNote: 'Categories are inferred from geotagged photos in this area, not from category coordinates.',
+      areaCatLoading: 'Collecting categories…',
+      areaCatEmpty: 'No categories found for this area. Try zooming out a little or moving the map.',
+      areaCatError: 'Could not load categories. Check your connection and try again.',
+      areaCatRetry: 'Try again',
+      areaCatTooWide: (maxKm: number) => `This area is too wide. Zoom in until the map is under about ${maxKm} km across.`,
+      areaCatPhotos: (count: number) => `${count} ${count === 1 ? 'photo' : 'photos'}`,
+      areaCatBasedOn: (files: number) => `Based on ${files} geotagged files`,
+      areaCatTruncated: 'The area has more files than can be loaded, so counts are partial. Zoom in for fuller results.',
+      areaCatWikidataFailed: 'Wikidata could not be loaded (timeout or error), showing photo results only.',
+      areaCatSearchIn: 'Search in category',
+      areaCatRange: (start: number, end: number, total: number) => `Showing ${start}–${end} of ${total} categories`,
+      tabPhotos: 'Photos',
+      tabCategories: 'Categories',
+      tabNoPhoto: 'Wikidata without photo',
+      noPhotoTitle: 'Places on Wikidata without a photo (P18)',
+      noPhotoNote: 'Wikidata items with coordinates in this area that have no image (P18). Good candidates for new photos.',
+      noPhotoEmpty: 'No Wikidata items without a photo were found in this area.',
+      noPhotoSkipped: 'Wikidata is only checked for small areas; zoom in to see items without a photo.',
+      noPhotoRange: (start: number, end: number, total: number) => `Showing ${start}–${end} of ${total} items`,
+      noPhotoOpen: 'Open in Wikidata',
+      areaCatWikidataSkipped: 'Wikidata is only checked for small areas; zoom in to include it.',
     },
     filters: {
       allMedia: 'All Media',
@@ -690,7 +604,6 @@ export const translations: Record<Language, Translations> = {
     modal: {
       downloadTab: 'Download & Info',
       licenseTab: 'CC Attribution',
-      aiTab: 'Gemini Assistant',
       downloadTitle: 'File Download Options',
       downloadOriginal: 'Download Original Resolution',
       copyDirectLink: 'Copy Direct URL',
@@ -714,72 +627,8 @@ export const translations: Record<Language, Translations> = {
       shareAlikeDesc: 'Derivatives must use same license',
       taslTitle: 'Attribution Citation Generator (TASL)',
       copyAttributionBtn: 'Copy Citation',
-      noKeyTitle: 'Gemini API Key Required',
-      noKeyDesc:
-        'AI contextual and compliance analysis requires your own free Gemini API key. Stored only in your local browser.',
-      inputKeyBtn: 'Enter Gemini Key Now',
-      aiSubTabs: {
-        compliance: 'Reuse Guidance',
-        context: 'Historical Context',
-        accessibility: 'WCAG Alt-Text',
-      },
-      analyzeComplianceBtn: 'Analyze License Compliance',
-      analyzeContextBtn: 'Explain the history and context',
-      analyzeAccessBtn: 'Generate WCAG Alt-Text & Description',
-      aiLoading: 'Analyzing File with Gemini...',
-      aiLoadingDesc: 'Reading the file details to explain what it shows.',
-      aiCallErrorTitle: 'Gemini API Request Encountered an Issue',
-      retryAiBtn: 'Retry Analysis',
-      aiHeroTitle: 'Gemini Assistant',
-      aiHeroSubtitle: 'A plain-language explanation of this file and what its license lets you do, all in one place.',
-      runAiFullBtn: 'Explain this file',
-      jsonBadge: 'Based on Commons data',
-      savePdfBtn: 'Save to PDF',
-      savingPdfBtn: 'Saving PDF...',
-      pdfSavedBtn: 'PDF Saved!',
-      rerunAiBtn: 'Re-analyze',
-      aiDisclaimerTitle: 'A note on AI:',
-      aiDisclaimerLink: 'Wikimedia AI Policy & Guidelines',
-      sec1Title: 'What this file is',
-      sec1Subtitle: 'In plain words, plus a few facts worth knowing',
-      sec1HighlightsTitle: 'Key points',
-      sec1UsageTitle: 'Ideas for using it',
-      sec3Title: '3. Accessibility & WCAG Alt-Text',
-      sec3Subtitle: 'Screen reader friendly for accessibility compliance',
-      sec3AltLabel: 'Concise Alt-Text (Ready for <img alt="..."> tag):',
-      sec3AltOnlyCopy: 'Copy Alt Text Only',
-      sec3AltOnlyCopied: 'Alt Copied!',
-      sec3NarrativeLabel: 'Extended Narrative Description:',
-      sec4Title: '4. Wikimedia Projects Usage & Categories',
-      sec4Subtitle: 'Wikipedia articles, Commons categories, and how this file is used (all clickable)',
-      sec4CatsLabel: (count: number) => `Wikimedia Commons Categories (${count}):`,
-      sec4ArticlesLabel: (count: number) => `Wikimedia Articles Using This File (${count}):`,
-      sec4ArticlesAction: 'click to open article',
-      sec4RolesLabel: 'Encyclopedic Context & Utilization Recommendations:',
-      sec4RolesAction: 'click to explore project',
-      copySection: 'Copy',
-      copiedSection: 'Copied!',
-      ethicalNotice:
-        'Ethical Notice: Analysis is based purely on public Wikimedia Commons metadata. AI does not claim ownership of open cultural heritage.',
       prevTooltip: 'Previous File (Left Arrow)',
       nextTooltip: 'Next File (Right Arrow)',
-    },
-    geminiModal: {
-      title: 'Configure Personal Gemini API',
-      subtitle: 'Use your own Google AI Studio key to turn on the Gemini features',
-      keyLabel: 'Google AI Studio API Key:',
-      placeholder: 'AIzaSy...',
-      privacyTitle: 'Privacy & Security Guarantee',
-      privacyDesc:
-        'Your key is stored strictly inside your browser (localStorage). It is never sent to any third-party servers.',
-      getKeyLink: 'Get Free API Key on Google AI Studio',
-      removeKey: 'Remove Key',
-      cancel: 'Cancel',
-      saveVerify: 'Save & Verify',
-      verifying: 'Testing Key...',
-      successMsg: 'Gemini API key successfully verified and saved!',
-      errorMsg: 'API key is invalid or has no active quota.',
-      emptyKeyMsg: 'API key cannot be empty.',
     },
     guideModal: {
       title: 'CC License Guide',
@@ -805,9 +654,6 @@ export const translations: Record<Language, Translations> = {
         'Source: a link to the file page on Wikimedia Commons.',
         'License: the license name, linked to its official page.',
       ],
-      aiPolicyTitle: 'How WikiGaleri uses Gemini',
-      aiPolicyDesc:
-        'Gemini only reads public metadata from Commons to explain a file. WikiGaleri does not copy files in bulk, and it does not claim any rights over the files.',
       docsLink: 'Wikimedia Commons guide to reusing content',
       closeBtn: 'Got it',
     },
@@ -823,7 +669,6 @@ export const translations: Record<Language, Translations> = {
     footer: {
       tagline: 'Built on Wikimedia Commons and Creative Commons licenses',
       attributionGuide: 'TASL Attribution Guide',
-      apiKeySettings: 'API Key Settings',
       commonsLink: 'Wikimedia Commons',
     },
   },
@@ -834,8 +679,6 @@ export const translations: Record<Language, Translations> = {
       gallery: 'Galeri Terbuka',
       licenseGuide: 'Panduan Lisensi CC',
       wikimediaTerms: 'Ketentuan Wikimedia',
-      geminiActive: 'Gemini aktif',
-      inputGemini: 'Tambah kunci Gemini',
       toggleDark: 'Ganti ke Mode Gelap',
       toggleLight: 'Ganti ke Mode Terang',
       language: 'Bahasa',
@@ -843,35 +686,13 @@ export const translations: Record<Language, Translations> = {
     hero: {
       title: 'Galeri Multimedia Wikimedia Commons',
       subtitle:
-        'Cari media terbuka di Wikimedia Commons, saring menurut jenis media, lihat lisensi tiap berkas, lalu unduh berkas lengkap dengan teks kreditnya. Gemini bisa menjelaskan isi berkas yang Anda temukan.',
+        'Cari media terbuka di Wikimedia Commons, saring menurut jenis media, lihat lisensi tiap berkas, lalu unduh berkas lengkap dengan teks kreditnya.',
     },
     search: {
       placeholder: 'Cari foto, audio, video, atau dokumen lama...',
       homePlaceholder: (example: string) => `Coba “${example}”, atau cari foto, audio, video, dan dokumen lama…`,
       categoryPlaceholder: 'Kategori, misalnya Batik, Candi, Tari tradisional',
       searchBtn: 'Cari',
-      smartAiBtn: 'Pencarian pintar',
-      smartAiShort: 'Pintar',
-      smartAiDisabled: 'Pencarian pintar belum aktif. Tambahkan kunci Gemini di bilah atas untuk menyalakannya.',
-      inputKeyNow: 'Tambah kunci',
-      smartModalTitle: 'Pencarian Pintar AI Gemini',
-      smartModalDesc:
-        'Ketik topik atau ide apa pun, Gemini akan merumuskan kueri sintaks & kategori Wikimedia paling akurat.',
-      smartPromptLabel: 'Apa yang ingin Anda temukan di Wikimedia Commons?',
-      smartPromptPlaceholder:
-        'Contoh: Naskah lontar Bali abad ke-18 format PDF, musik gamelan Jawa, atau citra luar angkasa Hubble...',
-      smartInspirations: 'Inspirasi Ide Pencarian:',
-      generateBtn: 'Rumuskan Kueri dengan Gemini',
-      generating: 'Merumuskan Kueri Optimal...',
-      recommendedQuery: 'Rekomendasi Kueri Wikimedia Commons',
-      relatedCategories: 'Kategori Commons Terkait:',
-      applySearchBtn: 'Terapkan & Cari Berkas Sekarang',
-      samplePrompts: [
-        'Manuskrip lontar kuno atau piagam bersejarah format PDF',
-        'Rekaman audio suara burung tropis dan alam liar',
-        'Foto candi abad ke-8 di pulau Jawa resolusi tinggi',
-        'Peta antik kepulauan Hindia Belanda abad ke-17',
-      ],
     },
     tabs: {
       keywords: 'Kata Kunci',
@@ -1131,20 +952,6 @@ export const translations: Record<Language, Translations> = {
       coordinates: 'Koordinat',
       author: 'Fotografer / Pembuat',
       license: 'Lisensi',
-      geminiAssistantBtn: 'Asisten Gemini',
-      geminiAnalyzing: 'Menganalisis Area dengan Gemini...',
-      geminiNeedsPhotos: 'Klik "Cari Commons Terdekat" dulu, lalu minta Gemini menjelaskan area ini.',
-      geminiAreaAnalysisTitle: 'Kata Gemini tentang area ini',
-      geminiAreaSubtitle: 'Alamat, sorotan area, dan ringkasan foto di sekitar',
-      nominatimAddress: 'Alamat Hasil Reversi (OpenStreetMap Nominatim)',
-      centerCoordinates: 'Koordinat Titik Tengah Peta',
-      photosSummaryTitle: 'Ringkasan Koleksi Foto Terdekat',
-      keyLandmarks: 'Landmark & Topik yang Teridentifikasi',
-      curatorInsight: 'Catatan tentang area ini',
-      loadingAddress: 'Mengambil alamat reversi koordinat...',
-      noKeyAlert: 'Tambahkan kunci Gemini di bilah atas untuk memakai asisten.',
-      regenerateBtn: 'Perbarui Analisis dengan Gemini',
-      unlockGeminiAiKey: 'Tip: tambahkan kunci Gemini di bilah atas untuk penjelasan yang lebih lengkap dari Gemini.',
       ipLocationFallbackNotice: (city?: string) =>
         `Izin GPS dibatasi peramban/iframe. Beralih otomatis ke perkiraan lokasi jaringan${city ? ` (${city})` : ''}.`,
       clickMapHint: 'Klik peta untuk menentukan lokasi',
@@ -1152,6 +959,30 @@ export const translations: Record<Language, Translations> = {
       previewRange: (start: number, end: number, total: number) => `Menampilkan ${start}–${end} dari ${total} berkas`,
       previewPrev: 'Sebelumnya',
       previewNext: 'Berikutnya',
+      areaCatBtn: 'Cari kategori di area ini',
+      areaCatTitle: 'Kategori di area ini',
+      areaCatNote: 'Kategori disimpulkan dari foto bergeotag di area ini, bukan dari koordinat kategori.',
+      areaCatLoading: 'Mengumpulkan kategori…',
+      areaCatEmpty: 'Tidak ada kategori ditemukan di area ini. Coba perkecil zoom sedikit atau geser peta.',
+      areaCatError: 'Kategori tidak dapat dimuat. Periksa koneksi lalu coba lagi.',
+      areaCatRetry: 'Coba lagi',
+      areaCatTooWide: (maxKm: number) => `Area terlalu luas. Perbesar peta sampai lebarnya kurang dari sekitar ${maxKm} km.`,
+      areaCatPhotos: (count: number) => `${count} foto`,
+      areaCatBasedOn: (files: number) => `Berdasarkan ${files} berkas bergeotag`,
+      areaCatTruncated: 'Berkas di area ini lebih banyak daripada yang bisa dimuat, jadi hitungan tidak lengkap. Perbesar peta untuk hasil yang lebih lengkap.',
+      areaCatWikidataFailed: 'Wikidata tidak dapat dimuat (waktu habis atau galat), hanya menampilkan hasil dari foto.',
+      areaCatSearchIn: 'Cari di kategori',
+      areaCatRange: (start: number, end: number, total: number) => `Menampilkan ${start}–${end} dari ${total} kategori`,
+      tabPhotos: 'Foto',
+      tabCategories: 'Kategori',
+      tabNoPhoto: 'Wikidata tanpa foto',
+      noPhotoTitle: 'Tempat di Wikidata tanpa foto (P18)',
+      noPhotoNote: 'Item Wikidata bertitik koordinat di area ini yang belum punya gambar (P18). Calon sasaran foto baru.',
+      noPhotoEmpty: 'Tidak ada item Wikidata tanpa foto di area ini.',
+      noPhotoSkipped: 'Wikidata hanya diperiksa untuk area kecil; perbesar peta untuk melihat item tanpa foto.',
+      noPhotoRange: (start: number, end: number, total: number) => `Menampilkan ${start}–${end} dari ${total} item`,
+      noPhotoOpen: 'Buka di Wikidata',
+      areaCatWikidataSkipped: 'Wikidata hanya diperiksa untuk area kecil; perbesar peta agar ikut disertakan.',
     },
     filters: {
       allMedia: 'Semua Media',
@@ -1215,7 +1046,6 @@ export const translations: Record<Language, Translations> = {
     modal: {
       downloadTab: 'Unduh & Info',
       licenseTab: 'Atribusi CC',
-      aiTab: 'Asisten Gemini',
       downloadTitle: 'Opsi Unduhan Berkas',
       downloadOriginal: 'Unduh Resolusi Asli',
       copyDirectLink: 'Salin Tautan Langsung',
@@ -1239,72 +1069,8 @@ export const translations: Record<Language, Translations> = {
       shareAlikeDesc: 'Karya turunan harus lisensi serupa',
       taslTitle: 'Generator Teks Atribusi (TASL)',
       copyAttributionBtn: 'Salin Atribusi',
-      noKeyTitle: 'Kunci Gemini API Belum Diinput',
-      noKeyDesc:
-        'Fitur analisis cerdas memerlukan kunci API Gemini gratis milik Anda sendiri. Kunci disimpan aman hanya di browser lokal Anda.',
-      inputKeyBtn: 'Input Kunci Gemini Sekarang',
-      aiSubTabs: {
-        compliance: 'Panduan Pakai',
-        context: 'Konteks Sejarah',
-        accessibility: 'Alt-Text Aksesibel',
-      },
-      analyzeComplianceBtn: 'Analisis Kepatuhan Lisensi',
-      analyzeContextBtn: 'Jelaskan sejarah dan konteksnya',
-      analyzeAccessBtn: 'Buat Alt-Text & Deskripsi WCAG',
-      aiLoading: 'Menganalisis Berkas dengan Gemini...',
-      aiLoadingDesc: 'Membaca detail berkas untuk menjelaskan isinya.',
-      aiCallErrorTitle: 'Terjadi Kendala Pemanggilan Gemini',
-      retryAiBtn: 'Coba Lagi',
-      aiHeroTitle: 'Asisten Gemini',
-      aiHeroSubtitle: 'Penjelasan isi berkas dan aturan lisensinya dengan bahasa sehari-hari, dalam satu halaman.',
-      runAiFullBtn: 'Jelaskan berkas ini',
-      jsonBadge: 'Dari data Commons',
-      savePdfBtn: 'Save to PDF',
-      savingPdfBtn: 'Menyimpan PDF...',
-      pdfSavedBtn: 'PDF Tersimpan!',
-      rerunAiBtn: 'Analisis Ulang',
-      aiDisclaimerTitle: 'Catatan soal AI:',
-      aiDisclaimerLink: 'Ketentuan & Kebijakan AI Wikimedia',
-      sec1Title: 'Apa isi berkas ini',
-      sec1Subtitle: 'Dijelaskan dengan bahasa sehari-hari, plus beberapa fakta penting',
-      sec1HighlightsTitle: 'Poin penting',
-      sec1UsageTitle: 'Bisa dipakai untuk',
-      sec3Title: '3. Aksesibilitas & WCAG Alt-Text',
-      sec3Subtitle: 'Ramah pembaca layar (Screen Reader)',
-      sec3AltLabel: 'Alt-Text Ringkas (Siap Pakai tag <img alt="...">):',
-      sec3AltOnlyCopy: 'Salin Alt Saja',
-      sec3AltOnlyCopied: 'Alt Tersalin!',
-      sec3NarrativeLabel: 'Deskripsi Panjang Naratif:',
-      sec4Title: '4. Penggunaan di Proyek Wikimedia & Kategori',
-      sec4Subtitle: 'Artikel Wikipedia, kategori Commons, dan cara berkas ini dipakai (semua bisa diklik)',
-      sec4CatsLabel: (count: number) => `Kategori Wikimedia Commons (${count}):`,
-      sec4ArticlesLabel: (count: number) => `Artikel Wikimedia yang Menggunakan Berkas Ini (${count}):`,
-      sec4ArticlesAction: 'klik untuk buka artikel',
-      sec4RolesLabel: 'Konteks & Rekomendasi Pemanfaatan Proyek Wiki:',
-      sec4RolesAction: 'klik untuk telusuri proyek',
-      copySection: 'Salin',
-      copiedSection: 'Tersalin!',
-      ethicalNotice:
-        'Pemberitahuan Etis: Seluruh analisis ini didasarkan langsung pada metadata publik Wikimedia Commons. AI tidak mengklaim kepemilikan atas berkas ini.',
       prevTooltip: 'Berkas Sebelumnya (Tombol Panah Kiri)',
       nextTooltip: 'Berkas Berikutnya (Tombol Panah Kanan)',
-    },
-    geminiModal: {
-      title: 'Konfigurasi Gemini API Pengguna',
-      subtitle: 'Pakai kunci Google AI Studio Anda sendiri untuk menyalakan fitur Gemini',
-      keyLabel: 'Google AI Studio API Key:',
-      placeholder: 'AIzaSy...',
-      privacyTitle: 'Privasi & Keamanan Kunci',
-      privacyDesc:
-        'Kunci API disimpan hanya di memori lokal peramban (localStorage) perangkat Anda. Kami tidak menyimpan atau mengirimkan kunci Anda ke server eksternal.',
-      getKeyLink: 'Dapatkan Kunci API Gratis di Google AI Studio',
-      removeKey: 'Hapus Kunci',
-      cancel: 'Batal',
-      saveVerify: 'Simpan & Verifikasi',
-      verifying: 'Menguji Kunci...',
-      successMsg: 'Kunci Gemini API berhasil diverifikasi dan disimpan!',
-      errorMsg: 'Kunci API tidak valid atau tidak memiliki kuota aktif.',
-      emptyKeyMsg: 'Kunci API tidak boleh kosong.',
     },
     guideModal: {
       title: 'Panduan Lisensi CC',
@@ -1330,9 +1096,6 @@ export const translations: Record<Language, Translations> = {
         'Source (sumber): tautan ke halaman berkas di Wikimedia Commons.',
         'License (lisensi): nama lisensi, dengan tautan ke halaman resminya.',
       ],
-      aiPolicyTitle: 'Cara WikiGaleri memakai Gemini',
-      aiPolicyDesc:
-        'Gemini hanya membaca metadata publik dari Commons untuk menjelaskan sebuah berkas. WikiGaleri tidak menyalin berkas secara massal dan tidak mengklaim hak apa pun atas berkas.',
       docsLink: 'Panduan Wikimedia Commons tentang memakai ulang konten',
       closeBtn: 'Mengerti',
     },
@@ -1348,7 +1111,6 @@ export const translations: Record<Language, Translations> = {
     footer: {
       tagline: 'Dibangun di atas Wikimedia Commons dan lisensi Creative Commons',
       attributionGuide: 'Panduan Atribusi TASL',
-      apiKeySettings: 'Pengaturan Kunci API',
       commonsLink: 'Wikimedia Commons',
     },
   },

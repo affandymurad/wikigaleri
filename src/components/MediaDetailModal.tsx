@@ -3,21 +3,7 @@ import { createPortal } from 'react-dom';
 import { CommonsMediaItem } from '../types/wikimedia';
 import { getLicenseInfo, generateAttribution, formatBytes, getFileExtension } from '../utils/licenseUtils';
 import {
-  UnifiedMediaAiAnalysis,
-  generateUnifiedMediaAnalysis,
-  buildLocalMediaAnalysis,
-  getCachedUnifiedAnalysis,
-  setCachedUnifiedAnalysis,
-  getGeminiQuotaBlockMessage,
-  GEMINI_ASSISTANT_NAME,
-  GEMINI_MODEL_NAME,
-  AI_DISCLAIMER_TEXT_ID,
-  AI_DISCLAIMER_TEXT_EN,
-} from '../services/geminiClient';
-import {
   fetchFileGlobalUsage,
-fetchRelatedWikimediaLinks,
-RelatedWikiLink,
   fetchMediaDetailByTitle,
   fetchMediaExtraDetail,
   fetchFileHistory,
@@ -26,7 +12,6 @@ RelatedWikiLink,
   MediaExtraDetail,
   WikiGlobalUsageItem,
 } from '../services/wikimediaApi';
-import { exportMediaAnalysisPdf } from '../utils/pdfGenerator';
 import { X, Download, Copy, Check, ExternalLink, Sparkles, ShieldCheck, BookOpen, Eye, Key, FileText, MapPin, Calendar, User, Info, ChevronLeft, Loader2, ChevronRight, Bookmark, AlertCircle, Globe, RefreshCw, FileCode, Tag, CheckCircle2, Folder, FileDown, Camera, ChevronDown, History, MessageSquare, Volume2, VolumeX } from 'lucide-react';
 import { TalkPageView } from './MediaGrid';
 import { StlViewer } from './StlViewer';
@@ -41,8 +26,6 @@ import { parseDetailTab, withDetailTab, type DetailTab } from '../utils/urlState
 interface MediaDetailModalProps {
   item: CommonsMediaItem | null;
   onClose: () => void;
-  geminiApiKey: string;
-  onOpenGeminiModal: () => void;
   onNext?: () => void;
   onPrev?: () => void;
   hasNext?: boolean;
@@ -233,8 +216,6 @@ const FileHistoryPanel: React.FC<{ title: string; onSearchUser?: (u: string) => 
 export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   item,
   onClose,
-  geminiApiKey,
-  onOpenGeminiModal,
   onNext,
   onPrev,
   hasNext,
@@ -283,17 +264,11 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedQuickAttr, setCopiedQuickAttr] = useState(false);
 
-  // Unified AI assistance state
-  const [unifiedAnalysis, setUnifiedAnalysis] = useState<UnifiedMediaAiAnalysis | null>(null);
   const [wikiUsages, setWikiUsages] = useState<WikiGlobalUsageItem[]>([]);
-  const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
   // Id foto yang sudah selesai dimuat (loading tampil selama id ini belum sama dengan item.id)
   const [loadedMediaId, setLoadedMediaId] = useState<string | null>(null);
   const isMediaLoading = loadedMediaId !== String(item?.id);
-  const [aiError, setAiError] = useState<string | null>(null);
-  const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>(item?.categories || []);
-  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   // Detail tambahan (EXIF kamera, Depicts) untuk tab Unduh & Info
   const [extraDetail, setExtraDetail] = useState<MediaExtraDetail | null>(null);
   // Layar penuh untuk foto biasa
@@ -314,14 +289,11 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
       .finally(() => { if (!cancelled) setIsExtraLoading(false); });
     return () => { cancelled = true; };
   }, [item?.id]);
-  const [pdfSuccess, setPdfSuccess] = useState<boolean>(false);
 
   // Reset analysis and sync categories when media item changes
   useEffect(() => {
     if (!item) return;
-    setUnifiedAnalysis(null);
     setWikiUsages([]);
-    setAiError(null);
     setCategories(item.categories || []);
 
     // If categories empty or short, fetch details
@@ -445,8 +417,6 @@ const [usagesLoading, setUsagesLoading] = useState<boolean>(false);
   };
 
 const [usagesLoadedId, setUsagesLoadedId] = useState<number | string | null>(null);
-const [relatedLinks, setRelatedLinks] = useState<RelatedWikiLink[]>([]);
-const [relatedLoading, setRelatedLoading] = useState<boolean>(false);
 
 // Muat penggunaan lintas-proyek saat tab Kategori & Penggunaan dibuka
 useEffect(() => {
@@ -462,21 +432,6 @@ useEffect(() => {
     });
   return () => { cancelled = true; };
 }, [activeTab, item?.id]);
-
-// Cari link proyek Wikimedia terkait setelah analisis AI selesai
-useEffect(() => {
-  if (!unifiedAnalysis || !item) { setRelatedLinks([]); return; }
-  let cancelled = false;
-  setRelatedLoading(true);
-  const skip = /^(files?|cc[- ]|self-published|pages|uploaded|media |images? from|use dmy|.*\b(licen[sc]e|uploads?)\b)/i;
-  const cat = categories.map((c) => c.replace(/^Category:/i, '')).find((c) => !skip.test(c));
-  const baseTitle = String(item.cleanTitle || item.title || '').replace(/^File:/i, '').replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[_\d]+/g, ' ').trim();
-  fetchRelatedWikimediaLinks({ terms: [cat || '', baseTitle] })
-    .then((l) => { if (!cancelled) setRelatedLinks(l); })
-    .catch(() => {})
-    .finally(() => { if (!cancelled) setRelatedLoading(false); });
-  return () => { cancelled = true; };
-}, [unifiedAnalysis, item?.id]);
 
   const licenseInfo = item ? getLicenseInfo(item) : null;
   const attributionText = item ? generateAttribution(item, attributionFormat, language) : '';
@@ -501,135 +456,6 @@ useEffect(() => {
     setTimeout(() => setCopiedUrl(false), 2000);
   };
 
-  const handleSaveToPdf = async () => {
-    if (!item || !unifiedAnalysis) return;
-    setIsExportingPdf(true);
-    try {
-      await exportMediaAnalysisPdf(item, unifiedAnalysis, wikiUsages, categories, language);
-      setPdfSuccess(true);
-      setTimeout(() => setPdfSuccess(false), 2500);
-    } catch (err) {
-      console.error('Failed to export PDF:', err);
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
-
-  const getWikimediaArticleUrl = (wikiName: string, article: string): string => {
-    const clean = article.replace(/^["']|["']$/g, '').trim();
-    const encoded = encodeURIComponent(clean.replace(/ /g, '_'));
-    const lower = wikiName.toLowerCase();
-    if (lower.includes('indonesia') || lower.includes('id.wiki') || lower.includes('id wikipedia')) {
-      return `https://id.wikipedia.org/wiki/${encoded}`;
-    } else if (lower.includes('english') || lower.includes('inggris') || lower.includes('en.wiki') || lower.includes('en wikipedia')) {
-      return `https://en.wikipedia.org/wiki/${encoded}`;
-    } else if (lower.includes('voyage')) {
-      return `https://en.wikivoyage.org/wiki/${encoded}`;
-    } else if (lower.includes('source')) {
-      return `https://en.wikisource.org/wiki/${encoded}`;
-    } else if (lower.includes('species')) {
-      return `https://species.wikimedia.org/wiki/${encoded}`;
-    } else if (lower.includes('quote')) {
-      return `https://id.wikiquote.org/wiki/${encoded}`;
-    } else if (lower.includes('commons')) {
-      return `https://commons.wikimedia.org/wiki/${encoded}`;
-    } else if (lower.includes('data')) {
-      return `https://www.wikidata.org/wiki/Special:Search?search=${encoded}`;
-    }
-    return `https://id.wikipedia.org/wiki/Special:Search?search=${encoded}`;
-  };
-
-  // Id berkas yang sedang ditampilkan, agar hasil yang terlambat tidak menimpa berkas lain
-  const currentItemIdRef = useRef<string | number | null>(item ? item.id : null);
-  currentItemIdRef.current = item ? item.id : null;
-
-  /**
-   * Menjalankan analisis berkas.
-   * auto = true: dipakai otomatis saat tab Gemini terbuka. Memakai cache memori (sampai halaman dimuat ulang)
-   * dan tidak memanggil Gemini lagi saat kuota baru saja habis.
-   * auto = false: tombol manual (Analisis ulang / Coba lagi), selalu memanggil Gemini.
-   * Tanpa kunci atau bila Gemini gagal, ditampilkan ringkasan lokal dari metadata Commons.
-   */
-  const runAiAnalysis = async (auto: boolean) => {
-    if (!item) return;
-    const target = item;
-
-    if (!geminiApiKey) {
-      setAiError(null);
-      setUnifiedAnalysis(buildLocalMediaAnalysis(target, language, wikiUsages));
-      if (!auto) onOpenGeminiModal();
-      return;
-    }
-
-    if (auto) {
-      const cached = getCachedUnifiedAnalysis(target.id, language);
-      if (cached) {
-        setAiError(null);
-        setUnifiedAnalysis(cached);
-        return;
-      }
-      const blocked = getGeminiQuotaBlockMessage();
-      if (blocked) {
-        setAiError(blocked);
-        setUnifiedAnalysis(buildLocalMediaAnalysis(target, language, wikiUsages));
-        return;
-      }
-    }
-
-    setIsAiLoading(true);
-    setAiError(null);
-
-    let usages: WikiGlobalUsageItem[] = wikiUsages;
-    try {
-      // 1. Ambil pemakaian berkas di proyek Wikimedia (tidak menggagalkan analisis bila gagal)
-      if (usages.length === 0) {
-        try {
-          usages = await fetchFileGlobalUsage(target.title);
-          if (currentItemIdRef.current === target.id) setWikiUsages(usages);
-        } catch (uErr) {
-          console.warn('Failed to fetch wiki usage:', uErr);
-        }
-      }
-
-      // 2. Analisis terstruktur Gemini sesuai bahasa antarmuka
-      const res = await generateUnifiedMediaAnalysis(geminiApiKey, target, usages, language);
-      setCachedUnifiedAnalysis(target.id, language, res);
-      if (currentItemIdRef.current === target.id) setUnifiedAnalysis(res);
-    } catch (err) {
-      console.error('Unified AI analysis error:', err);
-      if (currentItemIdRef.current !== target.id) return;
-      setAiError(err instanceof Error ? err.message : (language === 'en' ? 'Failed to generate the AI analysis.' : 'Gagal menghasilkan analisis AI.'));
-      // Pertahankan hasil Gemini sebelumnya bila ada; jika tidak, tampilkan ringkasan lokal
-      setUnifiedAnalysis((prev) =>
-        prev && prev.modelMeta?.source !== 'local' ? prev : buildLocalMediaAnalysis(target, language, usages)
-      );
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
-
-  const handleRunAiAnalysis = () => {
-    void runAiAnalysis(false);
-  };
-
-  // Otomatis jalan saat tab Gemini terbuka: hasil cache, ringkasan lokal (tanpa kunci), atau panggilan Gemini
-  const autoRunKeyRef = useRef<string>('');
-  useEffect(() => {
-    if (!item || activeTab !== 'ai') return;
-    const runKey = `${item.id}|${language}|${geminiApiKey ? 1 : 0}`;
-    if (autoRunKeyRef.current === runKey) return;
-    autoRunKeyRef.current = runKey;
-    void runAiAnalysis(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item?.id, activeTab, language, geminiApiKey]);
-
-  const handleCopySection = (sectionKey: string, textToCopy: string) => {
-    navigator.clipboard.writeText(textToCopy);
-    setCopiedSection(sectionKey);
-    setTimeout(() => {
-      setCopiedSection(null);
-    }, 2000);
-  };
 
   if (!item || !licenseInfo) return null;
 
@@ -1002,19 +828,6 @@ useEffect(() => {
             
             {/* Tabs Selector (chip) */}
           <div className="sticky top-0 z-10 flex flex-wrap gap-2 border-b border-stone-200 bg-white px-4 py-3 text-xs font-medium dark:border-stone-800 dark:bg-stone-900">
-            <button
-              type="button"
-              onClick={() => setActiveTab('ai')}
-              aria-pressed={activeTab === 'ai'}
-              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors ${
-                activeTab === 'ai'
-                  ? 'border-accent-600 bg-accent-600 font-semibold text-white shadow-xs'
-                  : 'border-stone-200 bg-stone-100 text-stone-600 hover:bg-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700'
-              }`}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>{t.modal.aiTab}</span>
-            </button>
             <button
               type="button"
               onClick={() => setActiveTab('download')}
@@ -1587,339 +1400,9 @@ return (
             </div>
           )}
 
-          {/* Tab 3: Gemini AI Assistant (Unified Direct View) */}
-            {activeTab === 'ai' && (
-              <div className="p-5 space-y-4 flex-1 overflow-y-auto text-xs">
-                {/* Check if user configured their Gemini key */}
-                {isAiLoading ? (
-                  <div className="p-10 text-center space-y-4 bg-stone-50/50 dark:bg-stone-800/30 rounded-lg border border-stone-200/60 dark:border-stone-800">
-                    <div className="relative mx-auto w-12 h-12 flex items-center justify-center">
-                      <div className="absolute inset-0 rounded-full border-2 border-accent-500/30 border-t-accent-600 animate-spin" />
-                      <Sparkles className="w-5 h-5 text-accent-600 animate-pulse" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="font-semibold text-stone-900 dark:text-white text-sm">
-                        {t.modal.aiLoading}
-                      </p>
-                      <p className="text-stone-500 dark:text-stone-400 text-xs max-w-sm mx-auto leading-relaxed">
-                        {t.modal.aiLoadingDesc}
-                      </p>
-                    </div>
-                  </div>
-                ) : aiError && !unifiedAnalysis ? (
-                  <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg text-amber-900 dark:text-amber-200 text-xs space-y-3">
-                    <div className="flex items-start gap-2.5">
-                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                      <div className="space-y-1">
-                        <p className="font-semibold text-sm">{t.modal.aiCallErrorTitle}</p>
-                        <p className="leading-relaxed opacity-90">{aiError}</p>
-                      </div>
-                    </div>
-                    <div className="pt-1 flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={handleRunAiAnalysis}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-accent-600 hover:bg-accent-700 text-white rounded-lg font-medium text-xs transition-colors shadow-xs"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        <span>{t.modal.retryAiBtn}</span>
-                      </button>
-                    </div>
-                  </div>
-                ) : !unifiedAnalysis ? (
-                  /* Initial State: Call to Action */
-                  <div className="p-6 text-center bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800 rounded-lg space-y-4">
-                    <div className="w-12 h-12 rounded-full bg-accent-50 dark:bg-accent-950/50 text-accent-600 dark:text-accent-400 flex items-center justify-center mx-auto border border-accent-200 dark:border-accent-900/50 shadow-xs">
-                      <Sparkles className="w-6 h-6" />
-                    </div>
-                    <div className="space-y-1 max-w-md mx-auto">
-                      <h4 className="font-semibold text-stone-900 dark:text-white text-sm">
-                        {t.modal.aiHeroTitle}
-                      </h4>
-                      <p className="text-stone-500 dark:text-stone-400 text-xs leading-relaxed">
-                        {t.modal.aiHeroSubtitle}
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleRunAiAnalysis}
-                      className="px-4 py-2.5 bg-accent-600 hover:bg-accent-700 text-white rounded-lg font-medium text-xs transition-colors inline-flex items-center gap-2 shadow-xs"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      <span>{t.modal.runAiFullBtn}</span>
-                    </button>
-                  </div>
-                ) : (
-                  /* Unified Analysis Result: 4 Structured Sections with Copy Icons */
-                  <div className="space-y-4">
-                    {/* Catatan sumber hasil: ringkasan lokal (tanpa kunci) atau Gemini gagal */}
-                    {unifiedAnalysis.modelMeta?.source === 'local' && !geminiApiKey && (
-                      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-accent-50 dark:bg-accent-950/40 border border-accent-200 dark:border-accent-900 text-xs text-accent-900 dark:text-accent-200">
-                        <span className="leading-relaxed min-w-0">
-                          {language === 'en'
-                            ? 'No Gemini key yet, so this is a summary built from Commons metadata. Add your key for a fuller explanation.'
-                            : 'Belum ada kunci Gemini, jadi ini ringkasan dari metadata Commons. Tambahkan kunci untuk penjelasan yang lebih lengkap.'}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={onOpenGeminiModal}
-                          className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 bg-accent-600 hover:bg-accent-700 text-white rounded-lg font-medium transition-colors"
-                        >
-                          <Key className="w-3.5 h-3.5" />
-                          <span>{t.modal.inputKeyBtn}</span>
-                        </button>
-                      </div>
-                    )}
-                    {aiError && (
-                      <div role="alert" className="flex flex-wrap items-start justify-between gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs text-red-900 dark:text-red-200">
-                        <div className="flex items-start gap-2 min-w-0">
-                          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                          <div className="space-y-0.5 min-w-0">
-                            <p className="font-semibold">{t.modal.aiCallErrorTitle}</p>
-                            <p className="leading-relaxed opacity-90 break-words">{aiError}</p>
-                            {unifiedAnalysis.modelMeta?.source === 'local' && (
-                              <p className="leading-relaxed opacity-90">
-                                {language === 'en'
-                                  ? 'Showing a summary from Commons metadata instead.'
-                                  : 'Menampilkan ringkasan dari metadata Commons sebagai gantinya.'}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleRunAiAnalysis}
-                          className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          <span>{t.modal.retryAiBtn}</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Header Controls: Structured Badge, Copy All JSON, and Re-run */}
-                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pb-3 border-b border-stone-200 dark:border-stone-800">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-0.5 rounded-full bg-moss-50 dark:bg-moss-950/50 text-moss-700 dark:text-moss-300 border border-moss-200 dark:border-moss-800 text-xs font-semibold">
-                          <CheckCircle2 className="w-3 h-3" />
-                          {t.modal.jsonBadge}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          onClick={handleSaveToPdf}
-                          disabled={isExportingPdf}
-                          className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 bg-accent-600 hover:bg-accent-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
-                          title="Simpan dan unduh laporan analisis lengkap dalam format PDF"
-                        >
-                          {pdfSuccess ? (
-                            <>
-                              <Check className="w-3.5 h-3.5" />
-                              <span className="font-semibold">{t.modal.pdfSavedBtn}</span>
-                            </>
-                          ) : isExportingPdf ? (
-                            <>
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                              <span>{t.modal.savingPdfBtn}</span>
-                            </>
-                          ) : (
-                            <>
-                              <FileDown className="w-3.5 h-3.5" />
-                              <span>{t.modal.savePdfBtn}</span>
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={handleRunAiAnalysis}
-                          className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-xs font-medium transition-colors"
-                          title="Muat ulang atau perbarui analisis berkas ini"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5 text-stone-500" />
-                          <span>{t.modal.rerunAiBtn}</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Assistant & LLM Model Info Bar with AI Disclaimer */}
-                    <div className="p-3 rounded-lg bg-stone-50 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-800 space-y-2.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex flex-wrap items-center gap-2 min-w-0">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-accent-600 text-white font-medium text-xs">
-                            <Sparkles className="w-3.5 h-3.5" />
-                            <span>{unifiedAnalysis.modelMeta?.assistantName || GEMINI_ASSISTANT_NAME}</span>
-                          </span>
-                          <span className="inline-flex px-2 py-0.5 rounded-md bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs font-medium">
-                            {unifiedAnalysis.modelMeta?.modelName || GEMINI_MODEL_NAME}
-                          </span>
-                        </div>
-                        <span className="text-xs text-moss-600 dark:text-moss-400 font-medium inline-flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          {language === 'en' ? 'Based on Commons metadata' : 'Berdasarkan metadata Commons'}
-                        </span>
-                      </div>
-
-                      {/* AI Disclaimer Section with Official Wikimedia AI Link */}
-                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-200">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                        <div className="space-y-1 w-full">
-                          <div className="flex items-center justify-between flex-wrap gap-2">
-                            <span className="font-semibold block text-xs">{t.modal.aiDisclaimerTitle}</span>
-                            <a
-                              href="https://meta.wikimedia.org/wiki/Artificial_intelligence/Guidelines"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs font-medium text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline decoration-amber-400 inline-flex items-center gap-1 transition-colors"
-                            >
-                              <span>{t.modal.aiDisclaimerLink}</span>
-                              <ExternalLink className="w-2.5 h-2.5" />
-                            </a>
-                          </div>
-                          <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-300">
-                            {unifiedAnalysis.modelMeta?.disclaimer ||
-                              (language === 'en' ? AI_DISCLAIMER_TEXT_EN : AI_DISCLAIMER_TEXT_ID)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* SECTION 1: Penjelasan Objek untuk Pengguna Awam */}
-                    <div className="p-4 rounded-lg bg-accent-50/50 dark:bg-accent-950/20 border border-accent-100 dark:border-accent-900/40 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-accent-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                            <Sparkles className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-stone-900 dark:text-white text-xs">
-                              {t.modal.sec1Title}
-                            </h4>
-                            <span className="text-xs text-accent-600 dark:text-accent-400 font-medium">
-                              {t.modal.sec1Subtitle}
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() =>
-                            handleCopySection(
-                              'object',
-                              `[${t.modal.sec1Title}: ${item.cleanTitle}]\n${unifiedAnalysis.objectDescription.laymanSummary}\n\n${t.modal.sec1HighlightsTitle}\n${unifiedAnalysis.objectDescription.keyHighlights.map((k) => `• ${k}`).join('\n')}`
-                            )
-                          }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs transition-colors shadow-2xs"
-                          title="Salin bagian penjelasan objek ini"
-                        >
-                          {copiedSection === 'object' ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-moss-600" />
-                              <span className="text-moss-600 font-medium">{t.modal.copiedSection}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5 text-stone-500" />
-                              <span>{t.modal.copySection}</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                      {/* Layman summary block */}
-                      <div className="p-3 bg-white dark:bg-stone-900/80 rounded-lg border border-accent-200/60 dark:border-accent-900/60 text-stone-800 dark:text-stone-200 text-xs leading-relaxed font-medium">
-                        {unifiedAnalysis.objectDescription.laymanSummary}
-                      </div>
-
-                      {/* Key highlights / bullets */}
-                      {unifiedAnalysis.objectDescription.keyHighlights?.length > 0 && (
-                        <div className="pt-1">
-                          <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
-                            {t.modal.sec1HighlightsTitle}
-                          </div>
-                          <div className="flex flex-col gap-1.5">
-                            {unifiedAnalysis.objectDescription.keyHighlights.map((highlight, idx) => (
-                              <span
-                                key={idx}
-                                className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-md bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-xs"
-                              >
-                                <Tag className="w-2.5 h-2.5 text-accent-500 shrink-0" />
-                                <span>{highlight}</span>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                    {Array.isArray(unifiedAnalysis.objectDescription.usageIdeas) && unifiedAnalysis.objectDescription.usageIdeas.length > 0 && (
-                      <div className="pt-1">
-                        <div className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
-                          {t.modal.sec1UsageTitle}
-                        </div>
-                        <ul className="space-y-1 text-xs text-stone-700 dark:text-stone-300 leading-relaxed list-disc pl-4">
-                          {unifiedAnalysis.objectDescription.usageIdeas.map((idea, idx) => (
-                            <li key={idx}>{idea}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-{/* Link proyek Wikimedia terkait rangkuman */}
-<RelatedWikimediaLinks links={relatedLinks} loading={relatedLoading} language={language} />
-                    </div>
-
-                    {/* Ethical notice */}
-                    <div className="p-3 bg-stone-100 dark:bg-stone-800/30 rounded-lg text-xs text-stone-500 dark:text-stone-400 leading-normal">
-                      {t.modal.ethicalNotice}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>
-    </div>
-  );
-};
-
-
-// Daftar link proyek Wikimedia terkait (Wikipedia, Wikidata, Wikivoyage)
-export const RelatedWikimediaLinks: React.FC<{
-  links: RelatedWikiLink[];
-  loading: boolean;
-  language: string;
-}> = ({ links, loading, language }) => {
-  const en = language === 'en';
-  const groups = Array.from(new Set(links.map((l) => l.project)));
-  return (
-    <div className="mt-3 pt-3 border-t border-accent-100 dark:border-accent-900/40 space-y-2">
-      <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-        <Globe className="w-3.5 h-3.5" />
-        {en ? 'Related Wikimedia projects' : 'Proyek Wikimedia terkait'}
-        {loading && <Loader2 className="w-3 h-3 animate-spin" />}
-      </div>
-      {!loading && links.length === 0 && (
-        <p className="text-xs text-stone-500 dark:text-stone-400">
-          {en ? 'No related pages found.' : 'Tidak ada halaman terkait yang ditemukan.'}
-        </p>
-      )}
-      {groups.map((g) => (
-        <div key={g} className="space-y-1">
-          <div className="text-xs font-semibold text-stone-400">{g}</div>
-          <div className="flex flex-wrap gap-1.5">
-            {links.filter((l) => l.project === g).map((l) => (
-              <a
-                key={l.url}
-                href={l.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={l.description || l.title}
-                className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700 hover:bg-stone-50 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700"
-              >
-                <span>{l.title}</span>
-                <ExternalLink className="w-2.5 h-2.5 opacity-60" />
-              </a>
-            ))}
-          </div>
-        </div>
-      ))}
     </div>
   );
 };
