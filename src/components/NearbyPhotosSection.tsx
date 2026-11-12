@@ -291,15 +291,6 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
   const areaCatAbortRef = useRef<AbortController | null>(null);
   useEffect(() => () => areaCatAbortRef.current?.abort(), []);
 
-  // Peta digeser/di-zoom saat memuat: batalkan permintaan karena areanya sudah berbeda
-  useEffect(() => {
-    if (areaCatAbortRef.current && !areaCatAbortRef.current.signal.aborted) {
-      areaCatAbortRef.current.abort();
-      setAreaCat((s) => (s.status === 'loading' ? { status: 'idle', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' } : s));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewCenter.lat, viewCenter.lng, mapSpanM]);
-
   const findAreaCategories = async () => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -561,6 +552,12 @@ return () => ro.disconnect();
 
     mapInstanceRef.current = map;
 
+    // ?list=categories|nophoto: jalankan pencarian sekali sesaat setelah peta dibuat (tanpa menunggu tile selesai dimuat)
+    if (!autoSearchedRef.current && parseNearbyList(window.location.search) !== 'photos') {
+      autoSearchedRef.current = true;
+      window.setTimeout(() => setAutoSearchTick(1), 400);
+    }
+
     // Track map center on moveend
     map.on('moveend', (e) => {
       const c = map.getCenter();
@@ -575,6 +572,12 @@ return () => ro.disconnect();
       } catch { /* abaikan */ }
       // originalEvent hanya ada pada gerakan oleh pengguna (geser, zoom, gulir)
       const byUser = !!(e as { originalEvent?: unknown }).originalEvent;
+      // Peta digeser/di-zoom pengguna saat kategori dimuat: batalkan permintaan karena areanya sudah berbeda.
+      // Gerakan otomatis (muat awal, ubah ukuran, terbang ke foto) tidak membatalkan.
+      if (byUser && areaCatAbortRef.current && !areaCatAbortRef.current.signal.aborted) {
+        areaCatAbortRef.current.abort();
+        setAreaCat((cur) => (cur.status === 'loading' ? { status: 'idle', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' } : cur));
+      }
       if (byUser && emptyNoticeRef.current) {
         emptyNoticeRef.current = false;
         setLocationError(null);
@@ -602,18 +605,14 @@ return () => ro.disconnect();
     };
   }, []);
 
-  // Tautan dengan ?list=categories|nophoto langsung menjalankan pencarian satu kali setelah peta siap
+  // Tautan dengan ?list=categories|nophoto langsung menjalankan pencarian satu kali setelah peta siap.
+  // Peta memberi sinyal lewat state (autoSearchTick) agar pencarian memakai closure terbaru.
+  const [autoSearchTick, setAutoSearchTick] = useState<number>(0);
   const autoSearchedRef = useRef<boolean>(false);
   useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map || autoSearchedRef.current) return;
-    if (parseNearbyList(window.location.search) === 'photos') return;
-    autoSearchedRef.current = true;
-    const run = () => { void handleFindNearbyCommons(); };
-    if (map.loaded()) run();
-    else map.once('load', run);
+    if (autoSearchTick > 0) void handleFindNearbyCommons();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [autoSearchTick]);
 
   // Spatial clustering algorithm
   const clusterPhotos = useCallback(
@@ -877,11 +876,22 @@ setSelectedPhoto(activeItem);
   };
 
   // 2. Find Nearby Commons Button Click Handler (foto bergeotag + kategori di area ini)
+  const photoReqRef = useRef<number>(0);
   const handleFindNearbyCommons = async () => {
+    const reqId = ++photoReqRef.current;
     setIsLoadingNearby(true);
     setLocationError(null);
     emptyNoticeRef.current = false;
     setHasSearched(true);
+    // Cari ulang: kosongkan semua hasil lama (foto, kategori, Wikidata, pilihan) agar hanya hasil baru yang tampil
+    areaCatAbortRef.current?.abort();
+    setNearbyPhotos([]);
+    setAreaNoPhoto([]);
+    setAreaCat({ status: 'idle', items: [], fileCount: 0, truncated: false, wikidata: 'skipped' });
+    setSelectedNoPhoto(null);
+    setNoPhotoPage(1);
+    setAreaCatPage(1);
+    setSelectedAreaCat(null);
     setSelectedPhoto(null);
     setSelectedCluster(null);
     setSelectedClusterItemIndex(0);
@@ -893,11 +903,21 @@ setSelectedPhoto(activeItem);
     setSearchOrigin({ lat: currentCenter.lat, lng: currentCenter.lng });
     setShiftCenter({ lat: currentCenter.lat, lng: currentCenter.lng });
 
-    // Kategori di area ini dicari bersamaan dengan foto (satu tombol)
+    // Foto, kategori, dan Wikidata memakai area yang sama: tampilan peta saat ini (maksimal AREA_MAX_SPAN_M)
+    const b = map?.getBounds();
+    const bounds: AreaBounds | undefined = b ? { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() } : undefined;
+    // Kategori dan Wikidata dicari bersamaan dengan foto (satu tombol); fungsi ini juga menandai area terlalu luas
     void findAreaCategories();
+    if (bounds && areaSpanMeters(bounds) > AREA_MAX_SPAN_M) {
+      setNearbyPhotos([]);
+      setLocationError(t.nearby.areaCatTooWide(AREA_MAX_SPAN_M / 1000));
+      setIsLoadingNearby(false);
+      return;
+    }
 
     try {
-      const results = await fetchNearbyCommonsMedia(currentCenter.lat, currentCenter.lng, 10000, 50);
+      const results = await fetchNearbyCommonsMedia(currentCenter.lat, currentCenter.lng, 10000, 50, bounds);
+      if (reqId !== photoReqRef.current) return; // pencarian yang lebih baru sudah berjalan
       setNearbyPhotos(results);
       setPreviewPage(1);
       setHasSearched(true);
@@ -910,10 +930,11 @@ setSelectedPhoto(activeItem);
         emptyNoticeRef.current = true;
       }
     } catch (err) {
+      if (reqId !== photoReqRef.current) return;
       console.error('Failed to search nearby commons:', err);
       setLocationError(err instanceof Error ? err.message : 'Error fetching nearby commons');
     } finally {
-      setIsLoadingNearby(false);
+      if (reqId === photoReqRef.current) setIsLoadingNearby(false);
     }
   };
 
@@ -1058,19 +1079,69 @@ setSelectedPhoto(activeItem);
     (previewPage - 1) * PREVIEW_PAGE_SIZE,
     previewPage * PREVIEW_PAGE_SIZE
   );
-  const sideTabActive: NearbyList = sideTab === 'photos' && nearbyPhotos.length === 0 ? 'categories' : sideTab;
+  const sideHasContent = hasSearched || nearbyPhotos.length > 0 || areaCat.status !== 'idle';
+  const sideTabActive: NearbyList = sideHasContent && !isLoadingNearby && sideTab === 'photos' && nearbyPhotos.length === 0 ? 'categories' : sideTab;
   const totalNoPhotoPages = Math.max(1, Math.ceil(areaNoPhoto.length / NOPHOTO_PAGE_SIZE));
   const currentNoPhotoSlice = areaNoPhoto.slice((noPhotoPage - 1) * NOPHOTO_PAGE_SIZE, noPhotoPage * NOPHOTO_PAGE_SIZE);
   const noPhotoStart = (noPhotoPage - 1) * NOPHOTO_PAGE_SIZE + 1;
   const noPhotoEnd = Math.min(noPhotoPage * NOPHOTO_PAGE_SIZE, areaNoPhoto.length);
-  const focusNoPhotoItem = (it: WikidataNoPhotoItem) => {
-    setSelectedNoPhoto((cur) => (cur === it.qid ? null : it.qid));
+  // Pilih item Wikidata tanpa foto: tandai di daftar dan peta, tutup kartu foto Commons, lalu terbang ke titiknya
+  const selectNoPhotoItem = (it: WikidataNoPhotoItem, toggle: boolean) => {
+    if (toggle && selectedNoPhoto === it.qid) {
+      setSelectedNoPhoto(null);
+      return;
+    }
+    setSelectedNoPhoto(it.qid);
+    setSelectedPhoto(null);
+    setSelectedCluster(null);
+    setSelectedClusterItemIndex(0);
+    const idx = areaNoPhoto.findIndex((x) => x.qid === it.qid);
+    if (idx >= 0) setNoPhotoPage(Math.floor(idx / NOPHOTO_PAGE_SIZE) + 1);
     const map = mapInstanceRef.current;
     if (!map) return;
     if (window.innerWidth < 768) mapContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     ignoreMoveRef.current = true;
     map.flyTo({ center: [it.lng, it.lat], zoom: Math.max(map.getZoom(), 17), speed: 1.4, essential: true });
   };
+  const focusNoPhotoItem = (it: WikidataNoPhotoItem) => selectNoPhotoItem(it, true);
+  const activeNoPhoto = selectedNoPhoto ? areaNoPhoto.find((x) => x.qid === selectedNoPhoto) ?? null : null;
+
+  // Pin item Wikidata tanpa foto di peta (warna beda dari foto Commons): hijau, terpilih jingga dan lebih besar.
+  // Hanya tampil saat daftar "Wikidata tanpa foto" aktif.
+  const wdMarkersRef = useRef<maplibregl.Marker[]>([]);
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    wdMarkersRef.current.forEach((m) => m.remove());
+    wdMarkersRef.current = [];
+    if (!map || sideTabActive !== 'nophoto') return;
+    areaNoPhoto.forEach((it) => {
+      const isSel = it.qid === selectedNoPhoto;
+      const el = document.createElement('div');
+      el.className = 'maplibre-wikidata-marker';
+      el.style.cursor = 'pointer';
+      el.style.width = isSel ? '20px' : '12px';
+      el.style.height = isSel ? '20px' : '12px';
+      el.style.borderRadius = '50%';
+      el.style.backgroundColor = isSel ? '#E08A00' : '#2E8B57';
+      el.style.border = '2px solid #FFFDF9';
+      el.style.zIndex = isSel ? '60' : '40';
+      el.title = it.label;
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        selectNoPhotoItem(it, false);
+      });
+      wdMarkersRef.current.push(
+        new maplibregl.Marker({ element: el, pitchAlignment: 'viewport', anchor: 'center' }).setLngLat([it.lng, it.lat]).addTo(map)
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [areaNoPhoto, selectedNoPhoto, sideTabActive]);
+  useEffect(() => () => { wdMarkersRef.current.forEach((m) => m.remove()); wdMarkersRef.current = []; }, []);
+
+  // Memilih foto Commons membatalkan pilihan item Wikidata (hanya satu kartu di peta)
+  useEffect(() => {
+    if (selectedPhoto) setSelectedNoPhoto(null);
+  }, [selectedPhoto]);
   const totalAreaCatPages = Math.max(1, Math.ceil(areaCat.items.length / AREA_CAT_PAGE_SIZE));
   const currentAreaCatSlice = areaCat.items.slice((areaCatPage - 1) * AREA_CAT_PAGE_SIZE, areaCatPage * AREA_CAT_PAGE_SIZE);
   const areaCatStart = (areaCatPage - 1) * AREA_CAT_PAGE_SIZE + 1;
@@ -1403,6 +1474,46 @@ setSelectedPhoto(activeItem);
           </div>
         )}
 
+        {/* Kartu item Wikidata tanpa foto (kiri bawah/kanan bawah, seperti kartu foto Commons) */}
+        {activeNoPhoto && !activeClusterPhoto && (
+          <div className={`absolute left-3 right-3 ${isScaleOn ? 'bottom-16' : 'bottom-8'} sm:left-auto sm:right-14 sm:bottom-3 sm:w-80 z-30 p-3 rounded-xl bg-[#FFFDF9] dark:bg-[hsl(40_7%_12.5%)] border border-[#E8E2D6] dark:border-[hsl(40_17%_24%)] shadow-lg space-y-2 text-xs animate-fadeIn`}>
+            <button
+              type="button"
+              onClick={() => setSelectedNoPhoto(null)}
+              aria-label={t.nearby.dismiss}
+              title={t.nearby.dismiss}
+              className={`absolute top-2 right-2 z-10 p-1 rounded-full cursor-pointer text-[#7A7060] dark:text-[hsl(37_10%_63%)] ${MAP_HOVER}`}
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+            <div className="pr-6 space-y-0.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#2E8B57]">
+                <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#E08A00] border border-[#FFFDF9]" />
+                {t.nearby.tabNoPhoto}
+              </div>
+              <div className="font-display text-base font-semibold text-[#29241E] dark:text-[hsl(33_12%_84%)] leading-snug">
+                {activeNoPhoto.label}
+              </div>
+              {activeNoPhoto.description && (
+                <div className="text-[#695F4F] dark:text-[hsl(37_11%_68%)]">{activeNoPhoto.description}</div>
+              )}
+              <div className="text-[11px] font-mono text-[#7A7060] dark:text-[hsl(37_10%_63%)]">
+                {activeNoPhoto.qid} • {activeNoPhoto.lat.toFixed(5)}, {activeNoPhoto.lng.toFixed(5)}
+              </div>
+            </div>
+            <p className="text-[#695F4F] dark:text-[hsl(37_11%_68%)]">{t.nearby.noPhotoCardHint}</p>
+            <a
+              href={`https://www.wikidata.org/wiki/${activeNoPhoto.qid}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${MAP_DARK_BTN}`}
+            >
+              <span>{t.nearby.noPhotoOpen}</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        )}
+
         {/* Tombol alat di kanan atas: lokasi saya, 3D, kontur, skala */}
         <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 pointer-events-auto">
           <button
@@ -1469,13 +1580,14 @@ setSelectedPhoto(activeItem);
 </div>
 
       {/* Horizontal Strip of Found Photos with Pagination */}
-      {(nearbyPhotos.length > 0 || areaCat.status !== 'idle') && (
+      {(
 <div className="relative w-full lg:w-[340px] xl:w-[380px] lg:shrink-0 lg:min-h-[320px]">
 <div className="space-y-3 pt-2 lg:pt-0 lg:px-3 lg:pb-3 lg:absolute lg:inset-0 lg:overflow-y-auto lg:rounded-lg lg:border lg:border-stone-200 dark:lg:border-stone-800 lg:bg-white dark:lg:bg-stone-900/60">
+          {/* Panel samping dan chip tab selalu ada; isinya kosong sampai pencarian pertama dijalankan */}
           {/* Tab daftar samping: Foto | Kategori */}
           <div role="tablist" className="flex flex-wrap gap-1.5 lg:pt-3">
             {([
-              ['photos', t.nearby.tabPhotos, nearbyPhotos.length],
+              ['photos', t.nearby.tabPhotos, hasSearched ? nearbyPhotos.length : null],
               ['categories', t.nearby.tabCategories, areaCat.status === 'ok' ? areaCat.items.length : null],
               ['nophoto', t.nearby.tabNoPhoto, areaCat.status === 'ok' && areaCat.wikidata !== 'skipped' ? areaNoPhoto.length : null],
             ] as const).map(([id, label, n]) => (
@@ -1496,6 +1608,24 @@ setSelectedPhoto(activeItem);
             ))}
           </div>
 
+          {!sideHasContent && (
+            <p className="flex items-start gap-2 text-xs sm:text-sm leading-snug text-stone-500 dark:text-stone-400">
+              <Search className="w-4 h-4 shrink-0 mt-px" />
+              <span>{t.nearby.sideEmptyHint}</span>
+            </p>
+          )}
+
+          {sideHasContent && (<>
+          {sideTabActive === 'photos' && nearbyPhotos.length === 0 && (
+            isLoadingNearby ? (
+              <div role="status" aria-live="polite" className="flex items-center gap-2 text-xs text-stone-600 dark:text-stone-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                {t.nearby.searching}
+              </div>
+            ) : (
+              <p className="text-xs text-stone-600 dark:text-stone-400">{t.nearby.noPhotosFound}</p>
+            )
+          )}
           {sideTabActive === 'categories' && (
             <div className="space-y-3">
               {/* Catatan perkiraan selalu terlihat */}
@@ -1743,7 +1873,7 @@ setSelectedPhoto(activeItem);
             </div>
           )}
 
-          {sideTabActive === 'photos' && (<>
+          {sideTabActive === 'photos' && nearbyPhotos.length > 0 && (<>
           {/* Baris Kontrol Strip: Jumlah foto & Navigasi Pagination */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch lg:sticky lg:top-0 lg:z-20 lg:-mx-3 lg:px-4 lg:pt-3 lg:pb-3 lg:bg-white dark:lg:bg-stone-900 lg:border-b lg:border-stone-200 dark:lg:border-stone-800 lg:shadow-[0_6px_10px_-8px_rgba(24,30,41,0.25)] lg:rounded-t-lg text-xs text-stone-600 dark:text-stone-400 px-1">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
@@ -1844,6 +1974,7 @@ setSelectedPhoto(activeItem);
               );
             })}
           </div>
+          </>)}
           </>)}
         </div>
 </div>

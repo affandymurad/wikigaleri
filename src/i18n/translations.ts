@@ -86,6 +86,7 @@ export interface Translations {
     previewRange: (start: number, end: number, total: number) => string;
     previewPrev: string;
     previewNext: string;
+    sideEmptyHint: string;
     areaCatBtn: string;
     areaCatTitle: string;
     areaCatNote: string;
@@ -110,6 +111,7 @@ export interface Translations {
     noPhotoSkipped: string;
     noPhotoRange: (start: number, end: number, total: number) => string;
     noPhotoOpen: string;
+    noPhotoCardHint: string;
   };
   filters: {
     allMedia: string;
@@ -506,7 +508,7 @@ export const translations: Record<Language, Translations> = {
       viewInModal: 'View Details',
       dismiss: 'Dismiss',
       clusterCount: (count: number) => `${count} photos in this cluster`,
-      radiusHint: 'Searching within ~10km radius from map center',
+      radiusHint: 'Searching the visible map area (up to ~3 km radius from the map center)',
       coordinates: 'Coordinates',
       author: 'Author',
       license: 'License',
@@ -517,6 +519,7 @@ export const translations: Record<Language, Translations> = {
       previewRange: (start: number, end: number, total: number) => `Showing ${start}–${end} of ${total} files`,
       previewPrev: 'Previous',
       previewNext: 'Next',
+      sideEmptyHint: 'Click "Find Nearby Commons" to search this map area. Photos, categories, and Wikidata places without a photo will appear here.',
       areaCatBtn: 'Find categories in this area',
       areaCatTitle: 'Categories in this area',
       areaCatNote: 'Categories are inferred from geotagged photos in this area, not from category coordinates.',
@@ -540,6 +543,7 @@ export const translations: Record<Language, Translations> = {
       noPhotoSkipped: 'Wikidata is only checked for small areas; zoom in to see items without a photo.',
       noPhotoRange: (start: number, end: number, total: number) => `Showing ${start}–${end} of ${total} items`,
       noPhotoOpen: 'Open in Wikidata',
+      noPhotoCardHint: 'This item has coordinates but no image (P18) on Wikidata. A good place for a new photo.',
       areaCatWikidataSkipped: 'Wikidata is only checked for small areas; zoom in to include it.',
     },
     filters: {
@@ -948,7 +952,7 @@ export const translations: Record<Language, Translations> = {
       viewInModal: 'Buka Detail Berkas',
       dismiss: 'Tutup Popup',
       clusterCount: (count: number) => `${count} foto di klaster ini`,
-      radiusHint: 'Radius pencarian ~10 km dari titik tengah peta',
+      radiusHint: 'Mencari di area peta yang terlihat (sampai radius ~3 km dari titik tengah peta)',
       coordinates: 'Koordinat',
       author: 'Fotografer / Pembuat',
       license: 'Lisensi',
@@ -959,6 +963,7 @@ export const translations: Record<Language, Translations> = {
       previewRange: (start: number, end: number, total: number) => `Menampilkan ${start}–${end} dari ${total} berkas`,
       previewPrev: 'Sebelumnya',
       previewNext: 'Berikutnya',
+      sideEmptyHint: 'Klik "Cari Commons Terdekat" untuk mencari di area peta ini. Foto, kategori, dan tempat Wikidata tanpa foto akan tampil di sini.',
       areaCatBtn: 'Cari kategori di area ini',
       areaCatTitle: 'Kategori di area ini',
       areaCatNote: 'Kategori disimpulkan dari foto bergeotag di area ini, bukan dari koordinat kategori.',
@@ -982,6 +987,7 @@ export const translations: Record<Language, Translations> = {
       noPhotoSkipped: 'Wikidata hanya diperiksa untuk area kecil; perbesar peta untuk melihat item tanpa foto.',
       noPhotoRange: (start: number, end: number, total: number) => `Menampilkan ${start}–${end} dari ${total} item`,
       noPhotoOpen: 'Buka di Wikidata',
+      noPhotoCardHint: 'Item ini punya koordinat tetapi belum punya gambar (P18) di Wikidata. Tempat yang cocok untuk foto baru.',
       areaCatWikidataSkipped: 'Wikidata hanya diperiksa untuk area kecil; perbesar peta agar ikut disertakan.',
     },
     filters: {

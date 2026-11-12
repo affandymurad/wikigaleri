@@ -95,7 +95,7 @@ Open http://localhost:3000. Search, filters, credit lines, the map and bookmarks
 
 The **Find Nearby Commons** button on the Nearby map runs one search for the visible map area and fills a side panel with three lists, switchable by chip:
 
-- **Photos**: geotagged Commons files near the map center.
+- **Photos**: geotagged Commons files in the visible map area (the 50 closest to the map center).
 - **Categories**: Commons categories used by the geotagged files in the area, most-used first. Each card has a *Search in category* badge that opens the existing Categories mode; clicking the card only selects it.
 - **Wikidata without photo**: Wikidata items that have coordinates (P625) in the area but no image (P18), as candidates for new photos. Clicking a card flies the map to it; the badge opens the item on Wikidata.
 
@@ -105,9 +105,9 @@ The active list is kept in the URL: `/?mode=nearby&list=categories` or `list=nop
 
 - **Categories are an estimate.** Commons categories usually have no coordinates, so they are inferred from the geotagged photos in the area, not from category coordinates. A category that is popular among photos here is not guaranteed to describe a place here.
 - Maintenance categories (such as "Taken with", "Uploaded", "CC-BY", "Self-published work", "Files by") are hidden, and when the area holds many photos, categories used by a single photo are hidden too. Both rules live in `src/utils/areaCategories.ts` and are easy to adjust.
-- Only the first 500 geotagged files of the area are read. If the area holds more, the panel says the counts are partial; zoom in for fuller results.
-- The map must be under about 10 km wide. Wider than that, no request is sent and you are asked to zoom in.
-- Wikidata lists are only fetched when the map is under about 3 km wide, and the query times out after 15 seconds. If it fails, the photo-based results still show.
+- The photo list shows at most 50 files. Categories read up to 500 geotagged files of the area. If the area holds more, the panel says the counts are partial; zoom in for fuller results.
+- All three lists use the visible map area, which must be under about 6 km wide (3 km radius from the map center). Wider than that, no request is sent and you are asked to zoom in.
+- Wikidata queries return at most 200 rows and time out after 15 seconds. If one fails, the photo-based results still show.
 - Results are cached per area and zoom for the session, and an older request is cancelled when the map moves.
 
 ### Scripts
@@ -224,7 +224,7 @@ Buka http://localhost:3000. Pencarian, filter, teks kredit, peta, dan markah lan
 
 Tombol **Cari Commons Terdekat** di peta Terdekat menjalankan satu pencarian untuk area peta yang terlihat dan mengisi panel samping dengan tiga daftar yang bisa dipilih lewat chip:
 
-- **Foto**: berkas Commons bergeotag di sekitar titik tengah peta.
+- **Foto**: berkas Commons bergeotag di area peta yang terlihat (50 yang terdekat dari titik tengah peta).
 - **Kategori**: kategori Commons yang dipakai berkas bergeotag di area itu, dari yang terbanyak. Tiap kartu punya badge *Cari di kategori* yang membuka mode Kategori yang sudah ada; mengklik kartunya hanya memilihnya.
 - **Wikidata tanpa foto**: item Wikidata yang punya koordinat (P625) di area itu tetapi belum punya gambar (P18), sebagai calon sasaran foto baru. Klik kartu menggeser peta ke item itu; badge membuka item di Wikidata.
 
@@ -234,9 +234,9 @@ Daftar yang aktif disimpan di URL: `/?mode=nearby&list=categories` atau `list=no
 
 - **Kategori hanya perkiraan.** Kategori Commons umumnya tidak punya koordinat, jadi kategori disimpulkan dari foto bergeotag di area itu, bukan dari koordinat kategori. Kategori yang populer di antara foto di sini belum tentu menggambarkan tempat di sini.
 - Kategori pemeliharaan (misalnya "Taken with", "Uploaded", "CC-BY", "Self-published work", "Files by") disembunyikan, dan bila area berisi banyak foto, kategori yang hanya dipakai satu foto ikut disembunyikan. Kedua aturan ada di `src/utils/areaCategories.ts` dan mudah diubah.
-- Hanya 500 berkas bergeotag pertama di area yang dibaca. Bila area berisi lebih banyak, panel memberi tahu bahwa hitungan tidak lengkap; perbesar peta untuk hasil yang lebih lengkap.
-- Lebar peta harus di bawah sekitar 10 km. Lebih lebar dari itu, tidak ada permintaan yang dikirim dan Anda diminta memperbesar peta.
-- Daftar Wikidata hanya diambil bila lebar peta di bawah sekitar 3 km, dan kueri berhenti setelah 15 detik. Bila gagal, hasil dari foto tetap tampil.
+- Daftar foto menampilkan paling banyak 50 berkas. Kategori membaca sampai 500 berkas bergeotag di area itu. Bila area berisi lebih banyak, panel memberi tahu bahwa hitungan tidak lengkap; perbesar peta untuk hasil yang lebih lengkap.
+- Ketiga daftar memakai area peta yang terlihat, yang lebarnya harus di bawah sekitar 6 km (radius 3 km dari titik tengah peta). Lebih lebar dari itu, tidak ada permintaan yang dikirim dan Anda diminta memperbesar peta.
+- Kueri Wikidata mengembalikan paling banyak 200 baris dan berhenti setelah 15 detik. Bila gagal, hasil dari foto tetap tampil.
 - Hasil disimpan di cache per area dan zoom selama sesi, dan permintaan lama dibatalkan saat peta bergeser.
 
 ### Perintah

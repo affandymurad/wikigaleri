@@ -17,8 +17,11 @@ export interface AreaCategoryCount {
   count: number;
 }
 
-/** Sisi terpanjang area (meter) yang masih boleh dicari; di atas ini pengguna diminta memperbesar peta */
-export const AREA_MAX_SPAN_M = 10000;
+/**
+ * Sisi terpanjang tampilan peta (meter) yang masih boleh dicari: 6 km = radius 3 km dari titik tengah.
+ * Berlaku untuk foto, kategori, dan Wikidata; di atas ini pengguna diminta memperbesar peta.
+ */
+export const AREA_MAX_SPAN_M = 6000;
 
 /** Jumlah berkas maksimum per permintaan geosearch Commons (batas pengguna biasa) */
 export const AREA_FILE_LIMIT = 500;
@@ -156,8 +159,8 @@ export function areaCacheKey(b: AreaBounds, zoom: number): string {
 // Sumber tambahan: Wikidata (item ber-P625 di dalam area yang punya P373 atau sitelink commonswiki ke Category:)
 // ---------------------------------------------------------------------------
 
-/** Sisi terpanjang area (meter) agar Wikidata ikut dicari; di atas ini Wikidata dilewati (kueri SPARQL berat) */
-export const WIKIDATA_MAX_SPAN_M = 3000;
+/** Batas area untuk Wikidata; sama dengan batas foto dan kategori */
+export const WIKIDATA_MAX_SPAN_M = AREA_MAX_SPAN_M;
 
 /** Batas waktu kueri SPARQL (milidetik) sebelum dianggap gagal */
 export const WIKIDATA_TIMEOUT_MS = 15000;

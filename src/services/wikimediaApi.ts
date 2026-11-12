@@ -888,15 +888,19 @@ export async function fetchNearbyCommonsMedia(
   lat: number,
   lng: number,
   radiusMeters = 10000,
-  limit = 50
+  limit = 50,
+  bounds?: AreaBounds
 ): Promise<CommonsMediaItem[]> {
+  // Dengan bounds, pencarian memakai kotak tampilan peta (hasil terdekat dari titik tengah kotak lebih dulu);
+  // tanpa bounds, memakai lingkaran radiusMeters dari (lat, lng)
   const params = new URLSearchParams({
     action: 'query',
     format: 'json',
     origin: '*',
     generator: 'geosearch',
-    ggscoord: `${lat}|${lng}`,
-    ggsradius: String(Math.min(radiusMeters, 10000)), // max 10000 for Commons geosearch
+    ...(bounds
+      ? { ggsbbox: `${bounds.north}|${bounds.west}|${bounds.south}|${bounds.east}` }
+      : { ggscoord: `${lat}|${lng}`, ggsradius: String(Math.min(radiusMeters, 10000)) }), // max 10000 for Commons geosearch
     ggsnamespace: '6', // File namespace
     ggslimit: String(limit),
     prop: 'imageinfo|info|coordinates|categories',
