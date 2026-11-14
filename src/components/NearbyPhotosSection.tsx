@@ -146,6 +146,8 @@ export const NearbyPhotosSection: React.FC<NearbyPhotosSectionProps> = ({
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<maplibregl.Map | null>(null);
+  // Terisi bila peta tidak bisa dibuat (mis. WebGL2 mati atau tidak didukung browser)
+  const [mapUnavailable, setMapUnavailable] = useState(false);
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const centerPinRef = useRef<maplibregl.Marker | null>(null);
@@ -367,7 +369,9 @@ return () => ro.disconnect();
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    const map = new maplibregl.Map({
+    let created: maplibregl.Map | null = null;
+    try {
+      created = new maplibregl.Map({
       container: mapContainerRef.current,
       // Gaya peta vektor terang (OpenFreeMap Positron): abu-abu netral, jalan putih, taman hijau pucat, label mengikuti jalan
       style: 'https://tiles.openfreemap.org/styles/positron',
@@ -377,7 +381,14 @@ return () => ro.disconnect();
       pitch: 0,
       maxPitch: 85,
       attributionControl: false,
-    });
+      });
+    } catch (err) {
+      // MapLibre 6 butuh WebGL2; tanpa itu konstruktor melempar galat. Tampilkan pesan, jangan merusak halaman.
+      console.warn('MapLibre could not start:', err);
+      setMapUnavailable(true);
+      return;
+    }
+    const map = created;
 
     // Gracefully handle any non-fatal tile fetch errors or network hiccups
     map.on('error', (e) => {
@@ -1272,11 +1283,20 @@ setSelectedPhoto(activeItem);
         {/* MapLibre DOM container */}
         <div ref={mapContainerRef} className="w-full h-full z-0" />
 
+        {mapUnavailable && (
+          <div role="alert" className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-6">
+            <div className={`max-w-sm rounded-xl px-4 py-3 text-sm text-center ${MAP_CARD}`}>
+              <AlertCircle className="mx-auto mb-2 h-5 w-5 text-amber-600" aria-hidden="true" />
+              {t.nearby.mapUnavailable}
+            </div>
+          </div>
+        )}
+
         {/* Penanda titik tengah yang dipakai untuk koordinat dan alamat */}
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 z-10" aria-hidden="true">
+        {!mapUnavailable && <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 z-10" aria-hidden="true">
           <div className="absolute left-1/2 top-0 h-full w-px bg-[#4A4338]/60 dark:bg-[hsl(37_11%_75.6%)]/60" />
           <div className="absolute top-1/2 left-0 w-full h-px bg-[#4A4338]/60 dark:bg-[hsl(37_11%_75.6%)]/60" />
-        </div>
+        </div>}
 
         {/* Kolom overlay kiri-atas: status, tombol aksi, kartu titik tengah, dan petunjuk 3D */}
         <div className="absolute top-3 left-3 right-14 z-20 flex flex-col items-start gap-2 pointer-events-none">

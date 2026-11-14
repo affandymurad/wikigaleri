@@ -70,6 +70,7 @@ export interface Translations {
     findCommonsBtn: string;
     locating: string;
     searching: string;
+    mapUnavailable: string;
     locationError: string;
     noPhotosFound: string;
     foundPhotos: (count: number) => string;
@@ -504,6 +505,7 @@ export const translations: Record<Language, Translations> = {
       findCommonsBtn: 'Find Nearby Commons',
       locating: 'Locating GPS...',
       searching: 'Searching Wikimedia...',
+      mapUnavailable: 'The map could not start because this browser has WebGL2 turned off or does not support it. Turn on hardware acceleration in your browser settings and restart it. Search still works around the default location, but you cannot move the map.',
       locationError: 'Could not get your location. Allow location access in your browser and try again.',
       noPhotosFound: 'No geotagged files here. Try moving the map or searching another place.',
       foundPhotos: (count: number) => `Found ${count} nearby photos`,
@@ -950,6 +952,7 @@ export const translations: Record<Language, Translations> = {
       findCommonsBtn: 'Cari Commons Terdekat',
       locating: 'Mendeteksi GPS...',
       searching: 'Mencari Berkas Commons...',
+      mapUnavailable: 'Peta tidak bisa dimulai karena WebGL2 di browser ini mati atau tidak didukung. Nyalakan akselerasi perangkat keras di pengaturan browser, lalu mulai ulang. Pencarian tetap berjalan di sekitar lokasi bawaan, tetapi peta tidak bisa digeser.',
       locationError: 'Lokasi Anda tidak terbaca. Izinkan akses lokasi di peramban lalu coba lagi.',
       noPhotosFound: 'Tidak ada berkas bergeotag di sini. Coba geser peta atau cari tempat lain.',
       foundPhotos: (count: number) => `Ditemukan ${count} foto di sekitar area`,

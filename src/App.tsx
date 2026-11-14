@@ -6,6 +6,7 @@ import { Header } from './components/Header';
 import { SearchBar } from './components/SearchBar';
 import { CuratedTopics } from './components/CuratedTopics';
 import { NearbyPhotosSection } from './components/NearbyPhotosSection';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { MediaTypeFilter } from './components/MediaTypeFilter';
 import { MediaGrid, TalkPageView, BookmarksPanel, BookmarkBackupBar } from './components/MediaGrid';
 import { MediaDetailModal } from './components/MediaDetailModal';
@@ -689,10 +690,25 @@ export default function App() {
         {/* Mode 2: Terdekat (Satu section Foto Terdekat / Nearby Photos) */}
         {activeMode === 'nearby' && (
           <section aria-label="Foto Terdekat" className="space-y-6">
-            <NearbyPhotosSection
-              language={language}
-              t={t}
-            />
+            <ErrorBoundary
+              fallback={(reset) => (
+                <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200">
+                  <p>
+                    {language === 'en'
+                      ? 'The Nearby map hit an error. Reload the page, or try a browser with graphics acceleration turned on.'
+                      : 'Peta Terdekat mengalami galat. Muat ulang halaman, atau coba browser dengan akselerasi grafis menyala.'}
+                  </p>
+                  <button type="button" onClick={reset} className="mt-2 cursor-pointer rounded-full border border-amber-400 px-3 py-1 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/40">
+                    {language === 'en' ? 'Try again' : 'Coba lagi'}
+                  </button>
+                </div>
+              )}
+            >
+              <NearbyPhotosSection
+                language={language}
+                t={t}
+              />
+            </ErrorBoundary>
           </section>
         )}
 
